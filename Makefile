@@ -11,6 +11,13 @@ CXX=g++
 BUILD_DIR := ./build
 SRC_DIRS := ./src
 
+# Link external libraries
+LIB_DIR := ./external/lib
+LIBS := $(LIB_DIR)/sylvan/libsylvan.a \
+		$(LIB_DIR)/sylvan/liblace.a \
+		$(LIB_DIR)/sylvan/liblace14.a
+INCLUDE := ./external/include/sylvan
+
 # Find all the C and C++ files we want to compile
 # Note the single quotes around the * expressions. Make will incorrectly expand these otherwise.
 SRCS := $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.s')
@@ -30,23 +37,23 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -MMD -MP
+CPPFLAGS := $(INC_FLAGS) -pthread -MMD -MP
 
 all: $(BUILD_DIR)/$(appname)
 
 # The final build step.
 $(BUILD_DIR)/$(appname): $(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+	$(CXX) $(CPPFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 # Build step for C source
 $(BUILD_DIR)/%.c.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -I$(INCLUDE) -c $< -o $@
 
 # Build step for C++ source
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	mkdir -p $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(INCLUDE) -c $< -o $@
 
 
 .PHONY: clean
