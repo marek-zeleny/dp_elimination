@@ -1,13 +1,14 @@
-#include <assert.h>
-#include <stdio.h>
-#include <stdint.h>
+#include <cassert>
+#include <cstdio>
 
+// only needed for sylvan_stats_report(), otherwise everything should be defined
+// in sylvan_obj.hpp
 #include <sylvan.h>
 #include <sylvan_obj.hpp>
 
 using namespace sylvan;
 
-VOID_TASK_0(simple_cxx)
+VOID_TASK_0(simple_bdd_test)
 {
     Bdd one = Bdd::bddOne(); // the True terminal
     Bdd zero = Bdd::bddZero(); // the False terminal
@@ -67,7 +68,7 @@ VOID_TASK_0(simple_cxx)
     assert(one       == Bdd::bddCube(variables, std::vector<uint8_t>({2, 2})));
 }
 
-VOID_TASK_1(_main, void*, arg)
+VOID_TASK_0(run_from_lace)
 {
     // Initialize Sylvan
     // With starting size of the nodes table 1 << 21, and maximum size 1 << 27.
@@ -81,42 +82,33 @@ VOID_TASK_1(_main, void*, arg)
     // - 1<<25 cache: 1152 MB
     // - 1<<26 cache: 2304 MB
     // - 1<<27 cache: 4608 MB
-    sylvan_set_sizes(1LL<<22, 1LL<<26, 1LL<<22, 1LL<<26);
-    sylvan_init_package();
+    Sylvan::initPackage(1LL<<22, 1LL<<26, 1LL<<22, 1LL<<26);
 
     // Initialize the BDD module with granularity 1 (cache every operation)
     // A higher granularity (e.g. 6) often results in better performance in practice
-    sylvan_init_bdd();
+    Sylvan::initBdd();
 
     // Now we can do some simple stuff using the C++ objects.
-    CALL(simple_cxx);
+    CALL(simple_bdd_test);
 
     // Report statistics (if SYLVAN_STATS is 1 in the configuration)
     sylvan_stats_report(stdout);
 
     // And quit, freeing memory
-    sylvan_quit();
-
-    // We didn't use arg
-    (void)arg;
+    Sylvan::quitPackage();
 }
 
-int
-main (int argc, char *argv[])
+int main()
 {
+    // Initialize Lace
     int n_workers = 0; // automatically detect number of workers
     size_t deque_size = 0; // default value for the size of task deques for the workers
 
-    // Initialize the Lace framework for <n_workers> workers.
     lace_start(n_workers, deque_size);
 
-    RUN(_main, NULL);
+    RUN(run_from_lace);
 
     // The lace_startup command also exits Lace after _main is completed.
 
     printf("Done\n");
-
-    return 0;
-    (void)argc; // unused variable
-    (void)argv; // unused variable
 }
