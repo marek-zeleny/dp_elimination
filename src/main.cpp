@@ -1,10 +1,14 @@
 #include <cassert>
 #include <cstdio>
+#include <vector>
 
 // only needed for sylvan_stats_report(), otherwise everything should be defined
 // in sylvan_obj.hpp
 #include <sylvan.h>
 #include <sylvan_obj.hpp>
+
+#include "data_structures/sylvan_zdd_cnf.hpp"
+#include "algorithms/dp_elimination.hpp"
 
 using namespace sylvan;
 
@@ -68,6 +72,82 @@ VOID_TASK_0(simple_bdd_test)
     assert(one       == Bdd::bddCube(variables, std::vector<uint8_t>({2, 2})));
 }
 
+VOID_TASK_0(zdd_cnf_test)
+{
+    using namespace dp;
+    std::vector<std::vector<int32_t>> clauses {
+        {1, 2, 3},
+        {2, 4},
+        {1, 3, 4},
+        {-5},
+        {2, 5, 6},
+        //{},
+    };
+    SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+    cnf.draw_to_file("zdd.gv");
+    cnf.print_clauses();
+    std::cout << std::endl;
+    SylvanZddCnf cnf_2 = cnf.filter_literal_in(2);
+    cnf_2.print_clauses();
+    std::cout << std::endl;
+    SylvanZddCnf cnf_no_2 = cnf.filter_literal_out(2);
+    cnf_no_2.print_clauses();
+}
+
+VOID_TASK_0(zdd_experiments)
+{
+    using namespace dp;
+    std::vector<std::vector<int32_t>> clauses {
+        {1, 2, 3},
+        {2, 4},
+        {1, 3, 4},
+        {2, 5, 6},
+    };
+    std::vector<uint32_t> vars {1, 2, 3, 4, 5, 6};
+    SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+    ZDD domain = zdd_set_from_array(vars.data(), vars.size());
+    cnf.print_clauses();
+    MTBDD bdd = zdd_to_mtbdd(cnf.get_zdd(), domain);
+    FILE *file = fopen("mtbdd.gv", "w");
+    mtbdd_fprintdot(file, bdd);
+    fclose(file);
+}
+
+VOID_TASK_0(dp_elimination)
+{
+    using namespace dp;
+    std::vector<std::vector<int32_t>> clauses {
+        {1, 2, 3},
+        {2, 4},
+        {1, 3, 4},
+        {2, 5, 6},
+        {-4},
+    };
+    SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+    cnf.print_clauses();
+    std::cout << std::endl;
+    SylvanZddCnf cnf_4 = eliminate(cnf, 4);
+    cnf_4.print_clauses();
+    std::cout << std::endl;
+    bool result = is_sat(cnf);
+    std::cout << result << std::endl << std::endl;
+
+    std::vector<std::vector<int32_t>> clauses2 {
+        {1, 2, 3},
+        {-2, 4},
+        {-1, 3, 4},
+        {2, 5, 6},
+        {-4},
+        {-3},
+    };
+    SylvanZddCnf cnf2 = SylvanZddCnf::from_vector(clauses2);
+    cnf2.print_clauses();
+    std::cout << std::endl;
+    bool result2 = is_sat(cnf2);
+    std::cout << result2 << std::endl;
+    cnf2.draw_to_file("zdd.gv");
+}
+
 VOID_TASK_0(run_from_lace)
 {
     // Initialize Sylvan
@@ -87,12 +167,17 @@ VOID_TASK_0(run_from_lace)
     // Initialize the BDD module with granularity 1 (cache every operation)
     // A higher granularity (e.g. 6) often results in better performance in practice
     Sylvan::initBdd();
+    Sylvan::initMtbdd();
+    sylvan_init_zdd();
 
     // Now we can do some simple stuff using the C++ objects.
-    CALL(simple_bdd_test);
+    //CALL(simple_bdd_test);
+    //CALL(zdd_cnf_test);
+    //CALL(zdd_experiments);
+    CALL(dp_elimination);
 
     // Report statistics (if SYLVAN_STATS is 1 in the configuration)
-    sylvan_stats_report(stdout);
+    //sylvan_stats_report(stdout);
 
     // And quit, freeing memory
     Sylvan::quitPackage();
@@ -109,6 +194,4 @@ int main()
     RUN(run_from_lace);
 
     // The lace_startup command also exits Lace after _main is completed.
-
-    printf("Done\n");
 }
