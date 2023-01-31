@@ -4,7 +4,8 @@
 #include <cstdio>
 #include <cassert>
 #include <sylvan.h>
-#include "sylvan_zdd_cnf.hpp"
+
+#include "io/cnf_reader.hpp"
 
 namespace dp {
 
@@ -55,6 +56,23 @@ SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
     for (auto &&c : clauses) {
         ZDD clause = clause_from_vector(c);
         zdd = zdd_or(zdd, clause);
+    }
+    return SylvanZddCnf(zdd);
+}
+
+SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
+    ZDD zdd = zdd_false;
+    CnfReader::AddClauseFunction func = [&](const CnfReader::Clause &c) {
+        ZDD clause = clause_from_vector(c);
+        zdd = zdd_or(zdd, clause);
+    };
+    try {
+        CnfReader::read_from_file(file_name, func);
+    } catch (const CnfReader::warning &w) {
+        std::cerr << w.what() << std::endl;
+    } catch (const CnfReader::failure &f) {
+        std::cerr << f.what() << std::endl;
+        return SylvanZddCnf();
     }
     return SylvanZddCnf(zdd);
 }

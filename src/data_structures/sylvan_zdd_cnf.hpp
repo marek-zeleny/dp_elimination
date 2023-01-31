@@ -33,6 +33,7 @@ public:
     static Heuristic get_new_heuristic();
 
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
+    static SylvanZddCnf from_file(const std::string &file_name);
     static SylvanZddCnf unify(const SylvanZddCnf &f, const SylvanZddCnf &g);
 
     bool is_empty() const;

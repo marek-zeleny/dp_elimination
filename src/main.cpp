@@ -7,6 +7,7 @@
 #include <sylvan.h>
 #include <sylvan_obj.hpp>
 
+#include "args_parser.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
 
@@ -103,14 +104,25 @@ VOID_TASK_0(zdd_experiments)
         {1, 3, 4},
         {2, 5, 6},
     };
-    std::vector<uint32_t> vars {1, 2, 3, 4, 5, 6};
     SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
-    ZDD domain = zdd_set_from_array(vars.data(), vars.size());
     cnf.print_clauses();
-    MTBDD bdd = zdd_to_mtbdd(cnf.get_zdd(), domain);
-    FILE *file = fopen("mtbdd.gv", "w");
-    mtbdd_fprintdot(file, bdd);
-    fclose(file);
+    std::cout << std::endl;
+
+    std::vector<uint32_t> vars {2, 3, 4, 5, 6};
+    ZDD proj = zdd_project(cnf.get_zdd(), zdd_set_from_array(vars.data(), vars.size()));
+    SylvanZddCnf cnf2(proj);
+    cnf2.print_clauses();
+    std::cout << std::endl;
+
+    std::vector<uint32_t> vars2 {1, 2, 3};
+    ZDD ite = zdd_ite(
+        SylvanZddCnf::from_vector({{1, 2}, {1, 2, 3}}).get_zdd(),
+        SylvanZddCnf::from_vector({{1, 2, 3}}).get_zdd(),
+        SylvanZddCnf::from_vector({{1, 2}, {3}}).get_zdd(),
+        zdd_set_from_array(vars2.data(), vars2.size()));
+    SylvanZddCnf cnf3(ite);
+    cnf3.print_clauses();
+    std::cout << std::endl;
 }
 
 VOID_TASK_0(dp_elimination)
@@ -148,7 +160,15 @@ VOID_TASK_0(dp_elimination)
     cnf2.draw_to_file("zdd.gv");
 }
 
-VOID_TASK_0(run_from_lace)
+VOID_TASK_1(impl, dp::ArgsParser *, args)
+{
+    using namespace dp;
+    SylvanZddCnf cnf = SylvanZddCnf::from_file(args->get_input_cnf_file_name());
+    bool result = is_sat(cnf);
+    std::cout << std::boolalpha << result << std::endl;
+}
+
+VOID_TASK_1(run_from_lace, dp::ArgsParser *, args)
 {
     // Initialize Sylvan
     // With starting size of the nodes table 1 << 21, and maximum size 1 << 27.
@@ -167,14 +187,14 @@ VOID_TASK_0(run_from_lace)
     // Initialize the BDD module with granularity 1 (cache every operation)
     // A higher granularity (e.g. 6) often results in better performance in practice
     Sylvan::initBdd();
-    Sylvan::initMtbdd();
     sylvan_init_zdd();
 
     // Now we can do some simple stuff using the C++ objects.
     //CALL(simple_bdd_test);
     //CALL(zdd_cnf_test);
     //CALL(zdd_experiments);
-    CALL(dp_elimination);
+    //CALL(dp_elimination);
+    CALL(impl, args);
 
     // Report statistics (if SYLVAN_STATS is 1 in the configuration)
     //sylvan_stats_report(stdout);
@@ -183,15 +203,21 @@ VOID_TASK_0(run_from_lace)
     Sylvan::quitPackage();
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // parse args
+    dp::ArgsParser args = dp::ArgsParser::parse(argc, argv);
+    if (!args.success()) {
+        return 1;
+    }
+
     // Initialize Lace
     int n_workers = 0; // automatically detect number of workers
     size_t deque_size = 0; // default value for the size of task deques for the workers
 
     lace_start(n_workers, deque_size);
 
-    RUN(run_from_lace);
+    RUN(run_from_lace, &args);
 
     // The lace_startup command also exits Lace after _main is completed.
 }
