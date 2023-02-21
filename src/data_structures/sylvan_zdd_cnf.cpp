@@ -1,11 +1,14 @@
 #include "data_structures/sylvan_zdd_cnf.hpp"
 
 #include <algorithm>
+#include <tuple>
 #include <cstdio>
 #include <cassert>
 #include <sylvan.h>
 
+#include "utils.hpp"
 #include "io/cnf_reader.hpp"
+#include "data_structures/lru_cache.hpp"
 
 namespace dp {
 
@@ -77,11 +80,6 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     return SylvanZddCnf(zdd);
 }
 
-SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &f, const SylvanZddCnf &g) {
-    ZDD zdd = zdd_or(f.m_zdd, g.m_zdd);
-    return SylvanZddCnf(zdd);
-}
-
 bool SylvanZddCnf::is_empty() const {
     return m_zdd == zdd_false;
 }
@@ -90,8 +88,92 @@ bool SylvanZddCnf::contains_empty_clause() const {
     return (m_zdd & zdd_complement) != 0;
 }
 
+SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
+    // TODO
+    return SylvanZddCnf();
+}
+
+SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
+    // TODO
+    return SylvanZddCnf();
+}
+
 SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {
-    return unify(*this, other);
+    ZDD zdd = zdd_or(m_zdd, other.m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
+SylvanZddCnf SylvanZddCnf::intersect(const SylvanZddCnf &other) const {
+    ZDD zdd = zdd_and(m_zdd, other.m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
+SylvanZddCnf SylvanZddCnf::subtract(const SylvanZddCnf &other) const {
+    ZDD zdd = zdd_diff(m_zdd, other.m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
+namespace {
+
+#define MULT_CACHE_SIZE 4
+
+using MultCacheEntry = std::tuple<ZDD, ZDD>;
+using MultCache = LruCache<MultCacheEntry, ZDD, MULT_CACHE_SIZE, zdd_pair_hash>;
+
+struct zdd_pair_hash {
+    size_t operator()(const MultCacheEntry &pair) const {
+        size_t seed = 0;
+        hash_combine(seed, std::get<0>(pair));
+        hash_combine(seed, std::get<1>(pair));
+        return seed;
+    }
+};
+
+ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
+    Var p_var = zdd_getvar(p);
+    Var q_var = zdd_getvar(q);
+    if (p_var > q_var) {
+        return multiply_impl(q, p, cache);
+    }
+    if (q == zdd_false) {
+        return zdd_false;
+    }
+    if (q == zdd_true) {
+        return p;
+    }
+    ZDD result;
+    std::tuple<ZDD, ZDD> cache_key = std::make_tuple(p, q);
+    if (cache.try_get(cache_key, result)) {
+        return result;
+    }
+    ZDD x = zdd_ithvar(p_var);
+    ZDD p0 = zdd_getlow(p);
+    ZDD p1 = zdd_gethigh(p);
+    ZDD q0;
+    ZDD q1;
+    if (q_var == p_var) {
+        q0 = zdd_getlow(q);
+        q1 = zdd_gethigh(q);
+    } else {
+        q0 = q;
+        q1 = zdd_false;
+    }
+    ZDD p0q0 = multiply_impl(p0, q0, cache);
+    ZDD p0q1 = multiply_impl(p0, q1, cache);
+    ZDD p1q0 = multiply_impl(p1, q0, cache);
+    ZDD p1q1 = multiply_impl(p1, q1, cache);
+    ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
+    result = zdd_or(multiply_impl(x, tmp, cache), p0q0);
+    cache.add(cache_key, result);
+    return result;
+}
+
+} // namespace
+
+SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
+    LruCache<std::tuple<ZDD, ZDD>, ZDD, MULT_CACHE_SIZE, zdd_pair_hash> cache;
+    ZDD zdd = multiply_impl(m_zdd, other.m_zdd, cache);
+    return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::filter_literal_in(Literal l) const {

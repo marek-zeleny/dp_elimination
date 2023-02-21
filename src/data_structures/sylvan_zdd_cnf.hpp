@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <tuple>
 #include <iostream>
 #include <functional>
 #include <cstdio>
@@ -34,11 +35,15 @@ public:
 
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
     static SylvanZddCnf from_file(const std::string &file_name);
-    static SylvanZddCnf unify(const SylvanZddCnf &f, const SylvanZddCnf &g);
 
     bool is_empty() const;
     bool contains_empty_clause() const;
+    SylvanZddCnf subset0(Literal l) const;
+    SylvanZddCnf subset1(Literal l) const;
     SylvanZddCnf unify(const SylvanZddCnf &other) const;
+    SylvanZddCnf intersect(const SylvanZddCnf &other) const;
+    SylvanZddCnf subtract(const SylvanZddCnf &other) const;
+    SylvanZddCnf multiply(const SylvanZddCnf &other) const;
     SylvanZddCnf filter_literal_in(Literal l) const;
     SylvanZddCnf filter_literal_out(Literal l) const;
     SylvanZddCnf resolve_all_pairs(const SylvanZddCnf &other, Var var) const;
