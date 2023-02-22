@@ -107,22 +107,9 @@ VOID_TASK_0(zdd_experiments)
     SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
     cnf.print_clauses();
     std::cout << std::endl;
-
-    std::vector<uint32_t> vars {2, 3, 4, 5, 6};
-    ZDD proj = zdd_project(cnf.get_zdd(), zdd_set_from_array(vars.data(), vars.size()));
-    SylvanZddCnf cnf2(proj);
+    ZDD zdd = zdd_eval(cnf.get_zdd(), 2, 0);
+    SylvanZddCnf cnf2 = SylvanZddCnf(zdd);
     cnf2.print_clauses();
-    std::cout << std::endl;
-
-    std::vector<uint32_t> vars2 {1, 2, 3};
-    ZDD ite = zdd_ite(
-        SylvanZddCnf::from_vector({{1, 2}, {1, 2, 3}}).get_zdd(),
-        SylvanZddCnf::from_vector({{1, 2, 3}}).get_zdd(),
-        SylvanZddCnf::from_vector({{1, 2}, {3}}).get_zdd(),
-        zdd_set_from_array(vars2.data(), vars2.size()));
-    SylvanZddCnf cnf3(ite);
-    cnf3.print_clauses();
-    std::cout << std::endl;
 }
 
 VOID_TASK_0(dp_elimination)
@@ -160,15 +147,7 @@ VOID_TASK_0(dp_elimination)
     cnf2.draw_to_file("zdd.gv");
 }
 
-VOID_TASK_1(impl, dp::ArgsParser *, args)
-{
-    using namespace dp;
-    SylvanZddCnf cnf = SylvanZddCnf::from_file(args->get_input_cnf_file_name());
-    bool result = is_sat(cnf);
-    std::cout << std::boolalpha << result << std::endl;
-}
-
-VOID_TASK_1(run_from_lace, dp::ArgsParser *, args)
+VOID_TASK_0(run_from_lace)
 {
     // Initialize Sylvan
     // With starting size of the nodes table 1 << 21, and maximum size 1 << 27.
@@ -192,9 +171,8 @@ VOID_TASK_1(run_from_lace, dp::ArgsParser *, args)
     // Now we can do some simple stuff using the C++ objects.
     //CALL(simple_bdd_test);
     //CALL(zdd_cnf_test);
-    //CALL(zdd_experiments);
+    CALL(zdd_experiments);
     //CALL(dp_elimination);
-    CALL(impl, args);
 
     // Report statistics (if SYLVAN_STATS is 1 in the configuration)
     //sylvan_stats_report(stdout);
@@ -203,21 +181,37 @@ VOID_TASK_1(run_from_lace, dp::ArgsParser *, args)
     Sylvan::quitPackage();
 }
 
-int main(int argc, char *argv[])
+TASK_2(int, impl, int, argc, char**, argv)
 {
+    using namespace dp;
     // parse args
-    dp::ArgsParser args = dp::ArgsParser::parse(argc, argv);
+    ArgsParser args = ArgsParser::parse(argc, argv);
     if (!args.success()) {
         return 1;
     }
+    // initialize sylvan
+    Sylvan::initPackage(1LL<<22, 1LL<<26, 1LL<<22, 1LL<<26);
+    sylvan_init_zdd();
+    // load input file
+    SylvanZddCnf cnf = SylvanZddCnf::from_file(args.get_input_cnf_file_name());
+    // perform the algorithm
+    bool result = is_sat(cnf);
+    std::cout << std::boolalpha << result << std::endl;
+    // quit sylvan, free memory
+    Sylvan::quitPackage();
+    return 0;
+}
 
+int main(int argc, char *argv[])
+{
     // Initialize Lace
     int n_workers = 0; // automatically detect number of workers
     size_t deque_size = 0; // default value for the size of task deques for the workers
 
     lace_start(n_workers, deque_size);
 
-    RUN(run_from_lace, &args);
+    RUN(run_from_lace);
+    //return RUN(impl, argc, argv);
 
     // The lace_startup command also exits Lace after _main is completed.
 }
