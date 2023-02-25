@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <tuple>
+#include <cstdlib>
 #include <cstdio>
 #include <cassert>
 #include <sylvan.h>
@@ -31,23 +32,6 @@ SylvanZddCnf &SylvanZddCnf::operator=(const SylvanZddCnf &other) {
 
 SylvanZddCnf::~SylvanZddCnf() {
     zdd_unprotect(&m_zdd);
-}
-
-SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
-    assert (l != 0);
-    if (l > 0) {
-        return (Var)l;
-    } else {
-        return (Var)-l + NEG_OFFSET;
-    }
-}
-
-SylvanZddCnf::Literal SylvanZddCnf::var_to_literal(Var v) {
-    if (v < NEG_OFFSET) {
-        return (Literal)v;
-    } else {
-        return -(Literal)(v - NEG_OFFSET);
-    }
 }
 
 SylvanZddCnf::Heuristic SylvanZddCnf::get_new_heuristic() {
@@ -238,9 +222,9 @@ SylvanZddCnf SylvanZddCnf::filter_literal_out(Literal l) const {
     return from_vector(clauses);
 }
 
-SylvanZddCnf SylvanZddCnf::resolve_all_pairs(const SylvanZddCnf &other, Var var) const {
-    Literal l = var_to_literal(var);
+SylvanZddCnf SylvanZddCnf::resolve_all_pairs(const SylvanZddCnf &other, Literal l) const {
     Literal not_l = -l;
+    Var var = literal_to_var(l);
     Var not_var = literal_to_var(not_l);
     ZDD zdd = zdd_false;
     ClauseFunction outer_func = [&](const SylvanZddCnf &, const Clause &clause1) {
@@ -316,6 +300,24 @@ const ZDD SylvanZddCnf::get_zdd() const {
     return m_zdd;
 }
 
+SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
+    assert (l != 0);
+    if (l > 0) {
+        return 2 * (Var)l;
+    } else {
+        return 2 * (Var)-l + 1;
+    }
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::var_to_literal(Var v) {
+    auto [q, r] = std::div((Literal)v, 2);
+    if (r == 0) {
+        return q;
+    } else {
+        return -q;
+    }
+}
+
 ZDD SylvanZddCnf::set_from_vector(const Clause &clause) {
     std::vector<Var> vars;
     for (auto &&l : clause) {
@@ -333,10 +335,9 @@ ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
     return zdd_clause;
 }
 
-SylvanZddCnf::Var SylvanZddCnf::SimpleHeuristic::get_next_variable(const SylvanZddCnf &cnf) {
+SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
     Var v = zdd_getvar(cnf.get_zdd());
-    Literal l = var_to_literal(v);
-    return literal_to_var(std::abs(l));
+    return var_to_literal(v);
 }
 
 } // namespace dp

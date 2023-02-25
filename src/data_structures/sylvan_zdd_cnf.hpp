@@ -17,7 +17,6 @@ private:
     class SimpleHeuristic;
 
 public:
-    using Var = uint32_t;
     using Literal = int32_t;
     using Clause = std::vector<Literal>;
     using ClauseFunction = std::function<bool(const SylvanZddCnf &, const Clause &)>;
@@ -29,8 +28,6 @@ public:
     SylvanZddCnf &operator=(const SylvanZddCnf &other);
     ~SylvanZddCnf();
 
-    static Var literal_to_var(Literal l);
-    static Literal var_to_literal(Var v);
     static Heuristic get_new_heuristic();
 
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
@@ -46,7 +43,7 @@ public:
     SylvanZddCnf multiply(const SylvanZddCnf &other) const;
     SylvanZddCnf filter_literal_in(Literal l) const;
     SylvanZddCnf filter_literal_out(Literal l) const;
-    SylvanZddCnf resolve_all_pairs(const SylvanZddCnf &other, Var var) const;
+    SylvanZddCnf resolve_all_pairs(const SylvanZddCnf &other, Literal l) const;
     void for_all_clauses(ClauseFunction &func) const;
 
     void print_clauses() const;
@@ -57,18 +54,21 @@ public:
     const ZDD get_zdd() const;
 
 private:
+    using Var = uint32_t;
+
     //SylvanZddCnf(ZDD &zdd);
 
+    static Var literal_to_var(Literal l);
+    static Literal var_to_literal(Var v);
     static ZDD set_from_vector(const Clause &clause);
     static ZDD clause_from_vector(const Clause &clause);
     bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack) const;
 
     ZDD m_zdd;
-    static constexpr Var NEG_OFFSET = 100000; // TODO: make a less arbitrary choice
 
     class SimpleHeuristic {
     public:
-        SylvanZddCnf::Var get_next_variable(const SylvanZddCnf &cnf);
+        SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);
     };
 };
 

@@ -5,8 +5,7 @@
 namespace dp {
 
 template<typename Set>
-Set eliminate(const Set &set, const typename Set::Var &v) {
-    typename Set::Literal l = Set::var_to_literal(v);
+Set eliminate(const Set &set, const typename Set::Literal &l) {
     /*/
     Set with_l = set.filter_literal_in(l);
     Set with_not_l = set.filter_literal_in(-l);
@@ -37,9 +36,9 @@ bool is_sat(Set set) {
         } else if (set.contains_empty_clause()) {
             return false;
         }
-        typename Set::Var v = heuristic.get_next_variable(set);
-        std::cout << "eliminating variable " << v << std::endl;
-        set = eliminate(set, v);
+        typename Set::Literal l = heuristic.get_next_literal(set);
+        std::cout << "eliminating literal " << l << std::endl;
+        set = eliminate(set, l);
     }
 }
 
