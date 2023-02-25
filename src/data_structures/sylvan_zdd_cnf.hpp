@@ -41,9 +41,6 @@ public:
     SylvanZddCnf intersect(const SylvanZddCnf &other) const;
     SylvanZddCnf subtract(const SylvanZddCnf &other) const;
     SylvanZddCnf multiply(const SylvanZddCnf &other) const;
-    SylvanZddCnf filter_literal_in(Literal l) const;
-    SylvanZddCnf filter_literal_out(Literal l) const;
-    SylvanZddCnf resolve_all_pairs(const SylvanZddCnf &other, Literal l) const;
     void for_all_clauses(ClauseFunction &func) const;
 
     void print_clauses() const;

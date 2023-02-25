@@ -88,10 +88,10 @@ VOID_TASK_0(zdd_cnf_test)
     cnf.draw_to_file("zdd.gv");
     cnf.print_clauses();
     std::cout << std::endl;
-    SylvanZddCnf cnf_2 = cnf.filter_literal_in(2);
+    SylvanZddCnf cnf_2 = cnf.subset1(2);
     cnf_2.print_clauses();
     std::cout << std::endl;
-    SylvanZddCnf cnf_no_2 = cnf.filter_literal_out(2);
+    SylvanZddCnf cnf_no_2 = cnf.subset0(2);
     cnf_no_2.print_clauses();
 }
 

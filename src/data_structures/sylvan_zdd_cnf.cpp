@@ -195,58 +195,6 @@ SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
     return SylvanZddCnf(zdd);
 }
 
-SylvanZddCnf SylvanZddCnf::filter_literal_in(Literal l) const {
-    //ZDD var = zdd_ithvar(literal_to_var(l));
-    //ZDD zdd = zdd_exists(m_zdd, var);
-    //return SylvanZddCnf(zdd);
-    std::vector<Clause> clauses;
-    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
-        if (std::find(clause.cbegin(), clause.cend(), l) != clause.cend()) {
-            clauses.push_back(clause);
-        }
-        return true;
-    };
-    for_all_clauses(func);
-    return from_vector(clauses);
-}
-
-SylvanZddCnf SylvanZddCnf::filter_literal_out(Literal l) const {
-    std::vector<Clause> clauses;
-    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
-        if (std::find(clause.cbegin(), clause.cend(), l) == clause.cend()) {
-            clauses.push_back(clause);
-        }
-        return true;
-    };
-    for_all_clauses(func);
-    return from_vector(clauses);
-}
-
-SylvanZddCnf SylvanZddCnf::resolve_all_pairs(const SylvanZddCnf &other, Literal l) const {
-    Literal not_l = -l;
-    Var var = literal_to_var(l);
-    Var not_var = literal_to_var(not_l);
-    ZDD zdd = zdd_false;
-    ClauseFunction outer_func = [&](const SylvanZddCnf &, const Clause &clause1) {
-        ClauseFunction inner_func = [&](const SylvanZddCnf &, const Clause &clause2) {
-            ZDD set1 = set_from_vector(clause1);
-            ZDD set2 = set_from_vector(clause2);
-            ZDD literals1 = zdd_set_remove(zdd_set_remove(set1, var), not_var);
-            ZDD literals2 = zdd_set_remove(zdd_set_remove(set2, var), not_var);
-            ZDD domain = zdd_set_union(literals1, literals2);
-            size_t domain_size = zdd_set_count(domain);
-            std::vector<uint8_t> signs(domain_size, 1);
-            ZDD clause = zdd_cube(domain, signs.data(), zdd_true);
-            zdd = zdd_or(zdd, clause);
-            return true;
-        };
-        other.for_all_clauses(inner_func);
-        return true;
-    };
-    for_all_clauses(outer_func);
-    return SylvanZddCnf(zdd);
-}
-
 void SylvanZddCnf::for_all_clauses(ClauseFunction &func) const {
     Clause stack;
     for_all_clauses_impl(func, m_zdd, stack);
