@@ -89,13 +89,37 @@ bool SylvanZddCnf::contains_empty_clause() const {
 }
 
 SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
-    // TODO
-    return SylvanZddCnf();
+    // TODO: efficient implementation
+    std::vector<Clause> clauses;
+    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
+        auto it = std::find(clause.cbegin(), clause.cend(), l);
+        if (it == clause.cend()) {
+            clauses.push_back(clause);
+        }
+        return true;
+    };
+    for_all_clauses(func);
+    return from_vector(clauses);
 }
 
 SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
-    // TODO
-    return SylvanZddCnf();
+    // TODO: efficient implementation
+    std::vector<Clause> clauses;
+    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
+        auto it = std::find(clause.cbegin(), clause.cend(), l);
+        if (it != clause.cend()) {
+            Clause without_l;
+            for (auto &&x : clause) {
+                if (x != l) {
+                    without_l.push_back(x);
+                }
+            }
+            clauses.push_back(without_l);
+        }
+        return true;
+    };
+    for_all_clauses(func);
+    return from_vector(clauses);
 }
 
 SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {
@@ -118,7 +142,6 @@ namespace {
 #define MULT_CACHE_SIZE 4
 
 using MultCacheEntry = std::tuple<ZDD, ZDD>;
-using MultCache = LruCache<MultCacheEntry, ZDD, MULT_CACHE_SIZE, zdd_pair_hash>;
 
 struct zdd_pair_hash {
     size_t operator()(const MultCacheEntry &pair) const {
@@ -129,11 +152,15 @@ struct zdd_pair_hash {
     }
 };
 
+using MultCache = LruCache<MultCacheEntry, ZDD, MULT_CACHE_SIZE, zdd_pair_hash>;
+
 ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
-    Var p_var = zdd_getvar(p);
-    Var q_var = zdd_getvar(q);
-    if (p_var > q_var) {
-        return multiply_impl(q, p, cache);
+    // resolve ground cases
+    if (p == zdd_false) {
+        return zdd_false;
+    }
+    if (p == zdd_true) {
+        return q;
     }
     if (q == zdd_false) {
         return zdd_false;
@@ -141,12 +168,20 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
     if (q == zdd_true) {
         return p;
     }
+    // break symmetry
+    uint32_t p_var = zdd_getvar(p);
+    uint32_t q_var = zdd_getvar(q);
+    if (p_var > q_var) {
+        return multiply_impl(q, p, cache);
+    }
+    // look into the cache
     ZDD result;
     std::tuple<ZDD, ZDD> cache_key = std::make_tuple(p, q);
     if (cache.try_get(cache_key, result)) {
         return result;
     }
-    ZDD x = zdd_ithvar(p_var);
+    // general case (recursion)
+    uint32_t x = p_var;
     ZDD p0 = zdd_getlow(p);
     ZDD p1 = zdd_gethigh(p);
     ZDD q0;
@@ -163,7 +198,7 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
     ZDD p1q0 = multiply_impl(p1, q0, cache);
     ZDD p1q1 = multiply_impl(p1, q1, cache);
     ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
-    result = zdd_or(multiply_impl(x, tmp, cache), p0q0);
+    result = zdd_makenode(x, p0q0, tmp);
     cache.add(cache_key, result);
     return result;
 }

@@ -7,12 +7,21 @@ namespace dp {
 template<typename Set>
 Set eliminate(const Set &set, const typename Set::Var &v) {
     typename Set::Literal l = Set::var_to_literal(v);
+    /*/
     Set with_l = set.filter_literal_in(l);
     Set with_not_l = set.filter_literal_in(-l);
     Set without_l = set.filter_literal_out(l).filter_literal_out(-l);
 
     Set resolvents = with_l.resolve_all_pairs(with_not_l, v);
     Set result = resolvents.unify(without_l);
+    /*/
+    Set with_l = set.subset1(l);
+    Set with_not_l = set.subset1(-l);
+    Set without_l = set.subset0(l).subset0(-l);
+
+    Set resolvents = with_l.multiply(with_not_l);
+    Set result = resolvents.unify(without_l);
+    /**/
     return result;
 }
 

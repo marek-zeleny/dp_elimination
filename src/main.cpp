@@ -210,8 +210,8 @@ int main(int argc, char *argv[])
 
     lace_start(n_workers, deque_size);
 
-    RUN(run_from_lace);
-    //return RUN(impl, argc, argv);
+    //RUN(run_from_lace);
+    return RUN(impl, argc, argv);
 
     // The lace_startup command also exits Lace after _main is completed.
 }
