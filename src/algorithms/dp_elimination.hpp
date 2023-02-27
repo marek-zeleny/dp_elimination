@@ -24,7 +24,7 @@ bool is_sat(Set set) {
         set.print_clauses();
         if (set.is_empty()) {
             return true;
-        } else if (set.contains_empty_clause()) {
+        } else if (set.contains_empty()) {
             return false;
         }
         typename Set::Literal l = heuristic.get_next_literal(set);

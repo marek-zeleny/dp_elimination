@@ -19,7 +19,7 @@ private:
 public:
     using Literal = int32_t;
     using Clause = std::vector<Literal>;
-    using ClauseFunction = std::function<bool(const SylvanZddCnf &, const Clause &)>;
+    using ClauseFunction = std::function<bool(const Clause &)>;
     using Heuristic = SimpleHeuristic;
 
     SylvanZddCnf();
@@ -34,7 +34,9 @@ public:
     static SylvanZddCnf from_file(const std::string &file_name);
 
     bool is_empty() const;
-    bool contains_empty_clause() const;
+    bool contains_empty() const;
+    Literal get_smallest_variable() const;
+    Literal get_largest_variable() const;
     SylvanZddCnf subset0(Literal l) const;
     SylvanZddCnf subset1(Literal l) const;
     SylvanZddCnf unify(const SylvanZddCnf &other) const;
@@ -45,8 +47,9 @@ public:
 
     void print_clauses() const;
     void print_clauses(std::ostream &output) const;
-    void draw_to_file(FILE *file) const;
-    void draw_to_file(const std::string &file_name) const;
+    bool draw_to_file(FILE *file) const;
+    bool draw_to_file(const std::string &file_name) const;
+    bool write_dimacs_to_file(const std::string &file_name) const;
 
     const ZDD get_zdd() const;
 

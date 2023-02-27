@@ -2,13 +2,16 @@
 
 #include <algorithm>
 #include <tuple>
+#include <iostream>
 #include <cstdlib>
 #include <cstdio>
+#include <cerrno>
 #include <cassert>
 #include <sylvan.h>
 
 #include "utils.hpp"
 #include "io/cnf_reader.hpp"
+#include "io/cnf_writer.hpp"
 #include "data_structures/lru_cache.hpp"
 
 namespace dp {
@@ -55,8 +58,6 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     };
     try {
         CnfReader::read_from_file(file_name, func);
-    } catch (const CnfReader::warning &w) {
-        std::cerr << w.what() << std::endl;
     } catch (const CnfReader::failure &f) {
         std::cerr << f.what() << std::endl;
         return SylvanZddCnf();
@@ -68,14 +69,44 @@ bool SylvanZddCnf::is_empty() const {
     return m_zdd == zdd_false;
 }
 
-bool SylvanZddCnf::contains_empty_clause() const {
+bool SylvanZddCnf::contains_empty() const {
     return (m_zdd & zdd_complement) != 0;
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::get_smallest_variable() const {
+    if (m_zdd == zdd_false || m_zdd == zdd_true) {
+        return 0;
+    }
+    Var v = zdd_getvar(m_zdd);
+    return std::abs(var_to_literal(v));
+}
+
+namespace {
+
+uint32_t get_largest_variable_impl(const ZDD &zdd) {
+    if (zdd == zdd_true || zdd == zdd_false) {
+        return 0;
+    }
+    uint32_t var = zdd_getvar(zdd);
+    uint32_t low = get_largest_variable_impl(zdd_getlow(zdd));
+    uint32_t high = get_largest_variable_impl(zdd_gethigh(zdd));
+    return std::max({var, low, high});
+}
+
+} // namespace
+
+SylvanZddCnf::Literal SylvanZddCnf::get_largest_variable() const {
+    if (zdd == zdd_true || zdd == zdd_false) {
+        return 0;
+    }
+    Var v = get_largest_variable_impl(m_zdd);
+    return std::abs(var_to_literal(v));
 }
 
 SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
     // TODO: efficient implementation
     std::vector<Clause> clauses;
-    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
+    ClauseFunction func = [&](const Clause &clause) {
         auto it = std::find(clause.cbegin(), clause.cend(), l);
         if (it == clause.cend()) {
             clauses.push_back(clause);
@@ -89,7 +120,7 @@ SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
 SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
     // TODO: efficient implementation
     std::vector<Clause> clauses;
-    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
+    ClauseFunction func = [&](const Clause &clause) {
         auto it = std::find(clause.cbegin(), clause.cend(), l);
         if (it != clause.cend()) {
             Clause without_l;
@@ -202,7 +233,7 @@ void SylvanZddCnf::for_all_clauses(ClauseFunction &func) const {
 
 bool SylvanZddCnf::for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack) const {
     if (node == zdd_true) {
-        return func(*this, stack);
+        return func(stack);
     } else if (node == zdd_false) {
         return true;
     }
@@ -223,7 +254,7 @@ void SylvanZddCnf::print_clauses() const {
 }
 
 void SylvanZddCnf::print_clauses(std::ostream &output) const {
-    ClauseFunction func = [&](const SylvanZddCnf &, const Clause &clause) {
+    ClauseFunction func = [&](const Clause &clause) {
         output << "{";
         for (auto &&l : clause) {
             output << " " << l << ",";
@@ -234,14 +265,45 @@ void SylvanZddCnf::print_clauses(std::ostream &output) const {
     for_all_clauses(func);
 }
 
-void SylvanZddCnf::draw_to_file(FILE *file) const {
+bool SylvanZddCnf::draw_to_file(FILE *file) const {
+    // Not ideal error handling, but zdd_fprintdot() returns void...
+    int prev_errno = errno;
     zdd_fprintdot(file, m_zdd);
+    if (errno != prev_errno) {
+        std::cerr << "Error while drawing sylvan ZDD to file: " << std::strerror(errno) << std::endl;
+        return false;
+    }
 }
 
-void SylvanZddCnf::draw_to_file(const std::string &file_name) const {
+bool SylvanZddCnf::draw_to_file(const std::string &file_name) const {
     FILE *file = fopen(file_name.c_str(), "w");
-    draw_to_file(file);
-    fclose(file);
+    if (file == nullptr) {
+        std::cerr << "Error while drawing sylvan ZDD to file: failed to open the output file" << std::endl;
+        return false;
+    }
+    bool retval = draw_to_file(file);
+    if (fclose(file) != 0) {
+        std::cerr << "Error while drawing sylvan ZDD to file: failed to close the output file" << std::endl;
+        return false;
+    }
+    return retval;
+}
+
+bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
+    size_t num_clauses = zdd_satcount(m_zdd);
+    size_t max_var = (size_t)get_largest_variable();
+    try {
+        CnfWriter writer(file_name, num_clauses, max_var);
+        ClauseFunction func = [&](const Clause &clause) {
+            writer.write_clause(clause);
+        };
+        for_all_clauses(func);
+        writer.finish();
+    } catch (const CnfWriter::failure &f) {
+        std::cerr << f.what();
+        return false;
+    }
+    return true;
 }
 
 const ZDD SylvanZddCnf::get_zdd() const {
