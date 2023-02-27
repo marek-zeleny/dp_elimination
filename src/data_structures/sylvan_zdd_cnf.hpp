@@ -47,7 +47,7 @@ public:
 
     void print_clauses() const;
     void print_clauses(std::ostream &output) const;
-    bool draw_to_file(FILE *file) const;
+    bool draw_to_file(std::FILE *file) const;
     bool draw_to_file(const std::string &file_name) const;
     bool write_dimacs_to_file(const std::string &file_name) const;
 

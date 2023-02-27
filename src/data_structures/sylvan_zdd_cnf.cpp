@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cerrno>
+#include <cstring>
 #include <cassert>
 #include <sylvan.h>
 
@@ -96,7 +97,7 @@ uint32_t get_largest_variable_impl(const ZDD &zdd) {
 } // namespace
 
 SylvanZddCnf::Literal SylvanZddCnf::get_largest_variable() const {
-    if (zdd == zdd_true || zdd == zdd_false) {
+    if (m_zdd == zdd_true || m_zdd == zdd_false) {
         return 0;
     }
     Var v = get_largest_variable_impl(m_zdd);
@@ -265,7 +266,7 @@ void SylvanZddCnf::print_clauses(std::ostream &output) const {
     for_all_clauses(func);
 }
 
-bool SylvanZddCnf::draw_to_file(FILE *file) const {
+bool SylvanZddCnf::draw_to_file(std::FILE *file) const {
     // Not ideal error handling, but zdd_fprintdot() returns void...
     int prev_errno = errno;
     zdd_fprintdot(file, m_zdd);
@@ -273,16 +274,17 @@ bool SylvanZddCnf::draw_to_file(FILE *file) const {
         std::cerr << "Error while drawing sylvan ZDD to file: " << std::strerror(errno) << std::endl;
         return false;
     }
+    return true;
 }
 
 bool SylvanZddCnf::draw_to_file(const std::string &file_name) const {
-    FILE *file = fopen(file_name.c_str(), "w");
+    std::FILE *file = std::fopen(file_name.c_str(), "w");
     if (file == nullptr) {
         std::cerr << "Error while drawing sylvan ZDD to file: failed to open the output file" << std::endl;
         return false;
     }
     bool retval = draw_to_file(file);
-    if (fclose(file) != 0) {
+    if (std::fclose(file) != 0) {
         std::cerr << "Error while drawing sylvan ZDD to file: failed to close the output file" << std::endl;
         return false;
     }
@@ -296,6 +298,7 @@ bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
         CnfWriter writer(file_name, num_clauses, max_var);
         ClauseFunction func = [&](const Clause &clause) {
             writer.write_clause(clause);
+            return true;
         };
         for_all_clauses(func);
         writer.finish();
