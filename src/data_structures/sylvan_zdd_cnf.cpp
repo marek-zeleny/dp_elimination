@@ -66,6 +66,10 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     return SylvanZddCnf(zdd);
 }
 
+size_t SylvanZddCnf::clauses_count() const {
+    return zdd_satcount(m_zdd);
+}
+
 bool SylvanZddCnf::is_empty() const {
     return m_zdd == zdd_false;
 }
@@ -292,10 +296,10 @@ bool SylvanZddCnf::draw_to_file(const std::string &file_name) const {
 }
 
 bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
-    size_t num_clauses = zdd_satcount(m_zdd);
     size_t max_var = (size_t)get_largest_variable();
+    size_t num_clauses = clauses_count();
     try {
-        CnfWriter writer(file_name, num_clauses, max_var);
+        CnfWriter writer(file_name, max_var, num_clauses);
         ClauseFunction func = [&](const Clause &clause) {
             writer.write_clause(clause);
             return true;

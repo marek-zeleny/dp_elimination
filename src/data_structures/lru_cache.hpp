@@ -34,8 +34,10 @@ public:
 
     void add(const Key &key, const T &entry) {
         m_cache_list.emplace_front(key, entry);
+        m_cache_map[key] = m_cache_list.begin();
         if (size() > Capacity) {
-            size_t removed = m_cache_map.erase(std::get<0>(m_cache_list.back()));
+            Key removed_key = std::get<0>(m_cache_list.back());
+            size_t removed = m_cache_map.erase(removed_key);
             assert(removed == 1);
             m_cache_list.pop_back();
         }

@@ -33,4 +33,17 @@ bool is_sat(Set set) {
     }
 }
 
+template<typename Set>
+Set eliminate_vars(Set set, size_t num_vars) {
+    typename Set::Heuristic heuristic = Set::get_new_heuristic();
+    for (size_t i = 0; i < num_vars; ++i) {
+        if (set.is_empty() || set.contains_empty()) {
+            return set;
+        }
+        typename Set::Literal l = heuristic.get_next_literal(set);
+        set = eliminate(set, l);
+    }
+    return set;
+}
+
 } // namespace dp

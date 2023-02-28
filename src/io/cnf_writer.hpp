@@ -21,7 +21,7 @@ public:
 
     static bool write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name);
 
-    CnfWriter(const std::string &file_name, const size_t num_clauses, const size_t max_var);
+    CnfWriter(const std::string &file_name, const size_t max_var, const size_t num_clauses);
 
     CnfWriter &write_clause(const Clause &clause);
     void finish();
@@ -30,8 +30,8 @@ private:
     using Var = uint32_t;
 
     std::ofstream m_file;
-    const size_t m_num_clauses;
     const size_t m_max_var;
+    const size_t m_num_clauses;
     size_t m_clause_count = 0;
     bool finished = false;
 };

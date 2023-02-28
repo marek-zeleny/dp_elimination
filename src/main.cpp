@@ -194,9 +194,15 @@ TASK_2(int, impl, int, argc, char**, argv)
     sylvan_init_zdd();
     // load input file
     SylvanZddCnf cnf = SylvanZddCnf::from_file(args.get_input_cnf_file_name());
+    std::cout << "Input formula has " << cnf.clauses_count() << " clauses" << std::endl;
     // perform the algorithm
-    bool result = is_sat(cnf);
-    std::cout << std::boolalpha << result << std::endl;
+    size_t num_vars = args.get_eliminated_vars();
+    std::cout << "Eliminating " << num_vars << " variables..." << std::endl;
+    SylvanZddCnf result = eliminate_vars(cnf, num_vars);
+    // write result to file
+    std::string file_name = "data/result.cnf";
+    std::cout << "Formula with " << result.clauses_count() << " clauses written to file " << file_name << std::endl;
+    result.write_dimacs_to_file(file_name);
     // quit sylvan, free memory
     Sylvan::quitPackage();
     return 0;

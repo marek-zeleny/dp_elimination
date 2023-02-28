@@ -33,6 +33,7 @@ public:
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
     static SylvanZddCnf from_file(const std::string &file_name);
 
+    size_t clauses_count() const;
     bool is_empty() const;
     bool contains_empty() const;
     Literal get_smallest_variable() const;
