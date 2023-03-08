@@ -109,37 +109,15 @@ SylvanZddCnf::Literal SylvanZddCnf::get_largest_variable() const {
 }
 
 SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
-    // TODO: efficient implementation
-    std::vector<Clause> clauses;
-    ClauseFunction func = [&](const Clause &clause) {
-        auto it = std::find(clause.cbegin(), clause.cend(), l);
-        if (it == clause.cend()) {
-            clauses.push_back(clause);
-        }
-        return true;
-    };
-    for_all_clauses(func);
-    return from_vector(clauses);
+    Var v = literal_to_var(l);
+    ZDD zdd = zdd_eval(m_zdd, v, 0);
+    return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
-    // TODO: efficient implementation
-    std::vector<Clause> clauses;
-    ClauseFunction func = [&](const Clause &clause) {
-        auto it = std::find(clause.cbegin(), clause.cend(), l);
-        if (it != clause.cend()) {
-            Clause without_l;
-            for (auto &&x : clause) {
-                if (x != l) {
-                    without_l.push_back(x);
-                }
-            }
-            clauses.push_back(without_l);
-        }
-        return true;
-    };
-    for_all_clauses(func);
-    return from_vector(clauses);
+    Var v = literal_to_var(l);
+    ZDD zdd = zdd_eval(m_zdd, v, 1);
+    return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {

@@ -16,16 +16,16 @@
 
 /**
  * This is a multi-core implementation of Zero-suppressed Binary Decision Diagrams.
- * 
+ *
  * Unlike BDDs, the interpretation of a ZDD depends on the "domain" of variables.
  * Variables not encountered in the ZDD are *false*.
  * The representation of the universe set is NOT the leaf "true".
  * Also, no complement edges. They do not work here.
  * Thus, computing "not" is not a trivial constant operation.
- * 
+ *
  * To represent "domain" and "set of variables" we use the same cubes
- * as for BDDs, i.e., var1 \and var2 \and var3... 
- * 
+ * as for BDDs, i.e., var1 \and var2 \and var3...
+ *
  * All operations with multiple input ZDDs interpret the ZDDs in the same domain.
  * For some operations, this domain must be supplied.
  */
@@ -113,7 +113,8 @@ ZDD zdd_gethigh(ZDD dd);
 /**
  * Evaluate a ZDD, assigning <value> (1 or 0) to <variables>.
  */
-ZDD zdd_eval(ZDD dd, uint32_t var, int value);
+TASK_DECL_3(ZDD, zdd_eval, ZDD, uint32_t, int);
+#define zdd_eval(dd, var, value) RUN(zdd_eval, dd, var, value)
 
 /**
  * Obtain a ZDD representing a positive literal of variable <var>.
@@ -436,7 +437,7 @@ ZDDMAP zdd_map_removeall(ZDDMAP map, ZDD variables);
  *
  * Given a ZDD <dd> and a variable domain <dom>, zdd_enum_first and zdd_enum_next enumerate
  * all assignments to the variables in <dom> that lead to a non-False leaf.
- * 
+ *
  * The function returns the leaf (or zdd_false if no new path is found) and encodes the path
  * in the supplied array <arr>: 0 for a low edge, 1 for a high edge.
  *
@@ -705,7 +706,7 @@ ZDD zdd_refs_sync(ZDD mtbdd);
 }
 #endif /* __cplusplus */
 
-/* 
+/*
  * A lot of functionality is still missing from this initial implementation...
  *
  * Visitor (enumerate using callback)
