@@ -44,25 +44,34 @@ SylvanZddCnf::Heuristic SylvanZddCnf::get_new_heuristic() {
 
 SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
     ZDD zdd = zdd_false;
+    ZDD clause = zdd_false;
+    zdd_refs_pushptr(&zdd);
+    zdd_refs_pushptr(&clause);
     for (auto &&c : clauses) {
-        ZDD clause = clause_from_vector(c);
+        clause = clause_from_vector(c);
         zdd = zdd_or(zdd, clause);
     }
+    zdd_refs_popptr(2);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     ZDD zdd = zdd_false;
+    ZDD clause = zdd_false;
+    zdd_refs_pushptr(&zdd);
+    zdd_refs_pushptr(&clause);
     CnfReader::AddClauseFunction func = [&](const CnfReader::Clause &c) {
-        ZDD clause = clause_from_vector(c);
+        clause = clause_from_vector(c);
         zdd = zdd_or(zdd, clause);
     };
     try {
         CnfReader::read_from_file(file_name, func);
     } catch (const CnfReader::failure &f) {
         std::cerr << f.what() << std::endl;
+        zdd_refs_popptr(2);
         return SylvanZddCnf();
     }
+    zdd_refs_popptr(2);
     return SylvanZddCnf(zdd);
 }
 
@@ -153,6 +162,7 @@ struct zdd_pair_hash {
 using MultCache = LruCache<MultCacheEntry, ZDD, MULT_CACHE_SIZE, zdd_pair_hash>;
 
 ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
+    // TODO: maybe later implement this as a Lace task and compute it in parallel
     // resolve ground cases
     if (p == zdd_false) {
         return zdd_false;
@@ -191,13 +201,22 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
         q0 = q;
         q1 = zdd_false;
     }
+    zdd_refs_push(p0);
+    zdd_refs_push(p1);
+    zdd_refs_push(q0);
+    zdd_refs_push(q1);
     ZDD p0q0 = multiply_impl(p0, q0, cache);
+    zdd_refs_push(p0q0);
     ZDD p0q1 = multiply_impl(p0, q1, cache);
+    zdd_refs_push(p0q1);
     ZDD p1q0 = multiply_impl(p1, q0, cache);
+    zdd_refs_push(p1q0);
     ZDD p1q1 = multiply_impl(p1, q1, cache);
+    zdd_refs_push(p1q1);
     ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
     result = zdd_makenode(x, p0q0, tmp);
     cache.add(cache_key, result);
+    zdd_refs_pop(8);
     return result;
 }
 
