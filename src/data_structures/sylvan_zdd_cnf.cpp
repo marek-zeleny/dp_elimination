@@ -249,14 +249,14 @@ ZDD remove_tautologies_impl(const ZDD &zdd) {
     }
     // otherwise compare variables in <zdd> and <high>
     uint32_t high_var = zdd_getvar(high);
-    if (var / 2 != high_var / 2) {
-        // not complements, do nothing
-        ZDD result = zdd_makenode(var, low, high);
+    if (var / 2 == high_var / 2) {
+        // complements, remove high child of <high>
+        ZDD result = zdd_makenode(var, low, zdd_getlow(high));
         zdd_refs_pop(2);
         return result;
     } else {
-        // complements, remove high child of <high>
-        ZDD result = zdd_makenode(var, low, zdd_getlow(high));
+        // not complements, do nothing
+        ZDD result = zdd_makenode(var, low, high);
         zdd_refs_pop(2);
         return result;
     }
