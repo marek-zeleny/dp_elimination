@@ -99,24 +99,27 @@ VOID_TASK_0(zdd_experiments)
 {
     using namespace dp;
     std::vector<std::vector<int32_t>> clauses {
-        {3, -3},
-        {1, -2, 3},
+        {1, -1, 3},
         {1, -1, 3, 4},
-        {2, -4},
-        {-2, 5, 6},
-        {2, 4, 5, -6},
+        {-4, -6},
+        //{-4, 5},
+        {2, -4, 5, -6},
+        {-2, -5, 6},
         {-5},
     };
     SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
     cnf.print_clauses();
-    std::cout << std::endl;
     cnf.draw_to_file("cnf.gv");
     ZDD zdd = zdd_eval(cnf.get_zdd(), 10, 1);
     SylvanZddCnf cnf2 = SylvanZddCnf(zdd);
+    std::cout << "evaluate variable 5 to True:" << std::endl;
     cnf2.print_clauses();
-    std::cout << std::endl;
     SylvanZddCnf cnf3 = cnf.remove_tautologies();
+    std::cout << "remove tautologies:" << std::endl;
     cnf3.print_clauses();
+    SylvanZddCnf cnf4 = cnf.remove_subsumed_clauses();
+    std::cout << "remove subsumed clauses:" << std::endl;
+    cnf4.print_clauses();
 }
 
 VOID_TASK_0(dp_elimination)

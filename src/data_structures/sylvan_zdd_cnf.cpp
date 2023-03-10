@@ -10,10 +10,8 @@
 #include <cassert>
 #include <sylvan.h>
 
-#include "utils.hpp"
 #include "io/cnf_reader.hpp"
 #include "io/cnf_writer.hpp"
-#include "data_structures/lru_cache.hpp"
 
 namespace dp {
 
@@ -84,7 +82,7 @@ bool SylvanZddCnf::is_empty() const {
 }
 
 bool SylvanZddCnf::contains_empty() const {
-    return (m_zdd & zdd_complement) != 0;
+    return contains_empty_set(m_zdd);
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::get_smallest_variable() const {
@@ -144,24 +142,12 @@ SylvanZddCnf SylvanZddCnf::subtract(const SylvanZddCnf &other) const {
     return SylvanZddCnf(zdd);
 }
 
-namespace {
+SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
+    ZDD zdd = multiply_impl(m_zdd, other.m_zdd);
+    return SylvanZddCnf(zdd);
+}
 
-#define MULT_CACHE_SIZE 4
-
-using MultCacheEntry = std::tuple<ZDD, ZDD>;
-
-struct zdd_pair_hash {
-    size_t operator()(const MultCacheEntry &pair) const {
-        size_t seed = 0;
-        hash_combine(seed, std::get<0>(pair));
-        hash_combine(seed, std::get<1>(pair));
-        return seed;
-    }
-};
-
-using MultCache = LruCache<MultCacheEntry, ZDD, MULT_CACHE_SIZE, zdd_pair_hash>;
-
-ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
+ZDD SylvanZddCnf::multiply_impl(const ZDD &p, const ZDD &q) {
     // TODO: maybe later implement this as a Lace task and compute it in parallel
     // resolve ground cases
     if (p == zdd_false) {
@@ -177,19 +163,19 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
         return p;
     }
     // break symmetry
-    uint32_t p_var = zdd_getvar(p);
-    uint32_t q_var = zdd_getvar(q);
+    Var p_var = zdd_getvar(p);
+    Var q_var = zdd_getvar(q);
     if (p_var > q_var) {
-        return multiply_impl(q, p, cache);
+        return multiply_impl(q, p);
     }
     // look into the cache
     ZDD result;
     std::tuple<ZDD, ZDD> cache_key = std::make_tuple(p, q);
-    if (cache.try_get(cache_key, result)) {
+    if (s_multiply_cache.try_get(cache_key, result)) {
         return result;
     }
     // general case (recursion)
-    uint32_t x = p_var;
+    Var x = p_var;
     ZDD p0 = zdd_getlow(p);
     ZDD p1 = zdd_gethigh(p);
     ZDD q0;
@@ -202,32 +188,28 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
         q1 = zdd_false;
     }
     // NOTE: p0, p1, q0, q1 are protected from GC recursively -> no need to push references
-    ZDD p0q0 = multiply_impl(p0, q0, cache);
+    ZDD p0q0 = multiply_impl(p0, q0);
     zdd_refs_push(p0q0);
-    ZDD p0q1 = multiply_impl(p0, q1, cache);
+    ZDD p0q1 = multiply_impl(p0, q1);
     zdd_refs_push(p0q1);
-    ZDD p1q0 = multiply_impl(p1, q0, cache);
+    ZDD p1q0 = multiply_impl(p1, q0);
     zdd_refs_push(p1q0);
-    ZDD p1q1 = multiply_impl(p1, q1, cache);
+    ZDD p1q1 = multiply_impl(p1, q1);
     zdd_refs_push(p1q1);
     ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
+    zdd_refs_push(tmp);
     result = zdd_makenode(x, p0q0, tmp);
-    cache.add(cache_key, result);
-    zdd_refs_pop(4);
+    zdd_refs_pop(5);
+    s_multiply_cache.add(cache_key, result);
     return result;
 }
 
-} // namespace
-
-SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
-    LruCache<std::tuple<ZDD, ZDD>, ZDD, MULT_CACHE_SIZE, zdd_pair_hash> cache;
-    ZDD zdd = multiply_impl(m_zdd, other.m_zdd, cache);
+SylvanZddCnf SylvanZddCnf::remove_tautologies() const {
+    ZDD zdd = remove_tautologies_impl(m_zdd);
     return SylvanZddCnf(zdd);
 }
 
-namespace {
-
-ZDD remove_tautologies_impl(const ZDD &zdd) {
+ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
     // NOTE: this algorithm assumes that complementary literals are consecutive in the variable order,
     //       i.e. for x > 0: var(x) = 2x, var(-x) = 2x + 1
     // TODO: consider caching and/or parallel implementation using Lace
@@ -235,42 +217,98 @@ ZDD remove_tautologies_impl(const ZDD &zdd) {
     if (zdd == zdd_false || zdd == zdd_true) {
         return zdd;
     }
+    // look into the cache
+    ZDD result;
+    if (s_remove_tautologies_cache.try_get(zdd, result)) {
+        return result;
+    }
     // recursive step
-    uint32_t var = zdd_getvar(zdd);
+    Var var = zdd_getvar(zdd);
     ZDD low = remove_tautologies_impl(zdd_getlow(zdd));
     zdd_refs_push(low);
     ZDD high = remove_tautologies_impl(zdd_gethigh(zdd));
     zdd_refs_push(high);
-    // if high child doesn't have a variable (is a leaf), do nothing
+    Var high_var = zdd_getvar(high);
     if (high == zdd_false || high == zdd_true) {
-        ZDD result = zdd_makenode(var, low, high);
-        zdd_refs_pop(2);
-        return result;
-    }
-    // otherwise compare variables in <zdd> and <high>
-    uint32_t high_var = zdd_getvar(high);
-    if (var / 2 == high_var / 2) {
+        // high child doesn't have a variable (is a leaf), do nothing
+        result = zdd_makenode(var, low, high);
+    } else if (var / 2 == high_var / 2) {
+        // otherwise compare variables in <zdd> and <high>
         // complements, remove high child of <high>
-        ZDD result = zdd_makenode(var, low, zdd_getlow(high));
-        zdd_refs_pop(2);
-        return result;
+        result = zdd_makenode(var, low, zdd_getlow(high));
     } else {
         // not complements, do nothing
-        ZDD result = zdd_makenode(var, low, high);
-        zdd_refs_pop(2);
-        return result;
+        result = zdd_makenode(var, low, high);
     }
-}
-
-} // namespace
-
-SylvanZddCnf SylvanZddCnf::remove_tautologies() const {
-    ZDD zdd = remove_tautologies_impl(m_zdd);
-    return SylvanZddCnf(zdd);
+    zdd_refs_pop(2);
+    s_remove_tautologies_cache.add(zdd, result);
+    return result;
 }
 
 SylvanZddCnf SylvanZddCnf::remove_subsumed_clauses() const {
-    // TODO
+    ZDD zdd = remove_subsumed_clauses_impl(m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
+ZDD SylvanZddCnf::remove_subsumed_clauses_impl(const ZDD &zdd) {
+    // resolve ground cases
+    if (zdd == zdd_false || zdd == zdd_true) {
+        return zdd;
+    }
+    // look into the cache
+    ZDD result;
+    if (s_remove_subsumed_clauses_cache.try_get(zdd, result)) {
+        return result;
+    }
+    // recursive step
+    Var var = zdd_getvar(zdd);
+    ZDD low = remove_subsumed_clauses_impl(zdd_getlow(zdd));
+    zdd_refs_push(low);
+    ZDD high = remove_subsumed_clauses_impl(zdd_gethigh(zdd));
+    zdd_refs_push(high);
+    ZDD high_without_supersets = remove_supersets(high, low);
+    zdd_refs_push(high_without_supersets);
+    result = zdd_makenode(var, low, high_without_supersets);
+    zdd_refs_pop(3);
+    s_remove_subsumed_clauses_cache.add(zdd, result);
+    return result;
+}
+
+ZDD SylvanZddCnf::remove_supersets(const ZDD &p, const ZDD &q) {
+    // resolve ground cases
+    if (p == zdd_false || contains_empty_set(q) || p == q) {
+        return zdd_false;
+    }
+    if (p == zdd_true || q == zdd_false) {
+        return p;
+    }
+    // look into the cache
+    ZDD result;
+    std::tuple<ZDD, ZDD> cache_key = std::make_tuple(p, q);
+    if (s_remove_supersets_cache.try_get(cache_key, result)) {
+        return result;
+    }
+    // recursive step
+    Var p_var = zdd_getvar(p);
+    Var q_var = zdd_getvar(q);
+    Var top_var = std::min(p_var, q_var);
+    ZDD p0 = zdd_eval(p, top_var, 0);
+    ZDD p1 = zdd_eval(p, top_var, 1);
+    ZDD q0 = zdd_eval(q, top_var, 0);
+    ZDD q1 = zdd_eval(q, top_var, 1);
+    // NOTE: p0, p1, q0, q1 are protected from GC recursively -> no need to push references
+    ZDD tmp1 = remove_supersets(p1, q0);
+    zdd_refs_push(tmp1);
+    ZDD tmp2 = remove_supersets(p1, q1);
+    zdd_refs_push(tmp2);
+    ZDD low = remove_supersets(p0, q0);
+    zdd_refs_push(low);
+    ZDD high = zdd_and(tmp1, tmp2);
+    zdd_refs_push(high);
+    result = zdd_makenode(top_var, low, high);
+    zdd_refs_pop(4);
+    s_remove_supersets_cache.add(cache_key, result);
+    return result;
 }
 
 void SylvanZddCnf::for_all_clauses(ClauseFunction &func) const {
@@ -278,7 +316,7 @@ void SylvanZddCnf::for_all_clauses(ClauseFunction &func) const {
     for_all_clauses_impl(func, m_zdd, stack);
 }
 
-bool SylvanZddCnf::for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack) const {
+bool SylvanZddCnf::for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack) {
     if (node == zdd_true) {
         return func(stack);
     } else if (node == zdd_false) {
@@ -392,6 +430,10 @@ ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
     ZDD domain = set_from_vector(clause);
     ZDD zdd_clause = zdd_cube(domain, signs.data(), zdd_true);
     return zdd_clause;
+}
+
+bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
+    return (zdd & zdd_complement) != 0;
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const SylvanZddCnf &cnf) {

@@ -8,6 +8,9 @@
 #include <cstdio>
 #include <sylvan.h>
 
+#include "utils.hpp"
+#include "data_structures/lru_cache.hpp"
+
 namespace dp {
 
 using namespace sylvan;
@@ -59,16 +62,47 @@ public:
 private:
     using Var = uint32_t;
 
+    ZDD m_zdd;
+
     //SylvanZddCnf(ZDD &zdd);
 
+    // helper functions
     static Var literal_to_var(Literal l);
     static Literal var_to_literal(Var v);
     static ZDD set_from_vector(const Clause &clause);
     static ZDD clause_from_vector(const Clause &clause);
-    bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack) const;
+    static bool contains_empty_set(const ZDD &zdd);
 
-    ZDD m_zdd;
+    // implementations of recursive algorithms
+    static ZDD multiply_impl(const ZDD &p, const ZDD& q);
+    static ZDD remove_tautologies_impl(const ZDD &zdd);
+    static ZDD remove_subsumed_clauses_impl(const ZDD &zdd);
+    static ZDD remove_supersets(const ZDD &p, const ZDD &q);
+    static bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack);
 
+    // caching of operation results
+    static constexpr size_t CACHE_SIZE = 32;
+
+    using UnaryCacheEntry = ZDD;
+    using BinaryCacheEntry = std::tuple<ZDD, ZDD>;
+    using UnaryCacheHash = std::hash<UnaryCacheEntry>;
+    struct BinaryCacheHash {
+        size_t operator()(const BinaryCacheEntry &pair) const {
+            size_t seed = 0;
+            hash_combine(seed, std::get<0>(pair));
+            hash_combine(seed, std::get<1>(pair));
+            return seed;
+        }
+    };
+    using UnaryCache = LruCache<UnaryCacheEntry, ZDD, CACHE_SIZE, UnaryCacheHash>;
+    using BinaryCache = LruCache<BinaryCacheEntry, ZDD, CACHE_SIZE, BinaryCacheHash>;
+
+    inline static BinaryCache s_multiply_cache;
+    inline static UnaryCache s_remove_tautologies_cache;
+    inline static UnaryCache s_remove_subsumed_clauses_cache;
+    inline static BinaryCache s_remove_supersets_cache;
+
+    // literal selection heuristics
     class SimpleHeuristic {
     public:
         SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);

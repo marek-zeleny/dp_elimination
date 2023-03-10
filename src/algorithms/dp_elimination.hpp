@@ -11,9 +11,10 @@ Set eliminate(const Set &set, const typename Set::Literal &l) {
     Set without_l = set.subset0(l).subset0(-l);
 
     Set resolvents = with_l.multiply(with_not_l);
-    Set result = resolvents.unify(without_l);
-    Set no_tautologies = result.remove_tautologies();
-    return no_tautologies;
+    Set no_tautologies_or_subsumed = resolvents.remove_tautologies().remove_subsumed_clauses();
+    Set result = no_tautologies_or_subsumed.unify(without_l);
+    Set no_subsumed = result.remove_subsumed_clauses();
+    return no_subsumed;
 }
 
 template<typename Set>
