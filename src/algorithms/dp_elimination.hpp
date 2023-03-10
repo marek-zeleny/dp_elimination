@@ -12,7 +12,8 @@ Set eliminate(const Set &set, const typename Set::Literal &l) {
 
     Set resolvents = with_l.multiply(with_not_l);
     Set result = resolvents.unify(without_l);
-    return result;
+    Set no_tautologies = result.remove_tautologies();
+    return no_tautologies;
 }
 
 template<typename Set>

@@ -201,10 +201,7 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
         q0 = q;
         q1 = zdd_false;
     }
-    zdd_refs_push(p0);
-    zdd_refs_push(p1);
-    zdd_refs_push(q0);
-    zdd_refs_push(q1);
+    // NOTE: p0, p1, q0, q1 are protected from GC recursively -> no need to push references
     ZDD p0q0 = multiply_impl(p0, q0, cache);
     zdd_refs_push(p0q0);
     ZDD p0q1 = multiply_impl(p0, q1, cache);
@@ -216,7 +213,7 @@ ZDD multiply_impl(const ZDD &p, const ZDD &q, MultCache &cache) {
     ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
     result = zdd_makenode(x, p0q0, tmp);
     cache.add(cache_key, result);
-    zdd_refs_pop(8);
+    zdd_refs_pop(4);
     return result;
 }
 
@@ -226,6 +223,54 @@ SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
     LruCache<std::tuple<ZDD, ZDD>, ZDD, MULT_CACHE_SIZE, zdd_pair_hash> cache;
     ZDD zdd = multiply_impl(m_zdd, other.m_zdd, cache);
     return SylvanZddCnf(zdd);
+}
+
+namespace {
+
+ZDD remove_tautologies_impl(const ZDD &zdd) {
+    // NOTE: this algorithm assumes that complementary literals are consecutive in the variable order,
+    //       i.e. for x > 0: var(x) = 2x, var(-x) = 2x + 1
+    // TODO: consider caching and/or parallel implementation using Lace
+    // resolve ground cases
+    if (zdd == zdd_false || zdd == zdd_true) {
+        return zdd;
+    }
+    // recursive step
+    uint32_t var = zdd_getvar(zdd);
+    ZDD low = remove_tautologies_impl(zdd_getlow(zdd));
+    zdd_refs_push(low);
+    ZDD high = remove_tautologies_impl(zdd_gethigh(zdd));
+    zdd_refs_push(high);
+    // if high child doesn't have a variable (is a leaf), do nothing
+    if (high == zdd_false || high == zdd_true) {
+        ZDD result = zdd_makenode(var, low, high);
+        zdd_refs_pop(2);
+        return result;
+    }
+    // otherwise compare variables in <zdd> and <high>
+    uint32_t high_var = zdd_getvar(high);
+    if (var / 2 != high_var / 2) {
+        // not complements, do nothing
+        ZDD result = zdd_makenode(var, low, high);
+        zdd_refs_pop(2);
+        return result;
+    } else {
+        // complements, remove high child of <high>
+        ZDD result = zdd_makenode(var, low, zdd_getlow(high));
+        zdd_refs_pop(2);
+        return result;
+    }
+}
+
+} // namespace
+
+SylvanZddCnf SylvanZddCnf::remove_tautologies() const {
+    ZDD zdd = remove_tautologies_impl(m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
+SylvanZddCnf SylvanZddCnf::remove_subsumed_clauses() const {
+    // TODO
 }
 
 void SylvanZddCnf::for_all_clauses(ClauseFunction &func) const {

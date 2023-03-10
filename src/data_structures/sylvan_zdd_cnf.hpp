@@ -44,6 +44,8 @@ public:
     SylvanZddCnf intersect(const SylvanZddCnf &other) const;
     SylvanZddCnf subtract(const SylvanZddCnf &other) const;
     SylvanZddCnf multiply(const SylvanZddCnf &other) const;
+    SylvanZddCnf remove_tautologies() const;
+    SylvanZddCnf remove_subsumed_clauses() const;
     void for_all_clauses(ClauseFunction &func) const;
 
     void print_clauses() const;
