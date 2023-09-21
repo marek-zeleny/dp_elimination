@@ -33,4 +33,5 @@
 *.app
 
 # Custom files and directories
-build/
+release/
+debug/

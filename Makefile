@@ -2,21 +2,45 @@
 # https://makefiletutorial.com/
 # https://stackoverflow.com/a/2481326/11983817
 # https://stackoverflow.com/a/28663974/11983817
+# https://stackoverflow.com/a/10825154 (debug vs. release build)
 
-appname := dp
+ifndef BUILD_DIR
+
+RELEASE_DIR := release/
+DEBUG_DIR := debug/
+
+.PHONY: default all release debug clean
+
+default all: release
+
+release: export BUILD_DIR := $(RELEASE_DIR)
+release: export EXTRA_FLAGS := -DNDEBUG -O3
+debug:   export BUILD_DIR := $(DEBUG_DIR)
+debug:   export EXTRA_FLAGS := -DDEBUG -g -O0
+
+release debug:
+	@$(MAKE)
+
+clean:
+	rm -r $(RELEASE_DIR)
+	rm -r $(DEBUG_DIR)
+
+else
+
+APPNAME := dp
+EXE := $(BUILD_DIR)$(APPNAME)
 
 CC=gcc
 CXX=g++
 
-BUILD_DIR := ./build
-SRC_DIRS := ./src
+SRC_DIRS := src/
 
 # Link external libraries
-LIB_DIR := ./external/lib
-LIBS := $(LIB_DIR)/sylvan/libsylvan.a \
-		$(LIB_DIR)/sylvan/liblace.a \
-		$(LIB_DIR)/sylvan/liblace14.a
-INCLUDE := ./external/include/sylvan
+LIB_DIR := external/lib/
+LIBS := $(LIB_DIR)sylvan/libsylvan.a \
+		$(LIB_DIR)sylvan/liblace.a \
+		$(LIB_DIR)sylvan/liblace14.a
+INCLUDE := external/include/sylvan
 
 # Find all the C and C++ files we want to compile
 # Note the single quotes around the * expressions. Make will incorrectly expand these otherwise.
@@ -24,7 +48,7 @@ SRCS := $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.s')
 
 # String substitution for every C/C++ file.
 # As an example, hello.cpp turns into ./build/hello.cpp.o
-OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
+OBJS := $(SRCS:%=$(BUILD_DIR)%.o)
 
 # String substitution (suffix version without %).
 # As an example, ./build/hello.cpp.o turns into ./build/hello.cpp.d
@@ -37,30 +61,33 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -std=c++2a -pthread -MMD -MP
+CFLAGS := $(INC_FLAGS) $(EXTRA_FLAGS) -Wall -Werror -Wextra -pthread -MMD -MP
+CXXFLAGS := $(INC_FLAGS) $(EXTRA_FLAGS) -Wall -Werror -Wextra -std=c++2a -pthread -MMD -MP
 
-all: $(BUILD_DIR)/$(appname)
+.PHONY: default all $(APPNAME)
 
-# The final build step.
-$(BUILD_DIR)/$(appname): $(OBJS)
-	$(CXX) $(CPPFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
+default all $(APPNAME): $(EXE)
+
+# The final build step
+$(EXE): $(OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 # Build step for C source
-$(BUILD_DIR)/%.c.o: %.c
+$(BUILD_DIR)%.c.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -I$(INCLUDE) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INCLUDE) -c $< -o $@
 
 # Build step for C++ source
-$(BUILD_DIR)/%.cpp.o: %.cpp
+$(BUILD_DIR)%.cpp.o: %.cpp
 	mkdir -p $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(INCLUDE) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE) -c $< -o $@
 
-
-.PHONY: clean
-clean:
-	rm -r $(BUILD_DIR)
+$(BUILD_DIR):
+	mkdir -p $@
 
 # Include the .d makefiles. The - at the front suppresses the errors of missing
 # Makefiles. Initially, all the .d files will be missing, and we don't want those
 # errors to show up.
 -include $(DEPS)
+
+endif # BUILD_DIR
