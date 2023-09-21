@@ -218,7 +218,8 @@ TASK_2(int, impl, int, argc, char**, argv)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int, char **)
+//int main(int argc, char *argv[])
 {
     // Initialize Lace
     int n_workers = 0; // automatically detect number of workers
@@ -226,8 +227,8 @@ int main(int argc, char *argv[])
 
     lace_start(n_workers, deque_size);
 
-    //RUN(run_from_lace);
-    return RUN(impl, argc, argv);
+    RUN(run_from_lace);
+    //return RUN(impl, argc, argv);
 
-    // The lace_startup command also exits Lace after _main is completed.
+    // The lace_start command also exits Lace after _main is completed.
 }

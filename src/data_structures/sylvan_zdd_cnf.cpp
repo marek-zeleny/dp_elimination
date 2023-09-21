@@ -393,7 +393,7 @@ bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
     return true;
 }
 
-const ZDD SylvanZddCnf::get_zdd() const {
+ZDD SylvanZddCnf::get_zdd() const {
     return m_zdd;
 }
 

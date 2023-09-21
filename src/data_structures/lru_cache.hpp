@@ -37,6 +37,7 @@ public:
         m_cache_map[key] = m_cache_list.begin();
         if (size() > Capacity) {
             Key removed_key = std::get<0>(m_cache_list.back());
+            [[maybe_unused]]
             size_t removed = m_cache_map.erase(removed_key);
             assert(removed == 1);
             m_cache_list.pop_back();

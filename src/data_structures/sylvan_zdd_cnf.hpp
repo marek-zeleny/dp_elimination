@@ -57,7 +57,7 @@ public:
     bool draw_to_file(const std::string &file_name) const;
     bool write_dimacs_to_file(const std::string &file_name) const;
 
-    const ZDD get_zdd() const;
+    ZDD get_zdd() const;
 
 private:
     using Var = uint32_t;

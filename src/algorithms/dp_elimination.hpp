@@ -1,6 +1,4 @@
-# pragma once
-
-#include "data_structures/sylvan_zdd_cnf.hpp"
+#pragma once
 
 namespace dp {
 
