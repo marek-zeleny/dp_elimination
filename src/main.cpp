@@ -10,6 +10,7 @@
 #include "args_parser.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
+#include "algorithms/unit_propagation.hpp"
 
 using namespace sylvan;
 
@@ -120,6 +121,21 @@ VOID_TASK_0(zdd_experiments)
     SylvanZddCnf cnf4 = cnf.remove_subsumed_clauses();
     std::cout << "remove subsumed clauses:" << std::endl;
     cnf4.print_clauses();
+
+    std::vector<std::vector<int32_t>> clauses2 {
+        {-1, 2},
+        {-2, 3},
+        {-1, 3},
+    };
+    std::vector<std::vector<int32_t>> no_absorbed = remove_absorbed_clauses(clauses2);
+    SylvanZddCnf cnf5 = SylvanZddCnf::from_vector(no_absorbed);
+    std::cout << "remove absorbed clauses:" << std::endl;
+    cnf5.print_clauses();
+
+    std::vector<std::vector<int32_t>> no_absorbed2 = remove_absorbed_clauses(clauses);
+    SylvanZddCnf cnf6 = SylvanZddCnf::from_vector(no_absorbed2);
+    std::cout << "remove absorbed clauses:" << std::endl;
+    cnf6.print_clauses();
 }
 
 VOID_TASK_0(dp_elimination)
