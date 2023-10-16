@@ -1,5 +1,8 @@
 #pragma once
 
+#include "algorithms/unit_propagation.hpp"
+#include "logging.hpp"
+
 namespace dp {
 
 template<typename Set>
@@ -17,10 +20,10 @@ Set eliminate(const Set &set, const typename Set::Literal &l) {
 
 template<typename Set>
 bool is_sat(Set set) {
-    std::cout << "Starting DP elimination algorithm:" << std::endl;
+    log << "Starting DP elimination algorithm:" << std::endl;
     typename Set::Heuristic heuristic = Set::get_new_heuristic();
     while (true) {
-        std::cout << "CNF:" << std::endl;
+        log << "CNF:" << std::endl;
         set.print_clauses();
         if (set.is_empty()) {
             return true;
@@ -28,20 +31,26 @@ bool is_sat(Set set) {
             return false;
         }
         typename Set::Literal l = heuristic.get_next_literal(set);
-        std::cout << "eliminating literal " << l << std::endl;
+        log << "eliminating literal " << l << std::endl;
         set = eliminate(set, l);
     }
 }
 
 template<typename Set>
-Set eliminate_vars(Set set, size_t num_vars) {
+Set eliminate_vars(Set set, size_t num_vars, size_t absorbed_clauses_interval = 5) {
     typename Set::Heuristic heuristic = Set::get_new_heuristic();
     for (size_t i = 0; i < num_vars; ++i) {
         if (set.is_empty() || set.contains_empty()) {
             return set;
         }
         typename Set::Literal l = heuristic.get_next_literal(set);
+        log << "eliminating literal " << l << std::endl;
         set = eliminate(set, l);
+        if (i % absorbed_clauses_interval == absorbed_clauses_interval - 1) {
+            std::vector<typename Set::Clause> vector = set.to_vector();
+            vector = remove_absorbed_clauses(vector);
+            set = Set::from_vector(vector);
+        }
     }
     return set;
 }

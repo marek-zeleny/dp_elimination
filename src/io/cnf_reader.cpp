@@ -5,10 +5,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <limits>
+#include "logging.hpp"
 
 namespace dp {
 
 void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &func) {
+    log << "CnfReader: openning file " << file_name << std::endl;
     std::ifstream file(file_name);
     if (!file.is_open()) {
         throw failure("failed to open the input file", 0);
@@ -40,6 +42,8 @@ void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &
                 std::string type;
                 if ((iss >> type >> num_vars >> num_clauses) && type == "cnf") { // TODO
                     started = true;
+                    log << "CnfReader: reading CNF formula with " << num_vars << " variables and " << num_clauses;
+                    log << " clauses" << std::endl;
                     continue;
                 } else {
                     throw failure("invalid problem definition (p)", line_num);
@@ -83,6 +87,7 @@ void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &
     if (clause_count != num_clauses) {
         print_warning("the number of clauses doesn't match the problem definition (p)", line_num);
     }
+    log << "CnfReader: CNF formula successfully read" << std::endl;
 }
 
 std::vector<CnfReader::Clause> CnfReader::read_from_file_to_vector(const std::string &file_name) {

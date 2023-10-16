@@ -334,6 +334,18 @@ bool SylvanZddCnf::for_all_clauses_impl(ClauseFunction &func, const ZDD &node, C
     return true;
 }
 
+auto SylvanZddCnf::to_vector() const -> std::vector<Clause> {
+    std::vector<Clause> output;
+    ClauseFunction func = [&](const Clause &clause) {
+        //Clause c = clause;
+        //output.push_back(c);
+        output.emplace_back(clause);
+        return true;
+    };
+    for_all_clauses(func);
+    return output;
+}
+
 void SylvanZddCnf::print_clauses() const {
     print_clauses(std::cout);
 }

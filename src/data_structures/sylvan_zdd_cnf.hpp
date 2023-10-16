@@ -51,6 +51,8 @@ public:
     SylvanZddCnf remove_subsumed_clauses() const;
     void for_all_clauses(ClauseFunction &func) const;
 
+    std::vector<Clause> to_vector() const;
+
     void print_clauses() const;
     void print_clauses(std::ostream &output) const;
     bool draw_to_file(std::FILE *file) const;

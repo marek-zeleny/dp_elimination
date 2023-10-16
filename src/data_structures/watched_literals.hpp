@@ -3,6 +3,7 @@
 #include <vector>
 #include <tuple>
 #include <unordered_set>
+#include <iostream>
 
 namespace dp {
 
@@ -30,8 +31,8 @@ public:
     void backtrack_to(size_t target_level);
     void change_active_clauses(const std::vector<size_t> &activate_indices,
         const std::vector<size_t> &deactivate_indices);
-    void print_clauses() const;
-    void print_stack() const;
+    void print_clauses(std::ostream &os = std::cout) const;
+    void print_stack(std::ostream &os = std::cout) const;
 
 private:
     using StackElement = std::vector<Literal>;

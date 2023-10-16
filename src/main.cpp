@@ -227,15 +227,15 @@ TASK_2(int, impl, int, argc, char**, argv)
     SylvanZddCnf result = eliminate_vars(cnf, num_vars);
     // write result to file
     std::string file_name = "data/result.cnf";
-    std::cout << "Formula with " << result.clauses_count() << " clauses written to file " << file_name << std::endl;
     result.write_dimacs_to_file(file_name);
+    std::cout << "Formula with " << result.clauses_count() << " clauses written to file " << file_name << std::endl;
     // quit sylvan, free memory
     Sylvan::quitPackage();
     return 0;
 }
 
-int main(int, char **)
-//int main(int argc, char *argv[])
+//int main(int, char **)
+int main(int argc, char *argv[])
 {
     // Initialize Lace
     int n_workers = 0; // automatically detect number of workers
@@ -243,8 +243,8 @@ int main(int, char **)
 
     lace_start(n_workers, deque_size);
 
-    RUN(run_from_lace);
-    //return RUN(impl, argc, argv);
+    //RUN(run_from_lace);
+    return RUN(impl, argc, argv);
 
     // The lace_start command also exits Lace after _main is completed.
 }

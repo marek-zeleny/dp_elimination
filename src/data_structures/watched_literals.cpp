@@ -5,6 +5,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <iostream>
+#include "logging.hpp"
 
 namespace dp {
 
@@ -95,9 +96,9 @@ WatchedLiterals::Assignment WatchedLiterals::get_assignment(Literal l) const {
 
 void WatchedLiterals::backtrack(size_t num_levels) {
     size_t current_level = get_assignment_level();
-    std::cout << "backtracking " << num_levels << "/" << current_level << " levels" << std::endl;
-    std::cout << "stack: ";
-    print_stack();
+    log << "backtracking " << num_levels << "/" << current_level << " levels" << std::endl;
+    log << "stack: ";
+    print_stack(log);
     if (num_levels > current_level) {
         throw std::out_of_range("Trying to backtrack more levels than assignments made");
     }
@@ -139,39 +140,40 @@ void WatchedLiterals::change_active_clauses(const std::vector<size_t> &activate_
     }
 }
 
-void WatchedLiterals::print_clauses() const {
+void WatchedLiterals::print_clauses(std::ostream &os) const {
     for (auto &&clause_data : m_clauses) {
-        std::cout << "{";
+        os << "{";
         for (size_t i = 0; i < clause_data.clause.size(); ++i) {
-            std::cout << " " << clause_data.clause[i];
+            os << " " << clause_data.clause[i];
             if (clause_data.watched1 == i) {
-                std::cout << "*";
+                os << "*";
             }
             if (clause_data.watched2 == i) {
-                std::cout << "**";
+                os << "**";
             }
-            std::cout << ",";
+            os << ",";
         }
-        std::cout << "}";
+        os << "}";
         if (clause_data.is_active) {
-            std::cout << "&";
+            os << "&";
         }
-        std::cout << std::endl;
+        os << std::endl;
     }
 }
 
-void WatchedLiterals::print_stack() const {
+void WatchedLiterals::print_stack(std::ostream &os) const {
     size_t i = 0;
     for (auto &level : m_stack) {
         for (auto &l : level)  {
-            std::cout << l << "@" << i << " ";
+            os << l << "@" << i << " ";
         }
         ++i;
     }
-    std::cout << std::endl;
+    os << std::endl;
 }
 
 void WatchedLiterals::activate_clause(size_t clause_index, bool skip_if_active) {
+    assert(clause_index < m_clauses.size());
     ClauseData &data = m_clauses[clause_index];
     if (skip_if_active && data.is_active) {
         return;
@@ -192,6 +194,7 @@ void WatchedLiterals::activate_clause(size_t clause_index, bool skip_if_active) 
 }
 
 void WatchedLiterals::deactivate_clause(size_t clause_index, bool skip_if_not_active) {
+    assert(clause_index < m_clauses.size());
     ClauseData &data = m_clauses[clause_index];
     if (skip_if_not_active && !data.is_active) {
         return;
@@ -217,6 +220,7 @@ bool WatchedLiterals::propagate() {
         auto it = m_unit_clauses.begin();
         size_t clause_idx = *it;
         m_unit_clauses.erase(it);
+        assert(clause_idx < m_clauses.size());
         ClauseData &clause_data = m_clauses[clause_idx];
         // obtain the literal to assign a value to
         Literal l1 = clause_data.clause[clause_data.watched1];
@@ -247,7 +251,7 @@ bool WatchedLiterals::assign_value_impl(Literal l) {
     m_stack.back().push_back(l);
     // update literals that watched this variable
     std::unordered_set<size_t> removed_watches;
-    for (auto &&idx : var_data.watched_clauses) {
+    for (auto &idx : var_data.watched_clauses) {
         bool moved_to_new_literal = update_watched_literal(idx, var_idx);
         if (moved_to_new_literal) {
             removed_watches.insert(idx);
@@ -257,11 +261,14 @@ bool WatchedLiterals::assign_value_impl(Literal l) {
             return false;
         }
     }
-    var_data.watched_clauses.erase(removed_watches.cbegin(), removed_watches.cend());
+    for (auto &idx : removed_watches) {
+        var_data.watched_clauses.erase(idx);
+    }
     return true;
 }
 
 bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_index) {
+    assert(clause_index < m_clauses.size());
     ClauseData &clause_data = m_clauses[clause_index];
     size_t &w1 = clause_data.watched1;
     size_t &w2 = clause_data.watched2;
@@ -276,6 +283,8 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
     }
     Assignment a1 = get_assignment(clause_data.clause[w1]);
     Assignment a2 = get_assignment(clause_data.clause[w2]);
+    // if the clause was unit, it is no longer so
+    m_unit_clauses.erase(clause_index);
     // either watch is positive -> clause is satisfied, no update
     if (a1 == Assignment::positive || a2 == Assignment::positive) {
         return false;
@@ -287,6 +296,7 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
         return false;
     }
     // second watch is unassigned -> try to move the first watch
+    assert(a2 == Assignment::unassigned);
     // note that the previous 2 cases also cover clauses with only one literal -> we know that w1 != w2
     size_t w_new = w1;
     while (true) {
@@ -303,14 +313,21 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
             m_unit_clauses.insert(clause_index);
             return false;
         }
-        // found an unassigned variable -> update
         Literal l = clause_data.clause[w_new];
-        if (get_assignment(l) == Assignment::unassigned) {
-            w1 = w_new;
-            m_variables[get_var_index(l)].watched_clauses.insert(clause_index);
-            return true;
+        Assignment a = get_assignment(l);
+        switch (a) {
+            case Assignment::negative:
+                // continue search
+                break;
+            case Assignment::positive:
+            case Assignment::unassigned:
+                // satisfied clause or unassigned variable -> update in either case
+                w1 = w_new;
+                m_variables[get_var_index(l)].watched_clauses.insert(clause_index);
+                return true;
+            default:
+                throw std::logic_error("Unexpected enum value");
         }
-        // otherwise continue search
     }
 }
 
@@ -323,7 +340,9 @@ void WatchedLiterals::backtrack_impl() {
 }
 
 size_t WatchedLiterals::get_var_index(Literal l) const {
-    return std::abs(l) - m_min_var;
+    size_t idx = std::abs(l) - m_min_var;
+    assert(idx < m_variables.size());
+    return idx;
 }
 
 } // namespace dp
