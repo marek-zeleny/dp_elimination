@@ -20,19 +20,21 @@ public:
     }
 
     bool try_get(const Key &key, T &output) {
-        auto map_it = m_cache_map.find(key);
+        typename CacheMap::iterator map_it = m_cache_map.find(key);
         if (map_it == m_cache_map.end()) {
             return false;
         } else {
-            auto list_it = map_it->second;
+            typename CacheList::iterator list_it = map_it->second;
             output = std::get<1>(*list_it);
-            m_cache_list.erase(list_it);
             m_cache_list.push_front(*list_it);
+            m_cache_map[key] = m_cache_list.begin();
+            m_cache_list.erase(list_it);
             return true;
         }
     }
 
     void add(const Key &key, const T &entry) {
+        assert(!m_cache_map.contains(key));
         m_cache_list.emplace_front(key, entry);
         m_cache_map[key] = m_cache_list.begin();
         if (size() > Capacity) {
