@@ -35,4 +35,5 @@
 # Custom files and directories
 release/
 debug/
-sanitize/
+asan/
+ubsan/

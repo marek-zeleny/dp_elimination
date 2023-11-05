@@ -8,9 +8,10 @@ ifndef BUILD_DIR
 
 RELEASE_DIR := release/
 DEBUG_DIR := debug/
-SAN_DIR := sanitize/
+ASAN_DIR := asan/
+UBSAN_DIR := ubsan/
 
-.PHONY: default all release debug san clean
+.PHONY: default all release debug asan ubsan clean
 
 default all: release
 
@@ -18,16 +19,19 @@ release: export BUILD_DIR := $(RELEASE_DIR)
 release: export EXTRA_FLAGS := -DNDEBUG -O3
 debug:   export BUILD_DIR := $(DEBUG_DIR)
 debug:   export EXTRA_FLAGS := -DDEBUG -g -O0
-san:     export BUILD_DIR := $(SAN_DIR)
-san:     export EXTRA_FLAGS := -DDEBUG -g -O0 -fsanitize=address
+asan:    export BUILD_DIR := $(ASAN_DIR)
+asan:    export EXTRA_FLAGS := -DDEBUG -g -O0 -fsanitize=address
+ubsan:    export BUILD_DIR := $(UBSAN_DIR)
+ubsan:    export EXTRA_FLAGS := -DDEBUG -g -O0 -fsanitize=undefined
 
-release debug san:
+release debug asan ubsan:
 	@$(MAKE)
 
 clean:
 	rm -r $(RELEASE_DIR)
 	rm -r $(DEBUG_DIR)
-	rm -r $(SAN_DIR)
+	rm -r $(ASAN_DIR)
+	rm -r $(UBSAN_DIR)
 
 else
 
