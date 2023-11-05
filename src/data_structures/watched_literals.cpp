@@ -80,6 +80,9 @@ bool WatchedLiterals::assign_value(Literal l) {
     if (contains_empty()) {
         return false;
     }
+    if (get_assignment(l) != Assignment::unassigned) {
+        throw std::invalid_argument("Cannot assign to an already assigned variable");
+    }
     m_stack.push_back({});
     bool success = assign_value_impl(l);
     if (!success) {
@@ -103,7 +106,8 @@ void WatchedLiterals::backtrack(size_t num_levels) {
         throw std::out_of_range("Trying to backtrack more levels than assignments made");
     }
     if (num_levels > 0) {
-        m_empty_count = m_initial_empty_count;
+        m_unit_clauses.clear();
+        m_empty_count = 0; // If the backtrack is valid, there mustn't have been any empty clauses pre-assignment
     }
     for (; num_levels > 0; --num_levels) {
         backtrack_impl();
@@ -228,9 +232,10 @@ bool WatchedLiterals::propagate() {
         Literal l;
         if (get_assignment(l1) == Assignment::unassigned) {
             // check that the clause is really unit
-            assert(clause_data.watched2 == clause_data.watched1 || get_assignment(l2) != Assignment::unassigned);
+            assert(clause_data.watched2 == clause_data.watched1 || get_assignment(l2) == Assignment::negative);
             l = l1;
         } else {
+            assert(get_assignment(l1) == Assignment::negative);
             assert(get_assignment(l2) == Assignment::unassigned);
             l = l2;
         }
@@ -245,24 +250,23 @@ bool WatchedLiterals::propagate() {
 }
 
 bool WatchedLiterals::assign_value_impl(Literal l) {
+    assert(get_assignment(l) == Assignment::unassigned);
     size_t var_idx = get_var_index(l);
     VarData &var_data = m_variables[var_idx];
     var_data.assignment = l > 0 ? Assignment::positive : Assignment::negative;
     m_stack.back().push_back(l);
     // update literals that watched this variable
-    std::unordered_set<size_t> removed_watches;
-    for (auto &idx : var_data.watched_clauses) {
-        bool moved_to_new_literal = update_watched_literal(idx, var_idx);
+    for (auto it = std::begin(var_data.watched_clauses); it != std::end(var_data.watched_clauses); ) {
+        bool moved_to_new_literal = update_watched_literal(*it, var_idx);
         if (moved_to_new_literal) {
-            removed_watches.insert(idx);
+            it = var_data.watched_clauses.erase(it);
+        } else {
+            ++it;
         }
         // check if an empty clause was created
         if (contains_empty()) {
             return false;
         }
-    }
-    for (auto &idx : removed_watches) {
-        var_data.watched_clauses.erase(idx);
     }
     return true;
 }

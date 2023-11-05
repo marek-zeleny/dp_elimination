@@ -29,6 +29,13 @@ bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &cl
             if (l == literal) {
                 continue;
             }
+            WatchedLiterals::Assignment a = formula.get_assignment(-l);
+            if (a == WatchedLiterals::Assignment::negative) {
+                is_empowered = false;
+                break;
+            } else if (a == WatchedLiterals::Assignment::positive) {
+                continue;
+            }
             bool empty_clause_created = !formula.assign_value(-l);
             if (empty_clause_created) {
                 assert(formula.contains_empty());
