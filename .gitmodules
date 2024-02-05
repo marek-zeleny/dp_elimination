@@ -1,0 +1,3 @@
+[submodule "external/sylvan"]
+	path = external/sylvan
+	url = git@github.com:marek-zeleny/sylvan.git
