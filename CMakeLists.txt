@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external/sylvan/)
+add_subdirectory(external/catch2/)
 
 add_executable(dp
     src/main.cpp
@@ -17,7 +18,11 @@ add_executable(dp
     src/data_structures/sylvan_zdd_cnf.cpp
     src/data_structures/watched_literals.cpp
 )
-
 target_include_directories(dp PRIVATE src/)
-
 target_link_libraries(dp PRIVATE sylvan)
+
+add_executable(tests
+    tests/test_example.cpp
+)
+target_include_directories(tests PRIVATE src/)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
