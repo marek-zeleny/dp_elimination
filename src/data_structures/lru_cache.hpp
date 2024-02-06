@@ -15,7 +15,7 @@ private:
     using CacheMap = std::unordered_map<Key, typename CacheList::iterator, Hash>;
 
 public:
-    size_t size() const {
+    [[nodiscard]] size_t size() const {
         return m_cache_list.size();
     }
 

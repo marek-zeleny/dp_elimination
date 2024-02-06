@@ -10,8 +10,8 @@
 namespace dp {
 
 WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var,
-    const std::unordered_set<size_t> &deactivated_clauses)
-    : m_min_var(min_var), m_max_var(max_var), m_empty_count(0) {
+                                 const std::unordered_set<size_t> &deactivated_clauses) :
+        m_min_var(min_var), m_max_var(max_var), m_empty_count(0) {
     // initialize variables
     m_variables.resize(m_max_var - m_min_var + 1, {});
     // initialize clauses
@@ -30,28 +30,28 @@ WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_
     m_empty_count = m_initial_empty_count;
     m_unit_clauses = m_initial_unit_clauses;
     // propagate
-    m_stack.push_back({});
+    m_stack.emplace_back();
     if (!contains_empty()) {
         propagate();
     }
 }
 
-WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var)
-    : WatchedLiterals(clauses, min_var, max_var, {}) {}
+WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var) :
+        WatchedLiterals(clauses, min_var, max_var, {}) {}
 
 WatchedLiterals WatchedLiterals::from_vector(const std::vector<Clause> &clauses,
-    const std::unordered_set<size_t> &deactivated_clauses) {
+                                             const std::unordered_set<size_t> &deactivated_clauses) {
     size_t min_var = std::numeric_limits<size_t>::max();
     size_t max_var = std::numeric_limits<size_t>::min();
-    for (auto && clause : clauses) {
-        for (auto && literal : clause) {
+    for (auto &clause: clauses) {
+        for (auto &literal: clause) {
             assert(literal != 0);
             size_t var = std::abs(literal);
             min_var = std::min(min_var, var);
             max_var = std::max(max_var, var);
         }
     }
-    return WatchedLiterals(clauses, min_var, max_var, deactivated_clauses);
+    return {clauses, min_var, max_var, deactivated_clauses};
 }
 
 WatchedLiterals WatchedLiterals::from_vector(const std::vector<Clause> &clauses) {
@@ -83,7 +83,7 @@ bool WatchedLiterals::assign_value(Literal l) {
     if (get_assignment(l) != Assignment::unassigned) {
         throw std::invalid_argument("Cannot assign to an already assigned variable");
     }
-    m_stack.push_back({});
+    m_stack.emplace_back();
     bool success = assign_value_impl(l);
     if (!success) {
         return false;
@@ -123,29 +123,29 @@ void WatchedLiterals::backtrack_to(size_t target_level) {
 }
 
 void WatchedLiterals::change_active_clauses(const std::vector<size_t> &activate_indices,
-    const std::vector<size_t> &deactivate_indices) {
+                                            const std::vector<size_t> &deactivate_indices) {
     // backtrack to empty stack
     backtrack_to(0);
     backtrack_impl();
     assert(m_stack.empty());
     // update active clauses
-    for (auto &&idx : activate_indices) {
+    for (auto &idx: activate_indices) {
         activate_clause(idx, true);
     }
-    for (auto &&idx : deactivate_indices) {
+    for (auto &idx: deactivate_indices) {
         deactivate_clause(idx, true);
     }
     m_empty_count = m_initial_empty_count;
     m_unit_clauses = m_initial_unit_clauses;
     // propagate
-    m_stack.push_back({});
+    m_stack.emplace_back();
     if (!contains_empty()) {
         propagate();
     }
 }
 
 void WatchedLiterals::print_clauses(std::ostream &os) const {
-    for (auto &&clause_data : m_clauses) {
+    for (auto &clause_data: m_clauses) {
         os << "{";
         for (size_t i = 0; i < clause_data.clause.size(); ++i) {
             os << " " << clause_data.clause[i];
@@ -167,8 +167,8 @@ void WatchedLiterals::print_clauses(std::ostream &os) const {
 
 void WatchedLiterals::print_stack(std::ostream &os) const {
     size_t i = 0;
-    for (auto &level : m_stack) {
-        for (auto &l : level)  {
+    for (auto &level: m_stack) {
+        for (auto &l: level) {
             os << l << "@" << i << " ";
         }
         ++i;
@@ -183,7 +183,7 @@ void WatchedLiterals::activate_clause(size_t clause_index, bool skip_if_active) 
         return;
     }
     data.is_active = true;
-    if (data.clause.size() == 0) {
+    if (data.clause.empty()) {
         ++m_initial_empty_count;
     } else if (data.clause.size() == 1) {
         size_t var_idx = get_var_index(data.clause[0]);
@@ -204,7 +204,7 @@ void WatchedLiterals::deactivate_clause(size_t clause_index, bool skip_if_not_ac
         return;
     }
     data.is_active = false;
-    if (data.clause.size() == 0) {
+    if (data.clause.empty()) {
         --m_initial_empty_count;
     } else if (data.clause.size() == 1) {
         size_t var_idx = get_var_index(data.clause[0]);
@@ -256,7 +256,7 @@ bool WatchedLiterals::assign_value_impl(Literal l) {
     var_data.assignment = l > 0 ? Assignment::positive : Assignment::negative;
     m_stack.back().push_back(l);
     // update literals that watched this variable
-    for (auto it = std::begin(var_data.watched_clauses); it != std::end(var_data.watched_clauses); ) {
+    for (auto it = std::begin(var_data.watched_clauses); it != std::end(var_data.watched_clauses);) {
         bool moved_to_new_literal = update_watched_literal(*it, var_idx);
         if (moved_to_new_literal) {
             it = var_data.watched_clauses.erase(it);
@@ -337,7 +337,7 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
 
 void WatchedLiterals::backtrack_impl() {
     StackElement &assignments = m_stack.back();
-    for (auto &&literal : assignments) {
+    for (auto &literal: assignments) {
         m_variables[get_var_index(literal)].assignment = Assignment::unassigned;
     }
     m_stack.pop_back();

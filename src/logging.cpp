@@ -8,10 +8,10 @@ namespace dp {
 
 logging::log_buffer::log_buffer(bool log_to_console) : m_log_to_console(log_to_console), m_write_to_file(false) {}
 
-logging::log_buffer::log_buffer(bool log_to_console, const std::string &filename)
-    : m_log_to_console(log_to_console), m_write_to_file(true), m_file(filename) {
+logging::log_buffer::log_buffer(bool log_to_console, const std::string &filename) :
+        m_log_to_console(log_to_console), m_write_to_file(true), m_file(filename) {
     if (!m_file.is_open()) {
-        throw std::runtime_error("Failed to open the log file");
+        throw std::runtime_error("Failed to open the log file \"" + filename + "\"");
     }
 }
 
@@ -46,17 +46,17 @@ void logging::log_buffer::check_new_line() {
     }
     std::string prefix = "log (" + get_time_str() + "): ";
     if (m_log_to_console) {
-        m_cout_buffer->sputn(prefix.c_str(), prefix.size());
+        m_cout_buffer->sputn(prefix.c_str(), static_cast<long>(prefix.size()));
     }
     if (m_write_to_file) {
-        m_file.write(prefix.c_str(), prefix.size());
+        m_file.write(prefix.c_str(), static_cast<long>(prefix.size()));
     }
     m_is_new_line = false;
 }
 
 #define adj(len) std::setfill('0') << std::setw(len)
 
-std::string logging::log_buffer::get_time_str() const {
+std::string logging::log_buffer::get_time_str() {
     std::ostringstream oss;
 
     auto now = std::chrono::high_resolution_clock::now();

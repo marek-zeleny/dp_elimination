@@ -12,7 +12,7 @@ namespace dp {
 
 bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &clause) {
     log << "checking if clause {";
-    for (auto &l : clause) {
+    for (auto &l: clause) {
         log << l << ", ";
     }
     log << "} is absorbed" << std::endl;
@@ -21,11 +21,11 @@ bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &cl
     if (formula.contains_empty()) {
         return false;
     }
-    for (auto &literal : clause) {
+    for (auto &literal: clause) {
         formula.backtrack_to(0);
         log << "checking if literal " << literal << " is empowered" << std::endl;
         bool is_empowered = true;
-        for (auto &l : clause) {
+        for (auto &l: clause) {
             if (l == literal) {
                 continue;
             }
@@ -56,7 +56,7 @@ bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &cl
 
 std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vector<std::vector<int32_t>> &clauses) {
     log << "removing absorbed clauses, starting with " << clauses.size() << std::endl;
-    std::unordered_set<size_t> deactivated {0};
+    std::unordered_set<size_t> deactivated{0};
     //WatchedLiterals watched = WatchedLiterals::from_vector(clauses, deactivated);
     WatchedLiterals watched = WatchedLiterals::from_vector(clauses);
     //watched.print_clauses(log);

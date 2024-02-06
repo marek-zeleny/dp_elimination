@@ -10,7 +10,7 @@
 namespace dp {
 
 void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &func) {
-    log << "CnfReader: openning file " << file_name << std::endl;
+    log << "CnfReader: opening file " << file_name << std::endl;
     std::ifstream file(file_name);
     if (!file.is_open()) {
         throw failure("failed to open the input file", 0);
@@ -61,17 +61,17 @@ void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &
                 ++clause_count;
             } else {
                 curr_clause.push_back(literal);
-                size_t var = (size_t)std::abs(literal);
+                auto var = static_cast<size_t>(std::abs(literal));
                 if (var > max_var) {
                     if (var - min_var > num_vars) {
-                        print_warning("variable outside the range defind in the problem definition (p)", line_num);
+                        print_warning("variable outside the range defined in the problem definition (p)", line_num);
                     } else {
                         max_var = var;
                     }
                 }
                 if (var < min_var) {
                     if (max_var - var > num_vars) {
-                        print_warning("variable outside the range defind in the problem definition (p)", line_num);
+                        print_warning("variable outside the range defined in the problem definition (p)", line_num);
                     } else {
                         min_var = var;
                     }
@@ -80,7 +80,7 @@ void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &
         }
     }
     // the final 0 might be omitted
-    if (curr_clause.size() > 0) {
+    if (!curr_clause.empty()) {
         func(curr_clause);
         ++clause_count;
     }
@@ -99,7 +99,7 @@ std::vector<CnfReader::Clause> CnfReader::read_from_file_to_vector(const std::st
         read_from_file(file_name, func);
     } catch (const failure &f) {
         std::cerr << f.what() << std::endl;
-        return std::vector<Clause>();
+        return {};
     }
     return clauses;
 }
@@ -108,8 +108,8 @@ void CnfReader::print_warning(const std::string &msg, const size_t line_num) {
     std::cerr << "CNF input file format warning [line " << line_num << "]: " << msg << std::endl;
 }
 
-CnfReader::failure::failure(const std::string &what_arg, const size_t line_num)
-    : std::runtime_error(construct_msg(what_arg, line_num)) {}
+CnfReader::failure::failure(const std::string &what_arg, const size_t line_num) :
+        std::runtime_error(construct_msg(what_arg, line_num)) {}
 
 std::string CnfReader::failure::construct_msg(const std::string &msg, const size_t line_num) {
     std::ostringstream oss;

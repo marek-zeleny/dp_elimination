@@ -11,7 +11,7 @@ class CnfWriter {
 public:
     class failure : public std::runtime_error {
     public:
-        failure(const std::string &what_arg);
+        explicit failure(const std::string &what_arg);
 
     private:
         static std::string construct_msg(const std::string &msg);
@@ -22,7 +22,7 @@ public:
 
     static bool write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name);
 
-    CnfWriter(const std::string &file_name, const size_t max_var, const size_t num_clauses);
+    CnfWriter(const std::string &file_name, size_t max_var, size_t num_clauses);
 
     CnfWriter &write_clause(const Clause &clause);
     void finish();

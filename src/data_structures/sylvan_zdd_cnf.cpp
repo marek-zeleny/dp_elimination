@@ -37,7 +37,7 @@ SylvanZddCnf::~SylvanZddCnf() {
 }
 
 SylvanZddCnf::Heuristic SylvanZddCnf::get_new_heuristic() {
-    return Heuristic();
+    return {};
 }
 
 SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
@@ -45,7 +45,7 @@ SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
     ZDD clause = zdd_false;
     zdd_refs_pushptr(&zdd);
     zdd_refs_pushptr(&clause);
-    for (auto &&c : clauses) {
+    for (auto &c: clauses) {
         clause = clause_from_vector(c);
         zdd = zdd_or(zdd, clause);
     }
@@ -67,7 +67,7 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     } catch (const CnfReader::failure &f) {
         std::cerr << f.what() << std::endl;
         zdd_refs_popptr(2);
-        return SylvanZddCnf();
+        return {};
     }
     zdd_refs_popptr(2);
     return SylvanZddCnf(zdd);
@@ -353,7 +353,7 @@ void SylvanZddCnf::print_clauses() const {
 void SylvanZddCnf::print_clauses(std::ostream &output) const {
     ClauseFunction func = [&](const Clause &clause) {
         output << "{";
-        for (auto &&l : clause) {
+        for (auto &l: clause) {
             output << " " << l << ",";
         }
         output << "}" << std::endl;
@@ -388,7 +388,7 @@ bool SylvanZddCnf::draw_to_file(const std::string &file_name) const {
 }
 
 bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
-    size_t max_var = (size_t)get_largest_variable();
+    auto max_var = static_cast<size_t>(get_largest_variable());
     size_t num_clauses = clauses_count();
     try {
         CnfWriter writer(file_name, max_var, num_clauses);
@@ -412,14 +412,14 @@ ZDD SylvanZddCnf::get_zdd() const {
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
     assert (l != 0);
     if (l > 0) {
-        return 2 * (Var)l;
+        return 2 * static_cast<Var>(l);
     } else {
-        return 2 * (Var)-l + 1;
+        return 2 * static_cast<Var>(-l) + 1;
     }
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::var_to_literal(Var v) {
-    auto [q, r] = std::div((Literal)v, 2);
+    auto [q, r] = std::div(static_cast<Literal>(v), 2);
     if (r == 0) {
         return q;
     } else {
@@ -429,7 +429,7 @@ SylvanZddCnf::Literal SylvanZddCnf::var_to_literal(Var v) {
 
 ZDD SylvanZddCnf::set_from_vector(const Clause &clause) {
     std::vector<Var> vars;
-    for (auto &&l : clause) {
+    for (auto &l: clause) {
         Var v = literal_to_var(l);
         vars.push_back(v);
     }

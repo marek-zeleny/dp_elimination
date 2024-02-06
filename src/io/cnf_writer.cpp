@@ -5,20 +5,20 @@
 #include <algorithm>
 #include "logging.hpp"
 
-namespace dp{
+namespace dp {
 
 bool CnfWriter::write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name) {
     size_t num_clauses = clauses.size();
     size_t max_var = 0;
-    for (auto &&c : clauses) {
-        for (auto &&l : c) {
-            size_t var = (size_t)std::abs(l);
+    for (auto &c: clauses) {
+        for (auto &l: c) {
+            auto var = static_cast<size_t>(std::abs(l));
             max_var = std::max(max_var, var);
         }
     }
     try {
         CnfWriter writer(file_name, max_var, num_clauses);
-        for (auto &&c : clauses) {
+        for (auto &c: clauses) {
             writer.write_clause(c);
         }
         writer.finish();
@@ -29,9 +29,9 @@ bool CnfWriter::write_vector_to_file(const std::vector<Clause> &clauses, const s
     return true;
 }
 
-CnfWriter::CnfWriter(const std::string &file_name, const size_t max_var, const size_t num_clauses)
-    : m_file(file_name), m_max_var(max_var), m_num_clauses(num_clauses) {
-    log << "CnfWriter: openning file " << file_name << std::endl;
+CnfWriter::CnfWriter(const std::string &file_name, const size_t max_var, const size_t num_clauses) :
+        m_file(file_name), m_max_var(max_var), m_num_clauses(num_clauses) {
+    log << "CnfWriter: opening file " << file_name << std::endl;
     if (!m_file.is_open()) {
         throw failure("failed to open the output file");
     }
@@ -47,18 +47,18 @@ CnfWriter &CnfWriter::write_clause(const Clause &clause) {
         throw failure("this writer has already finished writing the whole formula");
     }
     if (m_clause_count >= m_num_clauses) {
-        throw failure("the formula already contains the defined number of clauses (" + std::to_string(m_num_clauses)
-        + ")");
+        throw failure("the formula already contains the defined number of clauses (" +
+                      std::to_string(m_num_clauses) + ")");
     }
-    for (auto &&l : clause) {
+    for (auto &&l: clause) {
         if (l == 0) {
             throw failure("the formula cannot have a zero (0) literal");
         }
         m_file << l << " ";
-        Var v = (Var)std::abs(l);
+        Var v = (Var) std::abs(l);
         if (v > m_max_var) {
-            throw failure("literal " + std::to_string(v) + " outside of the defined range (" + std::to_string(m_max_var)
-            + ")");
+            throw failure("literal " + std::to_string(v) + " outside of the defined range (" +
+                          std::to_string(m_max_var) + ")");
         }
     }
     m_file << "0" << std::endl;
@@ -72,7 +72,7 @@ void CnfWriter::finish() {
     }
     if (m_clause_count < m_num_clauses) {
         throw failure("the formula contains less clauses (" + std::to_string(m_clause_count)
-        + ") than the defind number (" + std::to_string(m_num_clauses) + ")");
+                      + ") than the defind number (" + std::to_string(m_num_clauses) + ")");
     }
     m_file.close();
     if (!m_file) {
@@ -82,8 +82,8 @@ void CnfWriter::finish() {
     log << "CnfWriter: CNF formula successfully written" << std::endl;
 }
 
-CnfWriter::failure::failure(const std::string &what_arg)
-    : std::runtime_error(construct_msg(what_arg)) {}
+CnfWriter::failure::failure(const std::string &what_arg) :
+        std::runtime_error(construct_msg(what_arg)) {}
 
 std::string CnfWriter::failure::construct_msg(const std::string &msg) {
     std::ostringstream oss;
