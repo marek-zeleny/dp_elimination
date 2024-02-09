@@ -2,8 +2,6 @@
 
 #include <string>
 
-namespace dp {
-
 class ArgsParser {
 public:
     static ArgsParser parse(int argc, char *argv[]);
@@ -24,5 +22,3 @@ private:
     std::string m_input_cnf_file_name;
     size_t m_eliminated_vars {};
 };
-
-} // namespace dp

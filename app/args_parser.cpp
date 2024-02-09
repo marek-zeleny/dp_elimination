@@ -3,8 +3,6 @@
 #include <iostream>
 #include <utility>
 
-namespace dp {
-
 ArgsParser::ArgsParser() : m_success(false) {}
 
 ArgsParser::ArgsParser(std::string program_name, std::string input_cnf_file_name, size_t eliminated_vars) :
@@ -54,5 +52,3 @@ void ArgsParser::print_usage(const std::string &program_name) {
 
     std::cerr << std::endl;
 }
-
-} // namespace dp
