@@ -99,12 +99,7 @@ std::vector<CnfReader::Clause> CnfReader::read_from_file_to_vector(const std::st
     AddClauseFunction func = [&](const Clause &c) {
         clauses.push_back(c);
     };
-    try {
-        read_from_file(file_name, func);
-    } catch (const failure &f) {
-        std::cerr << f.what() << std::endl;
-        return {};
-    }
+    read_from_file(file_name, func);
     return clauses;
 }
 
