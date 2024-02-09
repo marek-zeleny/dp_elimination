@@ -5,8 +5,9 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
-TEST_CASE("CnfReader reads CNF format correctly", "[CnfReader]") {
+TEST_CASE("CnfReader functionality", "[CnfReader]") {
     std::string cnf_content;
     std::vector<dp::CnfReader::Clause> clauses;
 
@@ -37,7 +38,7 @@ TEST_CASE("CnfReader reads CNF format correctly", "[CnfReader]") {
 
         REQUIRE_THROWS_AS(dp::CnfReader::read_from_file_to_vector("temp_cnf.cnf"), dp::CnfReader::failure);
 
-        std::remove("temp_cnf.cnf");
+        std::filesystem::remove("temp_cnf.cnf");
     }
 
     SECTION("Mismatch in declared and actual number of clauses generates warning") {

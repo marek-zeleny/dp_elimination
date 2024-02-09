@@ -34,5 +34,6 @@ target_link_libraries(dp PRIVATE dp_lib)
 add_executable(tests
         tests/test_lru_cache.cpp
         tests/test_cnf_reader.cpp
+        tests/test_cnf_writer.cpp
 )
 target_link_libraries(tests PRIVATE dp_lib PRIVATE Catch2::Catch2WithMain)
