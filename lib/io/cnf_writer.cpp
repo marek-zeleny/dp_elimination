@@ -7,7 +7,7 @@
 
 namespace dp {
 
-bool CnfWriter::write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name) {
+void CnfWriter::write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name) {
     size_t num_clauses = clauses.size();
     size_t max_var = 0;
     for (auto &c: clauses) {
@@ -16,17 +16,11 @@ bool CnfWriter::write_vector_to_file(const std::vector<Clause> &clauses, const s
             max_var = std::max(max_var, var);
         }
     }
-    try {
-        CnfWriter writer(file_name, max_var, num_clauses);
-        for (auto &c: clauses) {
-            writer.write_clause(c);
-        }
-        writer.finish();
-    } catch (const failure &f) {
-        std::cerr << f.what() << std::endl;
-        return false;
+    CnfWriter writer(file_name, max_var, num_clauses);
+    for (auto &c: clauses) {
+        writer.write_clause(c);
     }
-    return true;
+    writer.finish();
 }
 
 CnfWriter::CnfWriter(std::ostream &output, const size_t max_var, const size_t num_clauses) :

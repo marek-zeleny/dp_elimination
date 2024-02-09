@@ -20,7 +20,7 @@ public:
     using Literal = int32_t;
     using Clause = std::vector<Literal>;
 
-    static bool write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name);
+    static void write_vector_to_file(const std::vector<Clause> &clauses, const std::string &file_name);
 
     CnfWriter(std::ostream &output, size_t max_var, size_t num_classes);
     CnfWriter(const std::string &file_name, size_t max_var, size_t num_clauses);
