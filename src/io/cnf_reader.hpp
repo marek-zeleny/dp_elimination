@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <istream>
 #include <functional>
 #include <stdexcept>
 
@@ -21,6 +22,7 @@ public:
     using Clause = std::vector<Literal>;
     using AddClauseFunction = std::function<void(Clause &clause)>;
 
+    static void read_from_stream(std::istream &stream, AddClauseFunction &func);
     static void read_from_file(const std::string &file_name, AddClauseFunction &func);
     static std::vector<Clause> read_from_file_to_vector(const std::string &file_name);
 

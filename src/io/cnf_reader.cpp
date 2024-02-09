@@ -9,12 +9,7 @@
 
 namespace dp {
 
-void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &func) {
-    log << "CnfReader: opening file " << file_name << std::endl;
-    std::ifstream file(file_name);
-    if (!file.is_open()) {
-        throw failure("failed to open the input file", 0);
-    }
+void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
     std::string line;
     bool started = false;
     Clause curr_clause;
@@ -24,7 +19,7 @@ void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &
     size_t min_var = std::numeric_limits<size_t>::max();
     size_t max_var = std::numeric_limits<size_t>::min();
     size_t line_num = 0;
-    while (std::getline(file, line)) {
+    while (std::getline(input, line)) {
         ++line_num;
         if (line.empty()) {
             continue;
@@ -88,6 +83,15 @@ void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &
         print_warning("the number of clauses doesn't match the problem definition (p)", line_num);
     }
     log << "CnfReader: CNF formula successfully read" << std::endl;
+}
+
+void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &func) {
+    log << "CnfReader: opening file " << file_name << std::endl;
+    std::ifstream file(file_name);
+    if (!file.is_open()) {
+        throw failure("failed to open the input file " + file_name, 0);
+    }
+    read_from_stream(file, func);
 }
 
 std::vector<CnfReader::Clause> CnfReader::read_from_file_to_vector(const std::string &file_name) {
