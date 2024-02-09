@@ -22,7 +22,7 @@ target_include_directories(dp PRIVATE src/)
 target_link_libraries(dp PRIVATE sylvan)
 
 add_executable(tests
-    tests/test_example.cpp
+    tests/test_lru_cache.cpp
 )
 target_include_directories(tests PRIVATE src/)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
