@@ -1,4 +1,4 @@
-#include "catch2/catch_test_macros.hpp"
+#include <catch2/catch_test_macros.hpp>
 #include "data_structures/lru_cache.hpp"
 
 TEST_CASE("LruCache functionality", "[LruCache]") {
