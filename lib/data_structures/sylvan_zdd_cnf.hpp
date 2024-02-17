@@ -36,6 +36,10 @@ public:
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
     static SylvanZddCnf from_file(const std::string &file_name);
 
+    inline bool operator==(const SylvanZddCnf &other) const {
+        return m_zdd == other.m_zdd;
+    }
+
     [[nodiscard]] size_t clauses_count() const;
     [[nodiscard]] bool is_empty() const;
     [[nodiscard]] bool contains_empty() const;

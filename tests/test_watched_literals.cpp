@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "data_structures/watched_literals.hpp"
 
-TEST_CASE("WatchedLiterals functionality", "[WatchedLiterals]") {
+TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
     using namespace dp;
     using Assignment = WatchedLiterals::Assignment;
 

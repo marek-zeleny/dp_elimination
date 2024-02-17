@@ -32,9 +32,11 @@ target_include_directories(dp PRIVATE app/)
 target_link_libraries(dp PRIVATE dp_lib)
 
 add_executable(tests
+        tests/main.cpp
         tests/test_lru_cache.cpp
         tests/test_cnf_reader.cpp
         tests/test_cnf_writer.cpp
         tests/test_watched_literals.cpp
+        tests/test_sylvan_zdd_cnf.cpp
 )
-target_link_libraries(tests PRIVATE dp_lib PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE dp_lib PRIVATE Catch2::Catch2)
