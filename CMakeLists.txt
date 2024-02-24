@@ -38,5 +38,6 @@ add_executable(tests
         tests/test_cnf_writer.cpp
         tests/test_watched_literals.cpp
         tests/test_sylvan_zdd_cnf.cpp
+        tests/test_unit_propagation.cpp
 )
 target_link_libraries(tests PRIVATE dp_lib PRIVATE Catch2::Catch2)

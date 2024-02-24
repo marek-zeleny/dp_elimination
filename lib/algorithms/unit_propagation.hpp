@@ -24,6 +24,10 @@ bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &cl
     for (auto &literal: clause) {
         formula.backtrack_to(0);
         log << "checking if literal " << literal << " is empowered" << std::endl;
+        // First we need to check if the potentially empowered literal is already positive
+        if (formula.get_assignment(literal) == WatchedLiterals::Assignment::positive) {
+            continue;
+        }
         bool is_empowered = true;
         for (auto &l: clause) {
             if (l == literal) {
