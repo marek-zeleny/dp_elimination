@@ -10,7 +10,7 @@
 
 namespace dp {
 
-bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &clause) {
+inline bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &clause) {
     log << "checking if clause {";
     for (auto &l: clause) {
         log << l << ", ";
@@ -58,7 +58,7 @@ bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32_t> &cl
     return true;
 }
 
-std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vector<std::vector<int32_t>> &clauses) {
+inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vector<std::vector<int32_t>> &clauses) {
     log << "removing absorbed clauses, starting with " << clauses.size() << std::endl;
     std::unordered_set<size_t> deactivated{0};
     //WatchedLiterals watched = WatchedLiterals::from_vector(clauses, deactivated);
