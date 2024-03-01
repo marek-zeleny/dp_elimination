@@ -19,7 +19,7 @@ SylvanZddCnf::SylvanZddCnf() : m_zdd(zdd_false) {
     zdd_protect(&m_zdd);
 }
 
-SylvanZddCnf::SylvanZddCnf(ZDD &zdd) : m_zdd(zdd) {
+SylvanZddCnf::SylvanZddCnf(ZDD zdd) : m_zdd(zdd) {
     zdd_protect(&m_zdd);
 }
 
@@ -113,6 +113,22 @@ SylvanZddCnf::Literal SylvanZddCnf::get_largest_variable() const {
     }
     Var v = get_largest_variable_impl(m_zdd);
     return std::abs(var_to_literal(v));
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::get_unit_literal() const {
+    ZDD zdd = m_zdd;
+    while (zdd != zdd_false && zdd != zdd_true) {
+        // if high child contains empty set, current node contains a unit literal
+        ZDD high = zdd_gethigh(zdd);
+        if (contains_empty_set(high)) {
+            return var_to_literal(zdd_getvar(zdd));
+        } else {
+            // otherwise, follow the low path
+            zdd = zdd_getlow(zdd);
+        }
+    }
+    // if no unit literal was found, return invalid literal
+    return 0;
 }
 
 SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
@@ -451,6 +467,16 @@ bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
 SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
     Var v = zdd_getvar(cnf.get_zdd());
     return var_to_literal(v);
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::UnitLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
+    Literal l = cnf.get_unit_literal();
+    if (l != 0) {
+        return l;
+    } else {
+        Var v = zdd_getvar(cnf.get_zdd());
+        return var_to_literal(v);
+    }
 }
 
 } // namespace dp

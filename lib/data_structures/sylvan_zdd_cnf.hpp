@@ -18,15 +18,16 @@ using namespace sylvan;
 class SylvanZddCnf {
 private:
     class SimpleHeuristic;
+    class UnitLiteralHeuristic;
 
 public:
     using Literal = int32_t;
     using Clause = std::vector<Literal>;
     using ClauseFunction = std::function<bool(const Clause &)>;
-    using Heuristic = SimpleHeuristic;
+    using Heuristic = UnitLiteralHeuristic;
 
     SylvanZddCnf();
-    explicit SylvanZddCnf(ZDD &zdd);
+    explicit SylvanZddCnf(ZDD zdd);
     SylvanZddCnf(const SylvanZddCnf &other);
     SylvanZddCnf &operator=(const SylvanZddCnf &other);
     ~SylvanZddCnf();
@@ -45,6 +46,7 @@ public:
     [[nodiscard]] bool contains_empty() const;
     [[nodiscard]] Literal get_smallest_variable() const;
     [[nodiscard]] Literal get_largest_variable() const;
+    [[nodiscard]] Literal get_unit_literal() const;
     [[nodiscard]] SylvanZddCnf subset0(Literal l) const;
     [[nodiscard]] SylvanZddCnf subset1(Literal l) const;
     [[nodiscard]] SylvanZddCnf unify(const SylvanZddCnf &other) const;
@@ -110,6 +112,11 @@ private:
 
     // literal selection heuristics
     class SimpleHeuristic {
+    public:
+        SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);
+    };
+
+    class UnitLiteralHeuristic {
     public:
         SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);
     };
