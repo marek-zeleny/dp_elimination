@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <tuple>
+#include <stack>
+#include <unordered_set>
+#include <unordered_map>
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
@@ -128,6 +131,45 @@ SylvanZddCnf::Literal SylvanZddCnf::get_unit_literal() const {
         }
     }
     // if no unit literal was found, return invalid literal
+    return 0;
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::get_clear_literal() const {
+    using Occurrence = uint8_t;
+    constexpr Occurrence POSITIVE = 1 << 0;
+    constexpr Occurrence NEGATIVE = 1 << 1;
+    std::stack<ZDD> stack;
+    stack.push(m_zdd);
+    std::unordered_set<ZDD> visited;
+    std::unordered_map<Literal, Occurrence> occurrences;
+    while (!stack.empty()) {
+        ZDD zdd = stack.top();
+        stack.pop();
+        if (zdd == zdd_false || zdd == zdd_true || visited.contains(zdd)) {
+            continue;
+        }
+        visited.insert(zdd);
+        stack.push(zdd_getlow(zdd));
+        stack.push(zdd_gethigh(zdd));
+        Literal l = var_to_literal(zdd_getvar(zdd));
+        Occurrence occ = l > 0 ? POSITIVE : NEGATIVE;
+        Literal var = std::abs(l);
+        if (occurrences.contains(var)) {
+            occurrences[var] |= occ;
+        } else {
+            occurrences[var] = occ;
+        }
+    }
+    for (auto &[var, occ] : occurrences) {
+        if (occ != (POSITIVE | NEGATIVE)) {
+            if (occ == POSITIVE) {
+                return var;
+            } else {
+                assert(occ == NEGATIVE);
+                return -var;
+            }
+        }
+    }
     return 0;
 }
 
@@ -471,6 +513,16 @@ SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const Sylv
 
 SylvanZddCnf::Literal SylvanZddCnf::UnitLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
     Literal l = cnf.get_unit_literal();
+    if (l != 0) {
+        return l;
+    } else {
+        Var v = zdd_getvar(cnf.get_zdd());
+        return var_to_literal(v);
+    }
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::ClearLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
+    Literal l = cnf.get_clear_literal();
     if (l != 0) {
         return l;
     } else {
