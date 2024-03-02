@@ -78,6 +78,52 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
         REQUIRE(cnf_with_empty_clause1.get_largest_variable() == 0);
     }
 
+    SECTION("Unit and clear literal detection") {
+        SylvanZddCnf empty_cnf;
+        SylvanZddCnf cnf_with_empty_clause1 = SylvanZddCnf::from_vector({{}});
+        SylvanZddCnf cnf_with_empty_clause2 = SylvanZddCnf::from_vector({
+            {},
+            {1},
+            {-1, 2},
+        });
+        SylvanZddCnf cnf_with_multiple = SylvanZddCnf::from_vector({
+            {-1, 2, 4},
+            {1, 2},
+            {2, -3, 4},
+            {1},
+            {3},
+        });
+        SylvanZddCnf cnf_without_any = SylvanZddCnf::from_vector({
+            {-1, 2, 3},
+            {1, -2},
+            {1, 2, -3},
+        });
+        SylvanZddCnf::Literal unit;
+        SylvanZddCnf::Literal clear;
+
+        unit = empty_cnf.get_unit_literal();
+        REQUIRE(unit == 0);
+        unit = cnf_with_empty_clause1.get_unit_literal();
+        REQUIRE(unit == 0);
+        unit = cnf_with_empty_clause2.get_unit_literal();
+        REQUIRE(unit == 1);
+        unit = cnf_with_multiple.get_unit_literal();
+        REQUIRE((unit == 1 || unit == 3));
+        unit = cnf_without_any.get_unit_literal();
+        REQUIRE(unit == 0);
+
+        clear = empty_cnf.get_clear_literal();
+        REQUIRE(clear == 0);
+        clear = cnf_with_empty_clause1.get_clear_literal();
+        REQUIRE(clear == 0);
+        clear = cnf_with_empty_clause2.get_clear_literal();
+        REQUIRE(clear == 2);
+        clear = cnf_with_multiple.get_clear_literal();
+        REQUIRE((clear == 2 || clear == 4));
+        clear = cnf_without_any.get_clear_literal();
+        REQUIRE(clear == 0);
+    }
+
     SECTION("Set operations") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
         SylvanZddCnf expected;
