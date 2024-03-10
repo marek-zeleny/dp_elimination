@@ -1,24 +1,28 @@
 #pragma once
 
 #include <string>
+#include <optional>
 
 class ArgsParser {
 public:
-    static ArgsParser parse(int argc, char *argv[]);
+    static std::optional<ArgsParser> parse(int argc, char *argv[]);
 
-    [[nodiscard]] bool success() const;
-    [[nodiscard]] std::string get_program_name() const;
-    [[nodiscard]] std::string get_input_cnf_file_name() const;
-    [[nodiscard]] size_t get_eliminated_vars() const;
+    ArgsParser(const ArgsParser &) = default;
+    ArgsParser &operator=(const ArgsParser &) = default;
+    ArgsParser(ArgsParser &&) = default;
+    ArgsParser &operator=(ArgsParser &&) = default;
+    ~ArgsParser() = default;
+
+    [[nodiscard]] const std::string &get_input_cnf_file_name() const { return m_input_cnf_file_name; }
+    [[nodiscard]] const std::string &get_output_cnf_file_name() const { return m_output_cnf_file_name; }
+    [[nodiscard]] const std::string &get_log_file_name() const { return m_log_file_name; }
+    [[nodiscard]] size_t get_eliminated_vars() const { return m_eliminated_vars; }
 
 private:
-    ArgsParser();
-    ArgsParser(std::string program_name, std::string input_cnf_file_name, size_t eliminated_vars);
+    ArgsParser() = default;
 
-    static void print_usage(const std::string &program_name);
-
-    bool m_success;
-    std::string m_program_name;
     std::string m_input_cnf_file_name;
-    size_t m_eliminated_vars {};
+    std::string m_output_cnf_file_name{"result.cnf"};
+    std::string m_log_file_name{"dp.log"};
+    size_t m_eliminated_vars{3};
 };

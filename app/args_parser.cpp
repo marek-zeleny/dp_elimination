@@ -1,54 +1,29 @@
 #include "args_parser.hpp"
 
-#include <iostream>
 #include <utility>
+#include <CLI/CLI.hpp>
 
-ArgsParser::ArgsParser() : m_success(false) {}
+std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
+    ArgsParser args;
+    CLI::App app("Davis Putnam elimination algorithm for preprocessing CNF formulas");
+    app.option_defaults()->always_capture_default();
+    argv = app.ensure_utf8(argv);
 
-ArgsParser::ArgsParser(std::string program_name, std::string input_cnf_file_name, size_t eliminated_vars) :
-        m_success(true),
-        m_program_name(std::move(program_name)),
-        m_input_cnf_file_name(std::move(input_cnf_file_name)),
-        m_eliminated_vars(eliminated_vars) {}
+    app.add_option("-i,--input-file", args.m_input_cnf_file_name,
+                   "File containing the input formula in DIMACS format")
+                   ->required();
+    app.add_option("-o,--output-file", args.m_output_cnf_file_name,
+                   "File for writing the formula after variable elimination ");
+    app.add_option("-l,--log-file", args.m_log_file_name,
+                   "File for writing logs");
+    app.add_option("-e,--eliminate", args.m_eliminated_vars,
+                   "Number of variables to eliminate");
 
-ArgsParser ArgsParser::parse(int argc, char *argv[]) {
-    std::string program_name{argv[0]};
-    if (argc < 2) {
-        print_usage(program_name);
-        return {};
+    try {
+        app.parse(argc, argv);
+    } catch (const CLI::ParseError &e) {
+        app.exit(e);
+        return std::nullopt;
     }
-
-    std::string input_cnf_file_name{argv[1]};
-    size_t eliminated_vars = 3;
-    if (argc >= 3) {
-        std::string s{argv[2]};
-        eliminated_vars = std::stoll(s);
-    }
-    return {program_name, input_cnf_file_name, eliminated_vars};
-}
-
-bool ArgsParser::success() const {
-    return m_success;
-}
-
-std::string ArgsParser::get_program_name() const {
-    return m_program_name;
-}
-
-std::string ArgsParser::get_input_cnf_file_name() const {
-    return m_input_cnf_file_name;
-}
-
-size_t ArgsParser::get_eliminated_vars() const {
-    return m_eliminated_vars;
-}
-
-void ArgsParser::print_usage(const std::string &program_name) {
-    std::cerr << "Usage:" << std::endl << std::endl;
-    std::cerr << program_name;
-    // args:
-    std::cerr << " <INPUT CNF FILE>";
-    std::cerr << " [ELIMINATED VARS COUNT (3)]";
-
-    std::cerr << std::endl;
+    return std::move(args);
 }
