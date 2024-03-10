@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external/sylvan/)
+add_subdirectory(external/CLI11/)
 add_subdirectory(external/catch2/)
 add_subdirectory(external/simple-logger/)
 
@@ -29,7 +30,7 @@ add_executable(dp
         app/args_parser.cpp
 )
 target_include_directories(dp PRIVATE app/)
-target_link_libraries(dp PRIVATE dp_lib)
+target_link_libraries(dp PRIVATE dp_lib PRIVATE CLI11::CLI11)
 
 add_executable(tests
         tests/main.cpp
