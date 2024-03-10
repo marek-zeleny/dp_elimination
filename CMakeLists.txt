@@ -13,16 +13,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external/sylvan/)
 add_subdirectory(external/catch2/)
+add_subdirectory(external/simple-logger/)
 
 add_library(dp_lib STATIC
-        lib/logging.cpp
         lib/io/cnf_reader.cpp
         lib/io/cnf_writer.cpp
         lib/data_structures/sylvan_zdd_cnf.cpp
         lib/data_structures/watched_literals.cpp
 )
 target_include_directories(dp_lib PUBLIC lib/)
-target_link_libraries(dp_lib PUBLIC sylvan)
+target_link_libraries(dp_lib PUBLIC sylvan PUBLIC simple_logger)
 
 add_executable(dp
         app/main.cpp

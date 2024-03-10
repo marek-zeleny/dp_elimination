@@ -4,3 +4,6 @@
 [submodule "external/catch2"]
 	path = external/catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "external/tiny-logger"]
+	path = external/simple-logger
+	url = git@github.com:marek-zeleny/tiny-logger.git

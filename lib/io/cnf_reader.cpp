@@ -5,7 +5,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <limits>
-#include "logging.hpp"
+#include <simple_logger.h>
 
 namespace dp {
 
@@ -37,8 +37,8 @@ void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
                 std::string type;
                 if ((iss >> type >> num_vars >> num_clauses) && type == "cnf") { // TODO
                     started = true;
-                    log << "CnfReader: reading CNF formula with " << num_vars << " variables and " << num_clauses;
-                    log << " clauses" << std::endl;
+                    LOG_INFO << "reading CNF formula with " << num_vars << " variables and " << num_clauses
+                             << " clauses";
                     continue;
                 } else {
                     throw failure("invalid problem definition (p)", line_num);
@@ -82,11 +82,11 @@ void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
     if (clause_count != num_clauses) {
         print_warning("the number of clauses doesn't match the problem definition (p)", line_num);
     }
-    log << "CnfReader: CNF formula successfully read" << std::endl;
+    LOG_INFO << "CNF formula successfully read";
 }
 
 void CnfReader::read_from_file(const std::string &file_name, AddClauseFunction &func) {
-    log << "CnfReader: opening file " << file_name << std::endl;
+    LOG_DEBUG << "opening file " << file_name;
     std::ifstream file(file_name);
     if (!file.is_open()) {
         throw failure("failed to open the input file " + file_name, 0);

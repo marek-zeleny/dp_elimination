@@ -1,7 +1,7 @@
 #pragma once
 
+#include <simple_logger.h>
 #include "algorithms/unit_propagation.hpp"
-#include "logging.hpp"
 
 namespace dp {
 
@@ -20,18 +20,21 @@ Set eliminate(const Set &set, const typename Set::Literal &l) {
 
 template<typename Set>
 bool is_sat(Set set) {
-    log << "Starting DP elimination algorithm:" << std::endl;
+    LOG_INFO << "Starting DP elimination algorithm";
     typename Set::Heuristic heuristic = Set::get_new_heuristic();
     while (true) {
-        log << "CNF:" << std::endl;
-        set.print_clauses();
+        {
+            GET_LOG_STREAM_DEBUG(log_stream);
+            log_stream << "CNF:\n";
+            set.print_clauses(log_stream);
+        }
         if (set.is_empty()) {
             return true;
         } else if (set.contains_empty()) {
             return false;
         }
         typename Set::Literal l = heuristic.get_next_literal(set);
-        log << "eliminating literal " << l << std::endl;
+        LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
     }
 }
@@ -44,7 +47,7 @@ Set eliminate_vars(Set set, size_t num_vars, size_t absorbed_clauses_interval = 
             return set;
         }
         typename Set::Literal l = heuristic.get_next_literal(set);
-        log << "eliminating literal " << l << std::endl;
+        LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
         if (absorbed_clauses_interval > 0 && i % absorbed_clauses_interval == absorbed_clauses_interval - 1) {
             std::vector<typename Set::Clause> vector = set.to_vector();

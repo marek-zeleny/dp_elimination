@@ -414,7 +414,7 @@ void SylvanZddCnf::print_clauses(std::ostream &output) const {
         for (auto &l: clause) {
             output << " " << l << ",";
         }
-        output << "}" << std::endl;
+        output << "}\n";
         return true;
     };
     for_all_clauses(func);
