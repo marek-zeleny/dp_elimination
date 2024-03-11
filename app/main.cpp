@@ -14,7 +14,7 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
 
     // initialize logging
     if (!args.get_log_file_name().empty()) {
-        simple_logger::SimpleLoggerConfig::logFileName = args.get_log_file_name();
+        simple_logger::Config::logFileName = args.get_log_file_name();
     }
 
     // initialize Sylvan

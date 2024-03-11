@@ -13,7 +13,7 @@ TASK_2(int, tests, int, argc, char**, argv) {
 }
 
 int main( int argc, char* argv[] ) {
-    simple_logger::SimpleLoggerConfig::logFileName = "tests.log";
+    simple_logger::Config::logFileName = "tests.log";
     lace_start(0, 0);
     return RUN(tests, argc, argv);
 }
