@@ -31,9 +31,3 @@
 *.exe
 *.out
 *.app
-
-# Custom files and directories
-release/
-debug/
-asan/
-ubsan/
