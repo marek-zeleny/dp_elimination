@@ -491,6 +491,7 @@ ZDD SylvanZddCnf::set_from_vector(const Clause &clause) {
         Var v = literal_to_var(l);
         vars.push_back(v);
     }
+    std::sort(vars.begin(), vars.end());
     ZDD set = zdd_set_from_array(vars.data(), vars.size());
     return set;
 }

@@ -16,6 +16,14 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
         REQUIRE_FALSE(cnf.is_empty());
         REQUIRE(cnf.clauses_count() == 2);
+
+        SylvanZddCnf cnf1 = SylvanZddCnf::from_vector({{1, -2, 3}});
+        SylvanZddCnf cnf2 = SylvanZddCnf::from_vector({{-2, 3, 1}});
+        SylvanZddCnf cnf3 = SylvanZddCnf::from_vector({{3, -2, 1}});
+        REQUIRE_FALSE(cnf1.is_empty());
+        REQUIRE(cnf1.clauses_count() == 1);
+        REQUIRE(cnf1 == cnf2);
+        REQUIRE(cnf1 == cnf3);
     }
 
     SECTION("Conversion to vector") {
@@ -128,11 +136,19 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
         SylvanZddCnf expected;
 
-        auto subset0 = cnf.subset0(1);
+        auto subset0 = cnf.subset0(-1);
+        expected = SylvanZddCnf::from_vector({clause1});
+        REQUIRE(subset0 == expected);
+
+        subset0 = cnf.subset0(1);
         expected = SylvanZddCnf::from_vector({clause2});
         REQUIRE(subset0 == expected);
 
-        auto subset1 = cnf.subset1(1);
+        auto subset1 = cnf.subset1(-1);
+        expected = SylvanZddCnf::from_vector({{2, -3}});
+        REQUIRE(subset1 == expected);
+
+        subset1 = cnf.subset1(1);
         expected = SylvanZddCnf::from_vector({{-2, 3}});
         REQUIRE(subset1 == expected);
 
