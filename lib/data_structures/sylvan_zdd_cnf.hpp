@@ -47,6 +47,7 @@ public:
     [[nodiscard]] bool contains_empty() const;
     [[nodiscard]] Literal get_smallest_variable() const;
     [[nodiscard]] Literal get_largest_variable() const;
+    [[nodiscard]] Literal get_root_literal() const;
     [[nodiscard]] Literal get_unit_literal() const;
     [[nodiscard]] Literal get_clear_literal() const;
     [[nodiscard]] SylvanZddCnf subset0(Literal l) const;

@@ -12,6 +12,7 @@
 #include <cstring>
 #include <cassert>
 #include <sylvan.h>
+#include <simple_logger.h>
 
 #include "io/cnf_reader.hpp"
 #include "io/cnf_writer.hpp"
@@ -116,6 +117,14 @@ SylvanZddCnf::Literal SylvanZddCnf::get_largest_variable() const {
     }
     Var v = get_largest_variable_impl(m_zdd);
     return std::abs(var_to_literal(v));
+}
+
+SylvanZddCnf::Literal SylvanZddCnf::get_root_literal() const {
+    if (m_zdd == zdd_true || m_zdd == zdd_false) {
+        return 0;
+    }
+    Var v = zdd_getvar(m_zdd);
+    return var_to_literal(v);
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::get_unit_literal() const {
@@ -508,28 +517,31 @@ bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
-    Var v = zdd_getvar(cnf.get_zdd());
-    return var_to_literal(v);
+    Literal l = cnf.get_root_literal();
+    LOG_DEBUG << "Heuristic found root literal " << l;
+    return l;
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::UnitLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
     Literal l = cnf.get_unit_literal();
-    if (l != 0) {
-        return l;
+    if (l == 0) {
+        l = cnf.get_root_literal();
+        LOG_DEBUG << "Heuristic didn't find any unit literal, returning root literal " << l << " instead";
     } else {
-        Var v = zdd_getvar(cnf.get_zdd());
-        return var_to_literal(v);
+        LOG_DEBUG << "Heuristic found unit literal " << l;
     }
+    return l;
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::ClearLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
     Literal l = cnf.get_clear_literal();
-    if (l != 0) {
-        return l;
+    if (l == 0) {
+        l = cnf.get_root_literal();
+        LOG_DEBUG << "Heuristic didn't find any clear literal, returning root literal " << l << " instead";
     } else {
-        Var v = zdd_getvar(cnf.get_zdd());
-        return var_to_literal(v);
+        LOG_DEBUG << "Heuristic found clear literal " << l;
     }
+    return l;
 }
 
 } // namespace dp
