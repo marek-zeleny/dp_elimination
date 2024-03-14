@@ -2,26 +2,25 @@
 
 #include <simple_logger.h>
 #include "algorithms/unit_propagation.hpp"
+#include "data_structures/sylvan_zdd_cnf.hpp"
 
 namespace dp {
 
-template<typename Set>
-Set eliminate(const Set &set, const typename Set::Literal &l) {
-    Set with_l = set.subset1(l);
-    Set with_not_l = set.subset1(-l);
-    Set without_l = set.subset0(l).subset0(-l);
+inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
+    SylvanZddCnf with_l = set.subset1(l);
+    SylvanZddCnf with_not_l = set.subset1(-l);
+    SylvanZddCnf without_l = set.subset0(l).subset0(-l);
 
-    Set resolvents = with_l.multiply(with_not_l);
-    Set no_tautologies_or_subsumed = resolvents.remove_tautologies().remove_subsumed_clauses();
-    Set result = no_tautologies_or_subsumed.unify(without_l);
-    Set no_subsumed = result.remove_subsumed_clauses();
+    SylvanZddCnf resolvents = with_l.multiply(with_not_l);
+    SylvanZddCnf no_tautologies_or_subsumed = resolvents.remove_tautologies().remove_subsumed_clauses();
+    SylvanZddCnf result = no_tautologies_or_subsumed.unify(without_l);
+    SylvanZddCnf no_subsumed = result.remove_subsumed_clauses();
     return no_subsumed;
 }
 
-template<typename Set>
-bool is_sat(Set set) {
+inline bool is_sat(SylvanZddCnf set) {
     LOG_INFO << "Starting DP elimination algorithm";
-    typename Set::Heuristic heuristic = Set::get_new_heuristic();
+    SylvanZddCnf::Heuristic heuristic = SylvanZddCnf::get_new_heuristic();
     while (true) {
         {
             GET_LOG_STREAM_DEBUG(log_stream);
@@ -33,27 +32,25 @@ bool is_sat(Set set) {
         } else if (set.contains_empty()) {
             return false;
         }
-        typename Set::Literal l = heuristic.get_next_literal(set);
+        SylvanZddCnf::Literal l = heuristic.get_next_literal(set);
         LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
     }
 }
 
-template<typename Set>
-static void remove_absorbed_clauses_from_set(Set &set) {
-    std::vector<typename Set::Clause> vector = set.to_vector();
+static void remove_absorbed_clauses_from_set(SylvanZddCnf &set) {
+    std::vector<SylvanZddCnf::Clause> vector = set.to_vector();
     vector = remove_absorbed_clauses(vector);
-    set = Set::from_vector(vector);
+    set = SylvanZddCnf::from_vector(vector);
 }
 
-template<typename Set>
-Set eliminate_vars(Set set, size_t num_vars, size_t absorbed_clauses_interval = 0) {
-    typename Set::Heuristic heuristic = Set::get_new_heuristic();
+inline SylvanZddCnf eliminate_vars(SylvanZddCnf set, size_t num_vars, size_t absorbed_clauses_interval = 0) {
+    SylvanZddCnf::Heuristic heuristic = SylvanZddCnf::get_new_heuristic();
     for (size_t i = 0; i < num_vars; ++i) {
         if (set.is_empty() || set.contains_empty()) {
             return set;
         }
-        typename Set::Literal l = heuristic.get_next_literal(set);
+        SylvanZddCnf::Literal l = heuristic.get_next_literal(set);
         LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
         if (absorbed_clauses_interval > 0 && i % absorbed_clauses_interval == 0) {
