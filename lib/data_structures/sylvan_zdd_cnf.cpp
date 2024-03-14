@@ -518,7 +518,7 @@ bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
 
 SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
     Literal l = cnf.get_root_literal();
-    LOG_DEBUG << "Heuristic found root literal " << l;
+    LOG_INFO << "Heuristic found root literal " << l;
     return l;
 }
 
@@ -526,9 +526,9 @@ SylvanZddCnf::Literal SylvanZddCnf::UnitLiteralHeuristic::get_next_literal(const
     Literal l = cnf.get_unit_literal();
     if (l == 0) {
         l = cnf.get_root_literal();
-        LOG_DEBUG << "Heuristic didn't find any unit literal, returning root literal " << l << " instead";
+        LOG_INFO << "Heuristic didn't find any unit literal, returning root literal " << l << " instead";
     } else {
-        LOG_DEBUG << "Heuristic found unit literal " << l;
+        LOG_INFO << "Heuristic found unit literal " << l;
     }
     return l;
 }
@@ -537,9 +537,9 @@ SylvanZddCnf::Literal SylvanZddCnf::ClearLiteralHeuristic::get_next_literal(cons
     Literal l = cnf.get_clear_literal();
     if (l == 0) {
         l = cnf.get_root_literal();
-        LOG_DEBUG << "Heuristic didn't find any clear literal, returning root literal " << l << " instead";
+        LOG_INFO << "Heuristic didn't find any clear literal, returning root literal " << l << " instead";
     } else {
-        LOG_DEBUG << "Heuristic found clear literal " << l;
+        LOG_INFO << "Heuristic found clear literal " << l;
     }
     return l;
 }

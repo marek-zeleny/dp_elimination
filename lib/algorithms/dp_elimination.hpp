@@ -7,6 +7,7 @@
 namespace dp {
 
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
+    LOG_INFO << "Eliminating literal " << l;
     SylvanZddCnf with_l = set.subset1(l);
     SylvanZddCnf with_not_l = set.subset1(-l);
     SylvanZddCnf without_l = set.subset0(l).subset0(-l);
@@ -33,7 +34,6 @@ inline bool is_sat(SylvanZddCnf set) {
             return false;
         }
         SylvanZddCnf::Literal l = heuristic.get_next_literal(set);
-        LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
     }
 }
@@ -45,13 +45,13 @@ static void remove_absorbed_clauses_from_set(SylvanZddCnf &set) {
 }
 
 inline SylvanZddCnf eliminate_vars(SylvanZddCnf set, size_t num_vars, size_t absorbed_clauses_interval = 0) {
+    LOG_INFO << "Starting DP elimination algorithm";
     SylvanZddCnf::Heuristic heuristic = SylvanZddCnf::get_new_heuristic();
     for (size_t i = 0; i < num_vars; ++i) {
         if (set.is_empty() || set.contains_empty()) {
             return set;
         }
         SylvanZddCnf::Literal l = heuristic.get_next_literal(set);
-        LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
         if (absorbed_clauses_interval > 0 && i % absorbed_clauses_interval == 0) {
             remove_absorbed_clauses_from_set(set);

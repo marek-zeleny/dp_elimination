@@ -5,7 +5,6 @@
 #include <cassert>
 #include <stdexcept>
 #include <iostream>
-#include <simple_logger.h>
 
 namespace dp {
 
@@ -99,12 +98,6 @@ WatchedLiterals::Assignment WatchedLiterals::get_assignment(Literal l) const {
 
 void WatchedLiterals::backtrack(size_t num_levels) {
     size_t current_level = get_assignment_level();
-    LOG_DEBUG << "backtracking " << num_levels << "/" << current_level << " levels";
-    {
-        GET_LOG_STREAM_DEBUG(log_stream);
-        log_stream << "stack: ";
-        print_stack(log_stream);
-    }
     if (num_levels > current_level) {
         throw std::out_of_range("Trying to backtrack more levels than assignments made");
     }
