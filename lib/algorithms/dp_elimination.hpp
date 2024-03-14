@@ -40,6 +40,13 @@ bool is_sat(Set set) {
 }
 
 template<typename Set>
+static void remove_absorbed_clauses_from_set(Set &set) {
+    std::vector<typename Set::Clause> vector = set.to_vector();
+    vector = remove_absorbed_clauses(vector);
+    set = Set::from_vector(vector);
+}
+
+template<typename Set>
 Set eliminate_vars(Set set, size_t num_vars, size_t absorbed_clauses_interval = 0) {
     typename Set::Heuristic heuristic = Set::get_new_heuristic();
     for (size_t i = 0; i < num_vars; ++i) {
@@ -49,11 +56,12 @@ Set eliminate_vars(Set set, size_t num_vars, size_t absorbed_clauses_interval = 
         typename Set::Literal l = heuristic.get_next_literal(set);
         LOG_DEBUG << "eliminating literal " << l;
         set = eliminate(set, l);
-        if (absorbed_clauses_interval > 0 && i % absorbed_clauses_interval == absorbed_clauses_interval - 1) {
-            std::vector<typename Set::Clause> vector = set.to_vector();
-            vector = remove_absorbed_clauses(vector);
-            set = Set::from_vector(vector);
+        if (absorbed_clauses_interval > 0 && i % absorbed_clauses_interval == 0) {
+            remove_absorbed_clauses_from_set(set);
         }
+    }
+    if (absorbed_clauses_interval > 0) {
+        remove_absorbed_clauses_from_set(set);
     }
     return set;
 }
