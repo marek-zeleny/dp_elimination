@@ -18,7 +18,10 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     }
 
     // initialize Sylvan
-    Sylvan::initPackage(1LL<<22, 1LL<<26, 1LL<<22, 1LL<<26);
+    Sylvan::initPackage(args.get_sylvan_table_size(),
+                        args.get_sylvan_table_max_size(),
+                        args.get_sylvan_cache_size(),
+                        args.get_sylvan_cache_max_size());
     sylvan_init_zdd();
 
     // load input file
@@ -28,7 +31,7 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     // perform the algorithm
     size_t num_vars = args.get_eliminated_vars();
     std::cout << "Eliminating " << num_vars << " variables..." << std::endl;
-    SylvanZddCnf result = eliminate_vars(cnf, num_vars);
+    SylvanZddCnf result = eliminate_vars(cnf, num_vars, args.get_absorbed_clause_elimination_interval());
 
     // write result to file
     std::string file_name = args.get_output_cnf_file_name();
