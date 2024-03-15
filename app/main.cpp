@@ -4,6 +4,7 @@
 #include "args_parser.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
+#include "algorithms/heuristics.h"
 
 TASK_1(int, impl, const ArgsParser *, args_ptr)
 {
@@ -30,8 +31,9 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
 
     // perform the algorithm
     size_t num_vars = args.get_eliminated_vars();
+    ClearLiteralHeuristic heuristic{};
     std::cout << "Eliminating " << num_vars << " variables..." << std::endl;
-    SylvanZddCnf result = eliminate_vars(cnf, num_vars, args.get_absorbed_clause_elimination_interval());
+    SylvanZddCnf result = eliminate_vars(cnf, heuristic, num_vars, args.get_absorbed_clause_elimination_interval());
 
     // write result to file
     std::string file_name = args.get_output_cnf_file_name();

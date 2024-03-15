@@ -16,24 +16,15 @@ namespace dp {
 using namespace sylvan;
 
 class SylvanZddCnf {
-private:
-    class SimpleHeuristic;
-    class UnitLiteralHeuristic;
-    class ClearLiteralHeuristic;
-
 public:
     using Literal = int32_t;
     using Clause = std::vector<Literal>;
     using ClauseFunction = std::function<bool(const Clause &)>;
-    using Heuristic = ClearLiteralHeuristic;
 
     SylvanZddCnf();
-    explicit SylvanZddCnf(ZDD zdd);
     SylvanZddCnf(const SylvanZddCnf &other);
     SylvanZddCnf &operator=(const SylvanZddCnf &other);
     ~SylvanZddCnf();
-
-    static Heuristic get_new_heuristic();
 
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
     static SylvanZddCnf from_file(const std::string &file_name);
@@ -68,14 +59,12 @@ public:
     bool draw_to_file(const std::string &file_name) const;
     bool write_dimacs_to_file(const std::string &file_name) const;
 
-    [[nodiscard]] ZDD get_zdd() const;
-
 private:
     using Var = uint32_t;
 
     ZDD m_zdd;
 
-    //SylvanZddCnf(ZDD &zdd);
+    explicit SylvanZddCnf(ZDD zdd);
 
     // helper functions
     static Var literal_to_var(Literal l);
@@ -112,22 +101,6 @@ private:
     inline static UnaryCache s_remove_tautologies_cache;
     inline static UnaryCache s_remove_subsumed_clauses_cache;
     inline static BinaryCache s_remove_supersets_cache;
-
-    // literal selection heuristics
-    class SimpleHeuristic {
-    public:
-        SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);
-    };
-
-    class UnitLiteralHeuristic {
-    public:
-        SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);
-    };
-
-    class ClearLiteralHeuristic {
-    public:
-        SylvanZddCnf::Literal get_next_literal(const SylvanZddCnf &cnf);
-    };
 };
 
 } // namespace dp

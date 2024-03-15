@@ -40,10 +40,6 @@ SylvanZddCnf::~SylvanZddCnf() {
     zdd_unprotect(&m_zdd);
 }
 
-SylvanZddCnf::Heuristic SylvanZddCnf::get_new_heuristic() {
-    return {};
-}
-
 SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
     ZDD zdd = zdd_false;
     ZDD clause = zdd_false;
@@ -472,10 +468,6 @@ bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
     return true;
 }
 
-ZDD SylvanZddCnf::get_zdd() const {
-    return m_zdd;
-}
-
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
     assert (l != 0);
     if (l > 0) {
@@ -514,34 +506,6 @@ ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
 
 bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
     return (zdd & zdd_complement) != 0;
-}
-
-SylvanZddCnf::Literal SylvanZddCnf::SimpleHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
-    Literal l = cnf.get_root_literal();
-    LOG_INFO << "Heuristic found root literal " << l;
-    return l;
-}
-
-SylvanZddCnf::Literal SylvanZddCnf::UnitLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
-    Literal l = cnf.get_unit_literal();
-    if (l == 0) {
-        l = cnf.get_root_literal();
-        LOG_INFO << "Heuristic didn't find any unit literal, returning root literal " << l << " instead";
-    } else {
-        LOG_INFO << "Heuristic found unit literal " << l;
-    }
-    return l;
-}
-
-SylvanZddCnf::Literal SylvanZddCnf::ClearLiteralHeuristic::get_next_literal(const SylvanZddCnf &cnf) {
-    Literal l = cnf.get_clear_literal();
-    if (l == 0) {
-        l = cnf.get_root_literal();
-        LOG_INFO << "Heuristic didn't find any clear literal, returning root literal " << l << " instead";
-    } else {
-        LOG_INFO << "Heuristic found clear literal " << l;
-    }
-    return l;
 }
 
 } // namespace dp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <simple_logger.h>
+#include "algorithms/heuristics.h"
 #include "algorithms/unit_propagation.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 
@@ -19,9 +20,9 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     return no_subsumed;
 }
 
-inline bool is_sat(SylvanZddCnf set) {
+template<IsHeuristic Heuristic = SimpleHeuristic>
+bool is_sat(SylvanZddCnf set, Heuristic heuristic = {}) {
     LOG_INFO << "Starting DP elimination algorithm";
-    SylvanZddCnf::Heuristic heuristic = SylvanZddCnf::get_new_heuristic();
     while (true) {
         {
             GET_LOG_STREAM_DEBUG(log_stream);
@@ -44,9 +45,10 @@ static void remove_absorbed_clauses_from_set(SylvanZddCnf &set) {
     set = SylvanZddCnf::from_vector(vector);
 }
 
-inline SylvanZddCnf eliminate_vars(SylvanZddCnf set, size_t num_vars, size_t absorbed_clauses_interval = 0) {
+template<IsHeuristic Heuristic>
+SylvanZddCnf eliminate_vars(SylvanZddCnf set, Heuristic heuristic, size_t num_vars,
+                            size_t absorbed_clauses_interval = 0) {
     LOG_INFO << "Starting DP elimination algorithm";
-    SylvanZddCnf::Heuristic heuristic = SylvanZddCnf::get_new_heuristic();
     for (size_t i = 0; i < num_vars; ++i) {
         if (set.is_empty() || set.contains_empty()) {
             return set;
