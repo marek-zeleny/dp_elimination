@@ -53,11 +53,11 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf set, Heuristic heuristic, size_t num_va
         if (set.is_empty() || set.contains_empty()) {
             return set;
         }
-        SylvanZddCnf::Literal l = heuristic.get_next_literal(set);
-        set = eliminate(set, l);
         if (absorbed_clauses_interval > 0 && i % absorbed_clauses_interval == 0) {
             remove_absorbed_clauses_from_set(set);
         }
+        SylvanZddCnf::Literal l = heuristic.get_next_literal(set);
+        set = eliminate(set, l);
     }
     if (absorbed_clauses_interval > 0) {
         remove_absorbed_clauses_from_set(set);
