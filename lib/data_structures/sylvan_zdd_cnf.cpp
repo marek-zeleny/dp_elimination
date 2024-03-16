@@ -178,6 +178,26 @@ SylvanZddCnf::Literal SylvanZddCnf::get_clear_literal() const {
     return 0;
 }
 
+SylvanZddCnf::FormulaStats SylvanZddCnf::get_formula_statistics() const {
+    FormulaStats stats;
+    stats.index_shift = get_smallest_variable();
+    stats.vars.resize(get_largest_variable() - stats.index_shift + 1);
+    ClauseFunction func = [&](const Clause &clause) {
+        for (auto &l : clause) {
+            size_t idx = std::abs(l) - stats.index_shift;
+            VariableStats &var_stats = stats.vars[idx];
+            if (l > 0) {
+                ++var_stats.positive_clause_count;
+            } else {
+                ++var_stats.negative_clause_count;
+            }
+        }
+        return true;
+    };
+    for_all_clauses(func);
+    return stats;
+}
+
 SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
     Var v = literal_to_var(l);
     ZDD zdd = zdd_eval(m_zdd, v, 0);
@@ -400,8 +420,6 @@ bool SylvanZddCnf::for_all_clauses_impl(ClauseFunction &func, const ZDD &node, C
 auto SylvanZddCnf::to_vector() const -> std::vector<Clause> {
     std::vector<Clause> output;
     ClauseFunction func = [&](const Clause &clause) {
-        //Clause c = clause;
-        //output.push_back(c);
         output.emplace_back(clause);
         return true;
     };

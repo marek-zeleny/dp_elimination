@@ -21,6 +21,16 @@ public:
     using Clause = std::vector<Literal>;
     using ClauseFunction = std::function<bool(const Clause &)>;
 
+    struct VariableStats {
+        size_t positive_clause_count{0};
+        size_t negative_clause_count{0};
+    };
+
+    struct FormulaStats {
+        std::vector<VariableStats> vars;
+        size_t index_shift;
+    };
+
     SylvanZddCnf();
     SylvanZddCnf(const SylvanZddCnf &other);
     SylvanZddCnf &operator=(const SylvanZddCnf &other);
@@ -41,6 +51,7 @@ public:
     [[nodiscard]] Literal get_root_literal() const;
     [[nodiscard]] Literal get_unit_literal() const;
     [[nodiscard]] Literal get_clear_literal() const;
+    [[nodiscard]] FormulaStats get_formula_statistics() const;
     [[nodiscard]] SylvanZddCnf subset0(Literal l) const;
     [[nodiscard]] SylvanZddCnf subset1(Literal l) const;
     [[nodiscard]] SylvanZddCnf unify(const SylvanZddCnf &other) const;
