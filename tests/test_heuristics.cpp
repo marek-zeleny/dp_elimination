@@ -159,7 +159,7 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
         // 2: 0
         // 3: -1
         // 4: -2
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic{0, 1000};
+        MinimalScoreHeuristic<bloat_score> heuristic{0, 1000};
 
         HeuristicResult result = heuristic(cnf1);
         CHECK(result.success);
@@ -175,7 +175,7 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
     SECTION("Fails for empty and zero formulas") {
         SylvanZddCnf empty;
         SylvanZddCnf contains_empty = SylvanZddCnf::from_vector({{}});
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic{0, 1000};
+        MinimalScoreHeuristic<bloat_score> heuristic{0, 1000};
 
         HeuristicResult result = heuristic(empty);
         CHECK_FALSE(result.success);
@@ -197,31 +197,31 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
         // 3: -2
         // 4: -3
 
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic1{1, 4};
+        MinimalScoreHeuristic<bloat_score> heuristic1{1, 4};
         HeuristicResult result = heuristic1(cnf);
         CHECK(result.success);
         CHECK(result.literal == 4);
         CHECK(result.score == -3);
 
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic2{1, 3};
+        MinimalScoreHeuristic<bloat_score> heuristic2{1, 3};
         result = heuristic2(cnf);
         CHECK(result.success);
         CHECK(result.literal == 3);
         CHECK(result.score == -2);
 
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic3{1, 2};
+        MinimalScoreHeuristic<bloat_score> heuristic3{1, 2};
         result = heuristic3(cnf);
         CHECK(result.success);
         CHECK(result.literal == 1);
         CHECK(result.score == -1);
 
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic4{2, 2};
+        MinimalScoreHeuristic<bloat_score> heuristic4{2, 2};
         result = heuristic4(cnf);
         CHECK(result.success);
         CHECK(result.literal == 2);
         CHECK(result.score == 0);
 
-        MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic5{5, 1000};
+        MinimalScoreHeuristic<bloat_score> heuristic5{5, 1000};
         result = heuristic5(cnf);
         CHECK_FALSE(result.success);
     }

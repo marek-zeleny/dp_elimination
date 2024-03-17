@@ -31,7 +31,7 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
 
     // perform the algorithm
     size_t num_vars = args.get_eliminated_vars();
-    MinimalScoreHeuristic<ScoreEvaluator::Bloat> heuristic{args.get_min_var(), args.get_max_var()};
+    MinimalScoreHeuristic<bloat_score> heuristic{args.get_min_var(), args.get_max_var()};
     std::cout << "Eliminating " << num_vars << " variables..." << std::endl;
     SylvanZddCnf result = eliminate_vars(cnf, heuristic, num_vars, args.get_absorbed_clause_elimination_interval());
 

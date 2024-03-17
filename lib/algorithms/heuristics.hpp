@@ -19,9 +19,14 @@ struct HeuristicResult {
         score(score), literal(literal), success(success) {}
 };
 
-template<typename T>
-concept IsHeuristic = requires(T t, const SylvanZddCnf &cnf) {
-    { t(cnf) } -> std::same_as<HeuristicResult>;
+template<typename F>
+concept IsHeuristic = requires(F f, const SylvanZddCnf &cnf) {
+    { f(cnf) } -> std::same_as<HeuristicResult>;
+};
+
+template<typename F>
+concept IsScoreEvaluator = requires(F f, const SylvanZddCnf::VariableStats &stats) {
+    { f(stats) } -> std::same_as<HeuristicResult::Score>;
 };
 
 class SimpleHeuristic {
@@ -67,11 +72,15 @@ public:
     }
 };
 
-enum class ScoreEvaluator {
-    Bloat,
-};
+inline HeuristicResult::Score bloat_score(const SylvanZddCnf::VariableStats &stats) {
+    using Score = HeuristicResult::Score;
+    auto removed_clauses = static_cast<Score>(stats.positive_clause_count + stats.negative_clause_count);
+    auto new_clauses = static_cast<Score>(stats.positive_clause_count * stats.negative_clause_count);
+    return new_clauses - removed_clauses;
+}
 
-template<ScoreEvaluator Evaluator = ScoreEvaluator::Bloat>
+template<auto ScoreEvaluator>
+requires IsScoreEvaluator<decltype(ScoreEvaluator)>
 class MinimalScoreHeuristic {
 public:
     MinimalScoreHeuristic(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
@@ -90,7 +99,7 @@ public:
             if (var_stats.positive_clause_count == 0 && var_stats.negative_clause_count == 0) {
                 continue;
             }
-            Score score = calculate_score(var_stats);
+            Score score = ScoreEvaluator(var_stats);
             if (score < best_score) {
                 best_score = score;
                 best_var = var;
@@ -106,22 +115,10 @@ public:
     }
 
 private:
-    using Score = int64_t;
+    using Score = HeuristicResult::Score;
 
     const size_t m_min_var;
     const size_t m_max_var;
-
-    static Score calculate_score(const SylvanZddCnf::VariableStats &stats) {
-        if constexpr (Evaluator == ScoreEvaluator::Bloat) {
-            return bloat_score(stats);
-        }
-    }
-
-    static Score bloat_score(const SylvanZddCnf::VariableStats &stats) {
-        auto removed_clauses = static_cast<Score>(stats.positive_clause_count + stats.negative_clause_count);
-        auto new_clauses = static_cast<Score>(stats.positive_clause_count * stats.negative_clause_count);
-        return new_clauses - removed_clauses;
-    }
 };
 
 } // namespace dp
