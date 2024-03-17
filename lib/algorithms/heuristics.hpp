@@ -11,9 +11,9 @@ namespace dp {
 struct HeuristicResult {
     using Score = int64_t;
 
-    const Score score;
-    const SylvanZddCnf::Literal literal;
-    const bool success;
+    Score score;
+    SylvanZddCnf::Literal literal;
+    bool success;
 
     HeuristicResult(bool success, SylvanZddCnf::Literal literal, Score score) :
         score(score), literal(literal), success(success) {}
@@ -29,7 +29,11 @@ public:
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
         SylvanZddCnf::Literal l = cnf.get_root_literal();
         LOG_INFO << "Heuristic found root literal " << l;
-        return {true, l, 0};
+        if (l == 0) {
+            return {false, l, 0};
+        } else {
+            return {true, l, 0};
+        }
     }
 };
 
@@ -78,7 +82,7 @@ public:
         Score best_score = std::numeric_limits<Score>::max();
         size_t best_var = 0;
         const size_t min_var = std::max(m_min_var, stats.index_shift);
-        const size_t max_var = std::min(m_max_var, stats.vars.size() - stats.index_shift);
+        const size_t max_var = std::min(m_max_var, stats.vars.size() + stats.index_shift - 1);
         for (size_t var = min_var; var <= max_var; ++var) {
             size_t idx = var - stats.index_shift;
             const SylvanZddCnf::VariableStats &var_stats = stats.vars[idx];

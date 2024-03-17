@@ -4,7 +4,7 @@
 #include "args_parser.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
-#include "algorithms/heuristics.h"
+#include "algorithms/heuristics.hpp"
 
 TASK_1(int, impl, const ArgsParser *, args_ptr)
 {

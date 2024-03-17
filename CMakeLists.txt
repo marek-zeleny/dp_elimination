@@ -41,5 +41,6 @@ add_executable(tests
         tests/test_sylvan_zdd_cnf.cpp
         tests/test_unit_propagation.cpp
         tests/test_dp_elimination.cpp
+        tests/test_heuristics.cpp
 )
 target_link_libraries(tests PRIVATE dp_lib PRIVATE Catch2::Catch2)

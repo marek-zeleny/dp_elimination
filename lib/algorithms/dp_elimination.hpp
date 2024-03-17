@@ -1,7 +1,7 @@
 #pragma once
 
 #include <simple_logger.h>
-#include "algorithms/heuristics.h"
+#include "algorithms/heuristics.hpp"
 #include "algorithms/unit_propagation.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 
