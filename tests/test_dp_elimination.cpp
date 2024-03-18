@@ -3,16 +3,16 @@
 
 #include "data_structures/sylvan_zdd_cnf.hpp"
 
-using namespace dp;
-
 TEST_CASE("SylvanZddCnf eliminate operation", "[dp elimination]") {
+    using namespace dp;
+
     SECTION("Eliminate a variable, resulting in an empty formula") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector({
             {1,  2},
             {-1, -2},
         });
         auto result = eliminate(cnf, 1);
-        REQUIRE(result.is_empty());
+        CHECK(result.is_empty());
     }
 
     SECTION("Eliminate a variable, resulting in an empty clause") {
@@ -21,7 +21,7 @@ TEST_CASE("SylvanZddCnf eliminate operation", "[dp elimination]") {
             {-1},
         });
         auto result = eliminate(cnf, 1);
-        REQUIRE(result.contains_empty());
+        CHECK(result.contains_empty());
     }
 
     SECTION("Eliminate a variable in a complex formula") {
@@ -37,23 +37,25 @@ TEST_CASE("SylvanZddCnf eliminate operation", "[dp elimination]") {
             {2},
             {1, 3},
         });
-        REQUIRE(result == expected);
+        CHECK(result == expected);
     }
 }
 
 TEST_CASE("SylvanZddCnf is_sat algorithm", "[dp elimination]") {
+    using namespace dp;
+
     SECTION("Check satisfiability of unsatisfiable formula") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector({
             {1},
             {-1},
         });
-        REQUIRE_FALSE(is_sat(cnf));
+        CHECK_FALSE(is_sat(cnf));
     }
 
     SECTION("Check satisfiability of satisfiable formula") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector({
             {1, 2},
         });
-        REQUIRE(is_sat(cnf));
+        CHECK(is_sat(cnf));
     }
 }
