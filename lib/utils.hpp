@@ -3,29 +3,26 @@
 #include <functional>
 #include <tuple>
 #include <iostream>
-#include <type_traits>
 
 namespace dp {
 
 // based on the boost library (https://stackoverflow.com/a/2595226/11983817)
 template<typename T>
-inline void hash_combine(std::size_t &seed, const T &v) {
+void hash_combine(std::size_t &seed, const T &v) {
     std::hash<T> hash;
     seed ^= hash(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
 // based on https://stackoverflow.com/a/9248150/11983817
-template<size_t n, typename... T>
-typename std::enable_if<(n >= sizeof...(T))>::type
-print_tuple(std::ostream &, const std::tuple<T...> &) {}
-
-template<size_t n, typename... T>
-typename std::enable_if<(n < sizeof...(T))>::type
-print_tuple(std::ostream &os, const std::tuple<T...> &tup) {
-    if (n != 0)
-        os << ", ";
-    os << std::get<n>(tup);
-    print_tuple<n + 1>(os, tup);
+template<size_t N, typename... T>
+void print_tuple(std::ostream &os, const std::tuple<T...> &tup) {
+    if constexpr (N < sizeof...(T)) {
+        if constexpr (N > 0) {
+            os << ", ";
+        }
+        os << std::get<N>(tup);
+        print_tuple<N + 1>(os, tup);
+    }
 }
 
 template<typename... T>

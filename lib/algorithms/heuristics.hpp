@@ -1,6 +1,6 @@
 #pragma once
 
-#include <type_traits>
+#include <concepts>
 #include <algorithm>
 #include <limits>
 #include <simple_logger.h>
@@ -26,7 +26,7 @@ concept IsHeuristic = requires(F f, const SylvanZddCnf &cnf) {
 
 template<typename F>
 concept IsScoreEvaluator = requires(F f, const SylvanZddCnf::VariableStats &stats) {
-    { f(stats) } -> std::same_as<HeuristicResult::Score>;
+    { f(stats) } -> std::convertible_to<HeuristicResult::Score>;
 };
 
 class SimpleHeuristic {
