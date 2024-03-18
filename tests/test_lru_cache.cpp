@@ -10,22 +10,22 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
         std::string value;
 
         cache.add(1, "one");
-        REQUIRE(cache.size() == 1);
+        CHECK(cache.size() == 1);
 
         found = cache.try_get(1, value);
-        REQUIRE(found);
-        REQUIRE(value == "one");
+        CHECK(found);
+        CHECK(value == "one");
 
         cache.add(2, "two");
-        REQUIRE(cache.size() == 2);
+        CHECK(cache.size() == 2);
 
         found = cache.try_get(2, value);
-        REQUIRE(found);
-        REQUIRE(value == "two");
+        CHECK(found);
+        CHECK(value == "two");
 
         found = cache.try_get(1, value);
-        REQUIRE(found);
-        REQUIRE(value == "one");
+        CHECK(found);
+        CHECK(value == "one");
     }
 
     SECTION("Adding an existing key replaces original value") {
@@ -34,11 +34,11 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
 
         cache.add(1, "one");
         cache.add(1, "one new");
-        REQUIRE(cache.size() == 1);
+        CHECK(cache.size() == 1);
 
         found = cache.try_get(1, value);
-        REQUIRE(found);
-        REQUIRE(value == "one new");
+        CHECK(found);
+        CHECK(value == "one new");
     }
 
     SECTION("Exceeding capacity removes the least recently used element") {
@@ -50,18 +50,18 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
 
         SECTION("Elements are in add order") {
             cache.add(3, "three");
-            REQUIRE(cache.size() == 2);
+            CHECK(cache.size() == 2);
 
             found = cache.try_get(1, value);
-            REQUIRE_FALSE(found);
+            CHECK_FALSE(found);
 
             found = cache.try_get(2, value);
-            REQUIRE(found);
-            REQUIRE(value == "two");
+            CHECK(found);
+            CHECK(value == "two");
 
             found = cache.try_get(3, value);
-            REQUIRE(found);
-            REQUIRE(value == "three");
+            CHECK(found);
+            CHECK(value == "three");
         }
 
         SECTION("Elements are touched before exceeding capacity") {
@@ -74,18 +74,18 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
             }
 
             cache.add(3, "three");
-            REQUIRE(cache.size() == 2);
+            CHECK(cache.size() == 2);
 
             found = cache.try_get(1, value);
-            REQUIRE(found);
-            REQUIRE(value.starts_with("one"));
+            CHECK(found);
+            CHECK(value.starts_with("one"));
 
             found = cache.try_get(2, value);
-            REQUIRE_FALSE(found);
+            CHECK_FALSE(found);
 
             found = cache.try_get(3, value);
-            REQUIRE(found);
-            REQUIRE(value == "three");
+            CHECK(found);
+            CHECK(value == "three");
         }
     }
 }
