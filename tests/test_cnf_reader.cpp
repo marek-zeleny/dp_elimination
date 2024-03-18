@@ -24,21 +24,22 @@ TEST_CASE("CnfReader functionality", "[CnfReader]") {
         dp::CnfReader::read_from_stream(stream, func);
 
         REQUIRE(clauses.size() == 2);
-        REQUIRE(clauses[0] == dp::CnfReader::Clause{1, -2});
-        REQUIRE(clauses[1] == dp::CnfReader::Clause{2});
+        CHECK(clauses[0] == dp::CnfReader::Clause{1, -2});
+        CHECK(clauses[1] == dp::CnfReader::Clause{2});
     }
 
     SECTION("Reading CNF from a file with missing problem definition throws exception") {
         cnf_content = "c This is a comment\n"
                       "1 -2 0\n"
                       "2 0\n";
-        std::ofstream out("temp_cnf.cnf");
+        std::string file_name{".temp_cnf.cnf"};
+        std::ofstream out(file_name);
         out << cnf_content;
         out.close();
 
-        REQUIRE_THROWS_AS(dp::CnfReader::read_from_file_to_vector("temp_cnf.cnf"), dp::CnfReader::failure);
+        CHECK_THROWS_AS(dp::CnfReader::read_from_file_to_vector(file_name), dp::CnfReader::failure);
 
-        std::filesystem::remove("temp_cnf.cnf");
+        REQUIRE(std::filesystem::remove(file_name));
     }
 
     SECTION("Mismatch in declared and actual number of clauses generates warning") {
@@ -59,13 +60,14 @@ TEST_CASE("CnfReader functionality", "[CnfReader]") {
         // Restore std::cerr to its original state
         std::cerr.rdbuf(original_cerr_buf);
 
-        REQUIRE(clauses.size() == 2);
+        CHECK(clauses.size() == 2);
         std::string warning_output = captured_warnings.str();
         REQUIRE_FALSE(warning_output.empty());
-        REQUIRE(warning_output.find("warning") != std::string::npos);
+        CHECK(warning_output.find("warning") != std::string::npos);
     }
 
     SECTION("Reading from a non-existent file throws exception") {
-        REQUIRE_THROWS_AS(dp::CnfReader::read_from_file_to_vector("non_existent_file.cnf"), dp::CnfReader::failure);
+        CHECK_THROWS_AS(dp::CnfReader::read_from_file_to_vector(".non_existent_file.cnf"),
+                        dp::CnfReader::failure);
     }
 }

@@ -20,40 +20,40 @@ TEST_CASE("CnfWriter functionality", "[CnfWriter]") {
                 "p cnf 3 2\n"
                 "1 -2 0\n"
                 "2 3 0\n";
-        REQUIRE(oss.str() == expected_output);
+        CHECK(oss.str() == expected_output);
     }
 
     SECTION("Exception for writing after finish") {
         CnfWriter writer(oss, 3, 1);
         writer.write_clause({1, -2});
         writer.finish();
-        REQUIRE_THROWS_AS(writer.write_clause({2, 3}), CnfWriter::failure);
+        CHECK_THROWS_AS(writer.write_clause({2, 3}), CnfWriter::failure);
     }
 
     SECTION("Exception for exceeding predefined number of clauses") {
         CnfWriter writer(oss, 3, 1);
         writer.write_clause({1, -2});
-        REQUIRE_THROWS_AS(writer.write_clause({2, 3}), CnfWriter::failure);
+        CHECK_THROWS_AS(writer.write_clause({2, 3}), CnfWriter::failure);
     }
 
     SECTION("Exception for including zero literal") {
         CnfWriter writer(oss, 3, 2);
-        REQUIRE_THROWS_AS(writer.write_clause({1, 0}), CnfWriter::failure);
+        CHECK_THROWS_AS(writer.write_clause({1, 0}), CnfWriter::failure);
     }
 
     SECTION("Exception for literal outside of defined variable range") {
         CnfWriter writer(oss, 3, 2);
-        REQUIRE_THROWS_AS(writer.write_clause({1, 4}), CnfWriter::failure);
+        CHECK_THROWS_AS(writer.write_clause({1, 4}), CnfWriter::failure);
     }
 
     SECTION("Exception for insufficient clauses on finish") {
         CnfWriter writer(oss, 3, 2);
         writer.write_clause({1, -2});
-        REQUIRE_THROWS_AS(writer.finish(), CnfWriter::failure);
+        CHECK_THROWS_AS(writer.finish(), CnfWriter::failure);
     }
 
     SECTION("Writes to a file and verifies contents") {
-        std::string file_name = "test_cnf_output.cnf";
+        std::string file_name = ".test_cnf_output.cnf";
         {
             CnfWriter writer(file_name, 3, 1);
             writer.write_clause({1, -2});
@@ -69,13 +69,13 @@ TEST_CASE("CnfWriter functionality", "[CnfWriter]") {
                 "c\n"
                 "p cnf 3 1\n"
                 "1 -2 0\n";
-        REQUIRE(content == expected_content);
+        CHECK(content == expected_content);
 
-        std::filesystem::remove(file_name);
+        REQUIRE(std::filesystem::remove(file_name));
     }
 
     SECTION("write_vector_to_file writes expected content") {
-        std::string file_name = "test_vector_cnf_output.cnf";
+        std::string file_name = ".test_vector_cnf_output.cnf";
         dp::CnfWriter::Clause clause1 = {1, -2};
         dp::CnfWriter::Clause clause2 = {2, 3};
         std::vector<dp::CnfWriter::Clause> clauses = {clause1, clause2};
@@ -92,9 +92,9 @@ TEST_CASE("CnfWriter functionality", "[CnfWriter]") {
                 "p cnf 3 2\n"
                 "1 -2 0\n"
                 "2 3 0\n";
-        REQUIRE(content == expected_content);
+        CHECK(content == expected_content);
 
-        std::filesystem::remove(file_name);
+        REQUIRE(std::filesystem::remove(file_name));
     }
 
 }
