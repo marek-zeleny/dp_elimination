@@ -11,11 +11,11 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {2, -3},
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE(is_clause_absorbed(formula, {1, 2}));
+        CHECK(is_clause_absorbed(formula, {1, 2}));
         formula.backtrack_to(0);
-        REQUIRE(is_clause_absorbed(formula, {-1, 2, 3}));
+        CHECK(is_clause_absorbed(formula, {-1, 2, 3}));
         formula.backtrack_to(0);
-        REQUIRE(is_clause_absorbed(formula, {2, -3}));
+        CHECK(is_clause_absorbed(formula, {2, -3}));
     }
 
     SECTION("Simple non-absorbed clause") {
@@ -24,7 +24,7 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {-2, 3},
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE_FALSE(is_clause_absorbed(formula, {1, -3}));
+        CHECK_FALSE(is_clause_absorbed(formula, {1, -3}));
     }
 
     SECTION("Simple absorbed clause") {
@@ -33,7 +33,7 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {-2, 3},
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE(is_clause_absorbed(formula, {-1, 3}));
+        CHECK(is_clause_absorbed(formula, {-1, 3}));
     }
 
     SECTION("Unit clause is absorbed IFF its literal is unit-deductible from the formula") {
@@ -44,9 +44,9 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {4, 5},
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE(is_clause_absorbed(formula, {3}));
+        CHECK(is_clause_absorbed(formula, {3}));
         formula.backtrack_to(0);
-        REQUIRE_FALSE(is_clause_absorbed(formula, {4}));
+        CHECK_FALSE(is_clause_absorbed(formula, {4}));
     }
 
     SECTION("Superclause is always absorbed") {
@@ -56,9 +56,9 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {2, -3},
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE(is_clause_absorbed(formula, {1, 2, 3}));
+        CHECK(is_clause_absorbed(formula, {1, 2, 3}));
         formula.backtrack_to(0);
-        REQUIRE(is_clause_absorbed(formula, {-1, 2, -3}));
+        CHECK(is_clause_absorbed(formula, {-1, 2, -3}));
     }
 
     SECTION("Tautology is always absorbed") {
@@ -67,11 +67,11 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {2, 3},
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE(is_clause_absorbed(formula, {1, -1}));
+        CHECK(is_clause_absorbed(formula, {1, -1}));
         formula.backtrack_to(0);
-        REQUIRE(is_clause_absorbed(formula, {2, -2}));
+        CHECK(is_clause_absorbed(formula, {2, -2}));
         formula.backtrack_to(0);
-        REQUIRE(is_clause_absorbed(formula, {1, -1, -2, 3}));
+        CHECK(is_clause_absorbed(formula, {1, -1, -2, 3}));
     }
 
     SECTION("Empty clause always absorbed") {
@@ -80,7 +80,7 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
                 {-1, 2}
         };
         WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
-        REQUIRE(is_clause_absorbed(formula, {}));
+        CHECK(is_clause_absorbed(formula, {}));
     }
 }
 
@@ -94,7 +94,7 @@ TEST_CASE("remove_absorbed_clauses algorithm", "[unit propagation]") {
                 {-3, 4},
         };
         auto result = remove_absorbed_clauses(clauses);
-        REQUIRE(result.size() == clauses.size());
+        CHECK(result.size() == clauses.size());
     }
 
     SECTION("Single absorbed clause") {
@@ -104,8 +104,8 @@ TEST_CASE("remove_absorbed_clauses algorithm", "[unit propagation]") {
                 {-1, 2},
         };
         auto result = remove_absorbed_clauses(clauses);
-        REQUIRE(result.size() == 2);
-        REQUIRE(std::find(result.begin(), result.end(), std::vector<int32_t>{-1, 2, 3}) == result.end());
+        CHECK(result.size() == 2);
+        CHECK(std::find(result.begin(), result.end(), std::vector<int32_t>{-1, 2, 3}) == result.end());
     }
 
     SECTION("Multiple absorbed clauses") {
@@ -116,7 +116,7 @@ TEST_CASE("remove_absorbed_clauses algorithm", "[unit propagation]") {
                 {-1, 2, -3, 4},
         };
         auto result = remove_absorbed_clauses(clauses);
-        REQUIRE(result.size() == 2);
+        CHECK(result.size() == 2);
     }
 
     SECTION("All clauses absorbed except one") {
@@ -128,7 +128,7 @@ TEST_CASE("remove_absorbed_clauses algorithm", "[unit propagation]") {
         };
         auto result = remove_absorbed_clauses(clauses);
         REQUIRE(result.size() == 1);
-        REQUIRE(result[0] == std::vector<int32_t>{1});
+        CHECK(result[0] == std::vector<int32_t>{1});
     }
 
     SECTION("Complex case with no absorbed clauses") {
@@ -140,6 +140,6 @@ TEST_CASE("remove_absorbed_clauses algorithm", "[unit propagation]") {
                 {-1, 4, -5},
         };
         auto result = remove_absorbed_clauses(clauses);
-        REQUIRE(result.size() == clauses.size());
+        CHECK(result.size() == clauses.size());
     }
 }
