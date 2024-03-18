@@ -3,9 +3,9 @@
 
 #include "data_structures/sylvan_zdd_cnf.hpp"
 
-using namespace dp;
-
 TEST_CASE("SimpleHeuristic functionality", "[heuristics]") {
+    using namespace dp;
+
     SECTION("Returns the root (smallest) literal") {
         SylvanZddCnf cnf1 = SylvanZddCnf::from_vector({
             {1,  2},
@@ -41,6 +41,8 @@ TEST_CASE("SimpleHeuristic functionality", "[heuristics]") {
 }
 
 TEST_CASE("UnitLiteralHeuristic functionality", "[heuristics]") {
+    using namespace dp;
+
     SECTION("Returns a unit literal") {
         SylvanZddCnf cnf1 = SylvanZddCnf::from_vector({
             {1,  2},
@@ -88,6 +90,8 @@ TEST_CASE("UnitLiteralHeuristic functionality", "[heuristics]") {
 }
 
 TEST_CASE("ClearLiteralHeuristic functionality", "[heuristics]") {
+    using namespace dp;
+
     SECTION("Returns a clear literal") {
         SylvanZddCnf cnf1 = SylvanZddCnf::from_vector({
             {1,  2},
@@ -136,6 +140,8 @@ TEST_CASE("ClearLiteralHeuristic functionality", "[heuristics]") {
 }
 
 TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
+    using namespace dp;
+
     constexpr auto test_score = [](const SylvanZddCnf::VariableStats &stats) {
         return static_cast<HeuristicResult::Score>(stats.positive_clause_count + stats.negative_clause_count);
     };

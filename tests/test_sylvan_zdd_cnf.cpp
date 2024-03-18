@@ -346,18 +346,17 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
             {1, -2, 3},
             {-1, 2, -3},
         });
-        std::string dot_file_name = ".test_zdd.dot";
-        std::string dimacs_file_name = ".test_dimacs.cnf";
 
         SECTION("Draw as dot file") {
-            CHECK(cnf.draw_to_file(dot_file_name));
+            std::string file_name = ".test_zdd.dot";
+            CHECK(cnf.draw_to_file(file_name));
+            REQUIRE(std::filesystem::remove(file_name.c_str()));
         }
 
         SECTION("Write as DIMACS file") {
-            CHECK(cnf.write_dimacs_to_file(dimacs_file_name));
+            std::string file_name = ".test_dimacs.cnf";
+            CHECK(cnf.write_dimacs_to_file(file_name));
+            REQUIRE(std::filesystem::remove(file_name.c_str()));
         }
-
-        std::filesystem::remove(dot_file_name.c_str());
-        std::filesystem::remove(dimacs_file_name.c_str());
     }
 }
