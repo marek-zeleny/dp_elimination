@@ -30,10 +30,24 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     std::cout << "Input formula has " << cnf.clauses_count() << " clauses" << std::endl;
 
     // perform the algorithm
-    size_t num_vars = args.get_eliminated_vars();
     MinimalScoreHeuristic<bloat_score> heuristic{args.get_min_var(), args.get_max_var()};
-    std::cout << "Eliminating " << num_vars << " variables..." << std::endl;
-    SylvanZddCnf result = eliminate_vars(cnf, heuristic, num_vars, args.get_absorbed_clause_elimination_interval());
+    auto stop_condition = [](size_t, const SylvanZddCnf &cnf, const HeuristicResult &result) {
+        if (cnf.is_empty() || cnf.contains_empty()) {
+            LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
+            return true;
+        } else if (!result.success) {
+            LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
+            return true;
+        } else if (result.score > 0) {
+            LOG_INFO << "Heuristic with too high score, stopping DP elimination";
+            return true;
+        } else {
+            return false;
+        }
+    };
+    std::cout << "Eliminating variables..." << std::endl;
+    SylvanZddCnf result = eliminate_vars(cnf, heuristic, stop_condition,
+                                         args.get_absorbed_clause_elimination_interval());
 
     // write result to file
     std::string file_name = args.get_output_cnf_file_name();
