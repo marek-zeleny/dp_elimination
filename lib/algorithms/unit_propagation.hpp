@@ -7,6 +7,7 @@
 #include <simple_logger.h>
 
 #include "data_structures/watched_literals.hpp"
+#include "metrics/dp_metrics.hpp"
 
 namespace dp {
 
@@ -60,6 +61,7 @@ inline bool is_clause_absorbed(WatchedLiterals &formula, const std::vector<int32
 
 inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vector<std::vector<int32_t>> &clauses) {
     LOG_INFO << "Removing absorbed clauses, starting with " << clauses.size() << " clauses";
+    metrics.increase_counter(MetricsCounters::RemoveAbsorbedClausesCallCount);
     std::unordered_set<size_t> deactivated{0};
     WatchedLiterals watched = WatchedLiterals::from_vector(clauses, deactivated);
 
@@ -67,6 +69,7 @@ inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vect
     std::vector<size_t> clauses_to_reactivate{0};
     if (is_clause_absorbed(watched, clauses[0])) {
         clauses_to_reactivate.pop_back();
+        metrics.increase_counter(MetricsCounters::AbsorbedClausesRemovedTotal);
     } else {
         output.push_back(clauses[0]);
     }
@@ -76,6 +79,7 @@ inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vect
         clauses_to_reactivate.push_back(i);
         if (is_clause_absorbed(watched, clauses[i])) {
             clauses_to_reactivate.pop_back();
+            metrics.increase_counter(MetricsCounters::AbsorbedClausesRemovedTotal);
         } else {
             output.push_back(clauses[i]);
         }

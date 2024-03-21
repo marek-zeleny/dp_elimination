@@ -5,6 +5,7 @@
 #include "algorithms/heuristics.hpp"
 #include "algorithms/unit_propagation.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
+#include "metrics/dp_metrics.hpp"
 
 namespace dp {
 
@@ -15,14 +16,33 @@ concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cn
 
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
     LOG_INFO << "Eliminating literal " << l;
+    auto timer_total = metrics.get_timer(MetricsDurations::EliminateVar_Total);
+    auto timer_decomposition = metrics.get_timer(MetricsDurations::EliminateVar_SubsetDecomposition);
     SylvanZddCnf with_l = set.subset1(l);
     SylvanZddCnf with_not_l = set.subset1(-l);
     SylvanZddCnf without_l = set.subset0(l).subset0(-l);
+    timer_decomposition.stop();
 
+    auto timer_resolution = metrics.get_timer(MetricsDurations::EliminateVar_Resolution);
     SylvanZddCnf resolvents = with_l.multiply(with_not_l);
-    SylvanZddCnf no_tautologies_or_subsumed = resolvents.remove_tautologies().remove_subsumed_clauses();
+    timer_resolution.stop();
+
+    auto timer_tautologies = metrics.get_timer(MetricsDurations::EliminateVar_TautologiesRemoval);
+    SylvanZddCnf no_tautologies = resolvents.remove_tautologies();
+    timer_tautologies.stop();
+
+    auto timer_subsumed1 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval);
+    SylvanZddCnf no_tautologies_or_subsumed = no_tautologies.remove_subsumed_clauses();
+    timer_subsumed1.stop();
+
+    auto timer_unification = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
     SylvanZddCnf result = no_tautologies_or_subsumed.unify(without_l);
+    timer_unification.stop();
+
+    auto timer_subsumed2 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval);
     SylvanZddCnf no_subsumed = result.remove_subsumed_clauses();
+    timer_subsumed2.stop();
+
     return no_subsumed;
 }
 
@@ -49,6 +69,7 @@ static inline void remove_absorbed_clauses_from_cnf(SylvanZddCnf &cnf) {
     if (cnf.is_empty() || cnf.contains_empty()) {
         return;
     }
+    auto timer = metrics.get_timer(MetricsDurations::RemoveAbsorbedClausesWithConversion);
     std::vector<SylvanZddCnf::Clause> vector = cnf.to_vector();
     vector = remove_absorbed_clauses(vector);
     cnf = SylvanZddCnf::from_vector(vector);
@@ -58,6 +79,7 @@ template<IsHeuristic Heuristic, IsStopCondition StopCondition>
 SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition stop_condition,
                             size_t absorbed_clauses_interval = 0) {
     LOG_INFO << "Starting DP elimination algorithm";
+    auto timer = metrics.get_timer(MetricsDurations::EliminateVars);
     // start by removing absorbed clauses
     if (absorbed_clauses_interval > 0) {
         remove_absorbed_clauses_from_cnf(cnf);
