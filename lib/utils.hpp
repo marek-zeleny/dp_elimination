@@ -1,10 +1,29 @@
 #pragma once
 
+#include <type_traits>
 #include <functional>
 #include <tuple>
 #include <iostream>
 
 namespace dp {
+
+// utilities for enum compile-time checks
+template<auto Value, typename = std::void_t<>>
+struct is_valid_value : std::false_type {};
+
+template<auto Value>
+struct is_valid_value<Value, std::void_t<decltype(Value)>> : std::true_type {};
+
+template<auto Value>
+constexpr bool is_valid_value_v = is_valid_value<Value>::value;
+
+template<typename Enum>
+concept IsEnum = std::is_enum_v<Enum>;
+
+template<IsEnum Enum>
+constexpr std::underlying_type_t<Enum> to_underlying(Enum e) {
+    return static_cast<std::underlying_type_t<Enum>>(e);
+}
 
 // based on the boost library (https://stackoverflow.com/a/2595226/11983817)
 template<typename T>
