@@ -5,6 +5,7 @@
 #include "data_structures/sylvan_zdd_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
 #include "algorithms/heuristics.hpp"
+#include "metrics/dp_metrics.hpp"
 
 TASK_1(int, impl, const ArgsParser *, args_ptr)
 {
@@ -53,6 +54,11 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     std::string file_name = args.get_output_cnf_file_name();
     result.write_dimacs_to_file(file_name);
     std::cout << "Formula with " << result.clauses_count() << " clauses written to file " << file_name << std::endl;
+
+    std::string metrics_file_name{"metrics.json"};
+    std::ofstream metrics_file{metrics_file_name};
+    std::cout << "Exporting metrics to " << metrics_file_name << std::endl;
+    metrics.export_json(metrics_file);
 
     // quit sylvan, free memory
     Sylvan::quitPackage();

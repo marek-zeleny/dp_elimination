@@ -4,9 +4,23 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <string>
 #include <chrono>
+#include <ostream>
 #include <stdexcept>
+#include <nlohmann/json.hpp>
 #include "utils.hpp"
+
+namespace nlohmann {
+
+template <typename Rep, typename Period>
+struct adl_serializer<std::chrono::duration<Rep, Period>> {
+    static void to_json(json &j, const std::chrono::duration<Rep, Period> &duration) {
+        j = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+    }
+};
+
+}
 
 namespace dp {
 
@@ -17,8 +31,20 @@ template<IsEnumWithLast CounterEntries, IsEnumWithLast DurationEntries>
 class MetricsCollector {
 private:
     class Timer;
+    static constexpr size_t num_counters = to_underlying(CounterEntries::Last) + 1;
+    static constexpr size_t num_durations = to_underlying(DurationEntries::Last) + 1;
+    template<size_t Size>
+    using name_array = std::array<std::string, Size>;
 
 public:
+    MetricsCollector(const name_array<num_counters> &counter_names, const name_array<num_durations> &duration_names) :
+        m_counter_names(counter_names), m_duration_names(duration_names) {}
+
+    MetricsCollector(const MetricsCollector &) = delete;
+    MetricsCollector &operator=(const MetricsCollector &) = delete;
+    MetricsCollector(MetricsCollector &&) = delete;
+    MetricsCollector &operator=(MetricsCollector &&) = delete;
+
     void increase_counter(CounterEntries entry, size_t amount = 1) {
         m_counters[to_underlying(entry)] += amount;
     }
@@ -27,13 +53,29 @@ public:
         return Timer(*this, entry);
     }
 
+    void export_json(std::ostream &stream) {
+        using json = nlohmann::json;
+        json counters;
+        for (size_t i = 0; i < num_counters; ++i) {
+            counters[m_counter_names[i]] = m_counters[i];
+        }
+        json durations;
+        for (size_t i = 0; i < num_durations; ++i) {
+            durations[m_duration_names[i]] = m_durations[i];
+        }
+        json j;
+        j["counters"] = counters;
+        j["durations"] = durations;
+        stream << j.dump(2) << std::endl;
+    }
+
 private:
     using counter = size_t;
     using clock = std::chrono::steady_clock;
     using duration = clock::duration;
     using durations = std::vector<duration>;
-    using counter_collection = std::array<counter, to_underlying(CounterEntries::Last) + 1>;
-    using durations_collection = std::array<durations, to_underlying(DurationEntries::Last) + 1>;
+    using counter_collection = std::array<counter, num_counters>;
+    using durations_collection = std::array<durations, num_durations>;
 
     class Timer {
     public:
@@ -69,6 +111,8 @@ private:
 
     counter_collection m_counters{};
     durations_collection m_durations{};
+    const name_array<num_counters> &m_counter_names;
+    const name_array<num_durations> &m_duration_names;
 
     void add_duration(DurationEntries entry, duration duration) {
         m_durations[to_underlying(entry)].push_back(duration);
