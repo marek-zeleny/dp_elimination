@@ -11,10 +11,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(JSON_Install OFF CACHE INTERNAL "")
+
 add_subdirectory(external/sylvan/)
 add_subdirectory(external/CLI11/)
 add_subdirectory(external/catch2/)
 add_subdirectory(external/simple-logger/)
+add_subdirectory(external/json/)
 
 add_library(dp_lib STATIC
         lib/io/cnf_reader.cpp
@@ -23,7 +26,7 @@ add_library(dp_lib STATIC
         lib/data_structures/watched_literals.cpp
 )
 target_include_directories(dp_lib PUBLIC lib/)
-target_link_libraries(dp_lib PUBLIC sylvan PUBLIC simple_logger)
+target_link_libraries(dp_lib PUBLIC sylvan PUBLIC simple_logger PUBLIC nlohmann_json::nlohmann_json)
 
 add_executable(dp
         app/main.cpp
