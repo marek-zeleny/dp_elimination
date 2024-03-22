@@ -16,7 +16,9 @@ concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cn
 
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
     LOG_INFO << "Eliminating literal " << l;
+    metrics.append_to_series(MetricsSeries::EliminatedLiterals, std::abs(l));
     auto timer_total = metrics.get_timer(MetricsDurations::EliminateVar_Total);
+
     auto timer_decomposition = metrics.get_timer(MetricsDurations::EliminateVar_SubsetDecomposition);
     SylvanZddCnf with_l = set.subset1(l);
     SylvanZddCnf with_not_l = set.subset1(-l);

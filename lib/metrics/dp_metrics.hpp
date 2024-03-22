@@ -7,7 +7,8 @@
 
 namespace dp {
 
-enum class MetricsCounters : uint16_t {
+// counters
+enum class MetricsCounters : uint8_t {
     RemoveAbsorbedClausesCallCount = 0,
     AbsorbedClausesRemovedTotal = 1,
     Last = AbsorbedClausesRemovedTotal,
@@ -18,7 +19,20 @@ inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> c
     "AbsorbedClausesRemovedTotal",
 };
 
-enum class MetricsDurations : uint16_t {
+// series
+enum class MetricsSeries : uint8_t {
+    EliminatedLiterals = 0,
+    AbsorbedClausesRemoved = 1,
+    Last = AbsorbedClausesRemoved,
+};
+
+inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> series_names{
+        "EliminatedLiterals",
+        "AbsorbedClausesRemoved",
+};
+
+// durations
+enum class MetricsDurations : uint8_t {
     EliminateVars = 0,
     RemoveAbsorbedClausesWithConversion = 1,
     EliminateVar_Total = 2,
@@ -43,6 +57,8 @@ inline const std::array<std::string, to_underlying(MetricsDurations::Last) + 1> 
     "EliminateVar_Unification",
 };
 
-inline MetricsCollector<MetricsCounters, MetricsDurations> metrics{counter_names, duration_names};
+inline MetricsCollector<MetricsCounters, MetricsSeries, MetricsDurations> metrics{counter_names,
+                                                                                  series_names,
+                                                                                  duration_names};
 
 } // namespace dp

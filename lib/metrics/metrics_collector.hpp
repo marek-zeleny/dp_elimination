@@ -27,18 +27,34 @@ namespace dp {
 template<typename Enum>
 concept IsEnumWithLast = IsEnum<Enum> && is_valid_value_v<Enum::Last>;
 
-template<IsEnumWithLast CounterEntries, IsEnumWithLast DurationEntries>
+template<IsEnumWithLast CounterEntries, IsEnumWithLast SeriesEntries, IsEnumWithLast DurationEntries>
 class MetricsCollector {
 private:
-    class Timer;
     static constexpr size_t num_counters = to_underlying(CounterEntries::Last) + 1;
+    static constexpr size_t num_series = to_underlying(SeriesEntries::Last) + 1;
     static constexpr size_t num_durations = to_underlying(DurationEntries::Last) + 1;
+
+    using counter = size_t;
+    using counter_collection = std::array<counter, num_counters>;
+
+    using series = std::vector<counter>;
+    using series_collection = std::array<series, num_series>;
+
+    using clock = std::chrono::steady_clock;
+    using duration = clock::duration;
+    using durations = std::vector<duration>;
+    using durations_collection = std::array<durations, num_durations>;
+
     template<size_t Size>
     using name_array = std::array<std::string, Size>;
 
+    class Timer;
+
 public:
-    MetricsCollector(const name_array<num_counters> &counter_names, const name_array<num_durations> &duration_names) :
-        m_counter_names(counter_names), m_duration_names(duration_names) {}
+    MetricsCollector(const name_array<num_counters> &counter_names,
+                     const name_array<num_series> &series_names,
+                     const name_array<num_durations> &duration_names) :
+        m_counter_names(counter_names), m_series_names(series_names), m_duration_names(duration_names) {}
 
     MetricsCollector(const MetricsCollector &) = delete;
     MetricsCollector &operator=(const MetricsCollector &) = delete;
@@ -47,6 +63,10 @@ public:
 
     void increase_counter(CounterEntries entry, size_t amount = 1) {
         m_counters[to_underlying(entry)] += amount;
+    }
+
+    void append_to_series(SeriesEntries entry, counter value) {
+        m_series[to_underlying(entry)].push_back(value);
     }
 
     [[nodiscard]] Timer get_timer(DurationEntries entry) {
@@ -59,24 +79,22 @@ public:
         for (size_t i = 0; i < num_counters; ++i) {
             counters[m_counter_names[i]] = m_counters[i];
         }
+        json series;
+        for (size_t i = 0; i < num_series; ++i) {
+            series[m_series_names[i]] = m_series[i];
+        }
         json durations;
         for (size_t i = 0; i < num_durations; ++i) {
             durations[m_duration_names[i]] = m_durations[i];
         }
         json j;
         j["counters"] = counters;
+        j["series"] = series;
         j["durations"] = durations;
         stream << j.dump(2) << std::endl;
     }
 
 private:
-    using counter = size_t;
-    using clock = std::chrono::steady_clock;
-    using duration = clock::duration;
-    using durations = std::vector<duration>;
-    using counter_collection = std::array<counter, num_counters>;
-    using durations_collection = std::array<durations, num_durations>;
-
     class Timer {
     public:
         Timer(MetricsCollector &metrics, DurationEntries entry) :
@@ -110,8 +128,10 @@ private:
     };
 
     counter_collection m_counters{};
+    series_collection m_series{};
     durations_collection m_durations{};
     const name_array<num_counters> &m_counter_names;
+    const name_array<num_series> &m_series_names;
     const name_array<num_durations> &m_duration_names;
 
     void add_duration(DurationEntries entry, duration duration) {

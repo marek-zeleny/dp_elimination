@@ -69,7 +69,6 @@ inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vect
     std::vector<size_t> clauses_to_reactivate{0};
     if (is_clause_absorbed(watched, clauses[0])) {
         clauses_to_reactivate.pop_back();
-        metrics.increase_counter(MetricsCounters::AbsorbedClausesRemovedTotal);
     } else {
         output.push_back(clauses[0]);
     }
@@ -79,12 +78,14 @@ inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vect
         clauses_to_reactivate.push_back(i);
         if (is_clause_absorbed(watched, clauses[i])) {
             clauses_to_reactivate.pop_back();
-            metrics.increase_counter(MetricsCounters::AbsorbedClausesRemovedTotal);
         } else {
             output.push_back(clauses[i]);
         }
     }
-    LOG_INFO << "Absorbed clauses removed, " << output.size() << " remaining";
+    size_t removed_count = clauses.size() - output.size();
+    metrics.increase_counter(MetricsCounters::AbsorbedClausesRemovedTotal, removed_count);
+    metrics.append_to_series(MetricsSeries::AbsorbedClausesRemoved, removed_count);
+    LOG_INFO << removed_count << " absorbed clauses removed, " << output.size() << " remaining";
     return output;
 }
 
