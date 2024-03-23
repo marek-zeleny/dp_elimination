@@ -64,11 +64,10 @@ public:
 
     [[nodiscard]] std::vector<Clause> to_vector() const;
 
-    void print_clauses() const;
-    void print_clauses(std::ostream &output) const;
-    bool draw_to_file(std::FILE *file) const;
-    bool draw_to_file(const std::string &file_name) const;
-    bool write_dimacs_to_file(const std::string &file_name) const;
+    void print_clauses(std::ostream &output = std::cout) const;
+    void draw_to_file(std::FILE *file) const;
+    void draw_to_file(const std::string &file_name) const;
+    void write_dimacs_to_file(const std::string &file_name) const;
 
 private:
     using Var = uint32_t;

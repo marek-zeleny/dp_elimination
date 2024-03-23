@@ -5,7 +5,7 @@
 #include <stack>
 #include <unordered_set>
 #include <unordered_map>
-#include <iostream>
+#include <stdexcept>
 #include <cstdlib>
 #include <cstdio>
 #include <cerrno>
@@ -65,9 +65,9 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     try {
         CnfReader::read_from_file(file_name, func);
     } catch (const CnfReader::failure &f) {
-        std::cerr << f.what() << std::endl;
+        LOG_ERROR << f.what();
         zdd_refs_popptr(2);
-        return {};
+        throw;
     }
     zdd_refs_popptr(2);
     return SylvanZddCnf(zdd);
@@ -427,10 +427,6 @@ auto SylvanZddCnf::to_vector() const -> std::vector<Clause> {
     return output;
 }
 
-void SylvanZddCnf::print_clauses() const {
-    print_clauses(std::cout);
-}
-
 void SylvanZddCnf::print_clauses(std::ostream &output) const {
     ClauseFunction func = [&](const Clause &clause) {
         output << "{";
@@ -443,32 +439,33 @@ void SylvanZddCnf::print_clauses(std::ostream &output) const {
     for_all_clauses(func);
 }
 
-bool SylvanZddCnf::draw_to_file(std::FILE *file) const {
+void SylvanZddCnf::draw_to_file(std::FILE *file) const {
     // Not ideal error handling, but zdd_fprintdot() returns void...
     int prev_errno = errno;
     zdd_fprintdot(file, m_zdd);
     if (errno != prev_errno) {
-        std::cerr << "Error while drawing sylvan ZDD to file: " << std::strerror(errno) << std::endl;
-        return false;
+        std::string error_msg{std::string("Error while drawing sylvan ZDD to file: ") + std::strerror(errno)};
+        LOG_ERROR << error_msg;
+        throw std::runtime_error(error_msg);
     }
-    return true;
 }
 
-bool SylvanZddCnf::draw_to_file(const std::string &file_name) const {
+void SylvanZddCnf::draw_to_file(const std::string &file_name) const {
     std::FILE *file = std::fopen(file_name.c_str(), "w");
     if (file == nullptr) {
-        std::cerr << "Error while drawing sylvan ZDD to file: failed to open the output file" << std::endl;
-        return false;
+        std::string error_msg{"Error while drawing sylvan ZDD to file: failed to open the output file"};
+        LOG_ERROR << error_msg;
+        throw std::runtime_error(error_msg);
     }
-    bool retval = draw_to_file(file);
+    draw_to_file(file);
     if (std::fclose(file) != 0) {
-        std::cerr << "Error while drawing sylvan ZDD to file: failed to close the output file" << std::endl;
-        return false;
+        std::string error_msg{"Error while drawing sylvan ZDD to file: failed to close the output file"};
+        LOG_ERROR << error_msg;
+        throw std::runtime_error(error_msg);
     }
-    return retval;
 }
 
-bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
+void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
     auto max_var = static_cast<size_t>(get_largest_variable());
     size_t num_clauses = clauses_count();
     try {
@@ -480,10 +477,9 @@ bool SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
         for_all_clauses(func);
         writer.finish();
     } catch (const CnfWriter::failure &f) {
-        std::cerr << f.what();
-        return false;
+        LOG_ERROR << f.what();
+        throw;
     }
-    return true;
 }
 
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {

@@ -349,13 +349,13 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
 
         SECTION("Draw as dot file") {
             std::string file_name = ".test_zdd.dot";
-            CHECK(cnf.draw_to_file(file_name));
+            CHECK_NOTHROW(cnf.draw_to_file(file_name));
             REQUIRE(std::filesystem::remove(file_name.c_str()));
         }
 
         SECTION("Write as DIMACS file") {
             std::string file_name = ".test_dimacs.cnf";
-            CHECK(cnf.write_dimacs_to_file(file_name));
+            CHECK_NOTHROW(cnf.write_dimacs_to_file(file_name));
             REQUIRE(std::filesystem::remove(file_name.c_str()));
         }
     }
