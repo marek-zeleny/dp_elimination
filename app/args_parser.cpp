@@ -1,7 +1,12 @@
 #include "args_parser.hpp"
 
 #include <utility>
+#include <unordered_map>
 #include <CLI/CLI.hpp>
+
+static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_map {
+        {"minimal_bloat", ArgsParser::Heuristic::MinimalBloat},
+};
 
 std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     ArgsParser args;
@@ -9,7 +14,9 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     app.option_defaults()->always_capture_default();
     argv = app.ensure_utf8(argv);
 
-    app.set_config("--config", "data/config.toml");
+    app.set_config("--config", "data/config.toml",
+                   "Read a config file (.ini or .toml); precedence from the last if multiple");
+    app.allow_config_extras(CLI::config_extras_mode::error);
 
     app.add_option("-i,--input-file", args.m_input_cnf_file_name,
                    "File containing the input formula in DIMACS format")
@@ -18,8 +25,14 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "File for writing the formula after variable elimination");
     app.add_option("-l,--log-file", args.m_log_file_name,
                    "File for writing logs");
-    app.add_option("-e,--eliminate", args.m_eliminated_vars,
-                   "Number of variables to eliminate");
+    app.add_option("-m,--metrics-file", args.m_metrics_file_name,
+                   "File for exporting metrics (JSON)");
+    app.add_option("--heuristic", args.m_heuristic,
+                   "Heuristic for selecting eliminated literals")
+                   ->transform(CLI::CheckedTransformer(heuristic_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
     app.add_option("-a,--absorbed-clause-elimination-interval", args.m_absorbed_clause_elimination_interval,
                    "Number of eliminated variables before absorbed clauses are removed (never if 0)");
     app.add_option("-v,--var-range", args.m_var_range,
@@ -32,7 +45,8 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     try {
         app.parse(argc, argv);
         if (args.get_min_var() > args.get_max_var()) {
-            throw CLI::ValidationError("--var-range", "Minimum variable to be eliminated cannot be larger than maximum variable");
+            throw CLI::ValidationError("--var-range",
+                                       "Minimum variable to be eliminated cannot be larger than maximum variable");
         }
     } catch (const CLI::ParseError &e) {
         app.exit(e);
