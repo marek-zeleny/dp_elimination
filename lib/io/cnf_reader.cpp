@@ -104,7 +104,11 @@ std::vector<CnfReader::Clause> CnfReader::read_from_file_to_vector(const std::st
 }
 
 void CnfReader::print_warning(const std::string &msg, const size_t line_num) {
-    std::cerr << "CNF input file format warning [line " << line_num << "]: " << msg << std::endl;
+    std::ostringstream oss;
+    oss << "CNF input file format warning [line " << line_num << "]: " << msg;
+    std::string message = oss.str();
+    LOG_WARNING << message;
+    std::cerr << message << std::endl;
 }
 
 CnfReader::failure::failure(const std::string &what_arg, const size_t line_num) :
