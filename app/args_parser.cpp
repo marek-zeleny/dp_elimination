@@ -12,10 +12,12 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     ArgsParser args;
     CLI::App app("Davis Putnam elimination algorithm for preprocessing CNF formulas");
     app.get_formatter()->column_width(40);
-    app.option_defaults()->always_capture_default();
+    app.option_defaults()->always_capture_default(true);
 
-    app.set_config("--config", "data/config.toml",
-                   "Read a config file (.ini or .toml); precedence from the last if multiple");
+    app.set_config("--config", "",
+                   "Read a config file (.ini or .toml); precedence from the last if multiple")
+                   ->expected(1, std::numeric_limits<int>::max())
+                   ->multi_option_policy(CLI::MultiOptionPolicy::Reverse);
     app.allow_config_extras(CLI::config_extras_mode::error);
 
     app.add_option("-i,--input-file", args.m_input_cnf_file_name,
@@ -32,13 +34,16 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "File for writing logs")
                    ->group("Files");
 
+    app.option_defaults()->always_capture_default(false);
     app.add_option("--heuristic", args.m_heuristic,
                    "Heuristic for selecting eliminated literals")
                    ->group("Algorithm")
+                   ->required()
                    ->transform(CLI::CheckedTransformer(heuristic_map,
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
+    app.option_defaults()->always_capture_default(true);
     app.add_option("-a,--absorbed-clause-elimination-interval", args.m_absorbed_clause_elimination_interval,
                    "Number of eliminated variables before absorbed clauses are removed (never if 0)")
                    ->group("Algorithm");
@@ -57,7 +62,11 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
         app.parse(argc, argv);
         if (args.get_min_var() > args.get_max_var()) {
             throw CLI::ValidationError("--var-range",
-                                       "Minimum variable to be eliminated cannot be larger than maximum variable");
+                                       "Minimum variable to be eliminated (" +
+                                       std::to_string(args.get_min_var()) +
+                                       ") cannot be larger than maximum variable (" +
+                                       std::to_string(args.get_max_var()) +
+                                       ")");
         }
     } catch (const CLI::ParseError &e) {
         app.exit(e);

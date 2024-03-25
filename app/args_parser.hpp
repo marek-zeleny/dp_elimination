@@ -17,6 +17,7 @@ public:
     ~ArgsParser() = default;
 
     enum class Heuristic : uint16_t {
+        None,
         MinimalBloat,
     };
 
@@ -36,11 +37,11 @@ public:
 private:
     ArgsParser() = default;
 
-    std::string m_input_cnf_file_name;
+    std::string m_input_cnf_file_name{};
     std::string m_output_cnf_file_name{"result.cnf"};
     std::string m_log_file_name{"dp.log"};
     std::string m_metrics_file_name{"metrics.json"};
-    Heuristic m_heuristic{Heuristic::MinimalBloat};
+    Heuristic m_heuristic{Heuristic::None};
     size_t m_absorbed_clause_elimination_interval{0};
     std::tuple<size_t, size_t> m_var_range{0, std::numeric_limits<size_t>::max()};
     std::tuple<size_t, size_t> m_sylvan_table_size{1LL<<22, 1LL<<26};
