@@ -29,6 +29,8 @@ concept IsScoreEvaluator = requires(F f, const SylvanZddCnf::VariableStats &stat
     { f(stats) } -> std::convertible_to<HeuristicResult::Score>;
 };
 
+namespace heuristics {
+
 class SimpleHeuristic {
 public:
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
@@ -72,15 +74,7 @@ public:
     }
 };
 
-inline HeuristicResult::Score bloat_score(const SylvanZddCnf::VariableStats &stats) {
-    using Score = HeuristicResult::Score;
-    auto removed_clauses = static_cast<Score>(stats.positive_clause_count + stats.negative_clause_count);
-    auto new_clauses = static_cast<Score>(stats.positive_clause_count * stats.negative_clause_count);
-    return new_clauses - removed_clauses;
-}
-
-template<auto ScoreEvaluator>
-requires IsScoreEvaluator<decltype(ScoreEvaluator)>
+template<auto ScoreEvaluator> requires IsScoreEvaluator<decltype(ScoreEvaluator)>
 class MinimalScoreHeuristic {
 public:
     MinimalScoreHeuristic(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
@@ -120,5 +114,18 @@ private:
     const size_t m_min_var;
     const size_t m_max_var;
 };
+
+namespace scores {
+
+inline HeuristicResult::Score bloat_score(const SylvanZddCnf::VariableStats &stats) {
+    using Score = HeuristicResult::Score;
+    auto removed_clauses = static_cast<Score>(stats.positive_clause_count + stats.negative_clause_count);
+    auto new_clauses = static_cast<Score>(stats.positive_clause_count * stats.negative_clause_count);
+    return new_clauses - removed_clauses;
+}
+
+} // namespace scores
+
+} // namespace heuristics
 
 } // namespace dp

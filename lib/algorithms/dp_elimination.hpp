@@ -48,7 +48,7 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     return no_subsumed;
 }
 
-template<IsHeuristic Heuristic = SimpleHeuristic>
+template<IsHeuristic Heuristic = heuristics::SimpleHeuristic>
 bool is_sat(SylvanZddCnf set, Heuristic heuristic = {}) {
     LOG_INFO << "Starting DP elimination algorithm";
     while (true) {

@@ -28,7 +28,8 @@ bool stop_condition(size_t, const SylvanZddCnf &cnf, const HeuristicResult &resu
 SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const ArgsParser &args) {
     if (args.get_heuristic() == ArgsParser::Heuristic::MinimalBloat) {
         LOG_INFO << "Using the MinimalBloat heuristic";
-        MinimalScoreHeuristic<bloat_score> heuristic{args.get_min_var(), args.get_max_var()};
+        heuristics::MinimalScoreHeuristic<heuristics::scores::bloat_score> heuristic{args.get_min_var(),
+                                                                                     args.get_max_var()};
         return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
     } else {
         throw std::logic_error("Heuristic not implemented");

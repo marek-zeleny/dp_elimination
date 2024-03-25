@@ -16,7 +16,7 @@ TEST_CASE("SimpleHeuristic functionality", "[heuristics]") {
             {-1, -2, 4},
             {2, 3},
         });
-        SimpleHeuristic heuristic;
+        heuristics::SimpleHeuristic heuristic;
 
         HeuristicResult result = heuristic(cnf1);
         CHECK(result.success);
@@ -30,7 +30,7 @@ TEST_CASE("SimpleHeuristic functionality", "[heuristics]") {
     SECTION("Fails for empty and zero formulas") {
         SylvanZddCnf empty;
         SylvanZddCnf contains_empty = SylvanZddCnf::from_vector({{}});
-        SimpleHeuristic heuristic;
+        heuristics::SimpleHeuristic heuristic;
 
         HeuristicResult result = heuristic(empty);
         CHECK_FALSE(result.success);
@@ -54,7 +54,7 @@ TEST_CASE("UnitLiteralHeuristic functionality", "[heuristics]") {
             {2},
             {-4},
         });
-        UnitLiteralHeuristic heuristic;
+        heuristics::UnitLiteralHeuristic heuristic;
 
         HeuristicResult result = heuristic(cnf1);
         CHECK(result.success);
@@ -68,7 +68,7 @@ TEST_CASE("UnitLiteralHeuristic functionality", "[heuristics]") {
     SECTION("Fails for empty and zero formulas") {
         SylvanZddCnf empty;
         SylvanZddCnf contains_empty = SylvanZddCnf::from_vector({{}});
-        UnitLiteralHeuristic heuristic;
+        heuristics::UnitLiteralHeuristic heuristic;
 
         HeuristicResult result = heuristic(empty);
         CHECK_FALSE(result.success);
@@ -82,7 +82,7 @@ TEST_CASE("UnitLiteralHeuristic functionality", "[heuristics]") {
             {-1, -2, 4},
             {2, 3},
         });
-        UnitLiteralHeuristic heuristic;
+        heuristics::UnitLiteralHeuristic heuristic;
 
         HeuristicResult result = heuristic(cnf);
         CHECK_FALSE(result.success);
@@ -103,7 +103,7 @@ TEST_CASE("ClearLiteralHeuristic functionality", "[heuristics]") {
             {2},
             {-4},
         });
-        ClearLiteralHeuristic heuristic;
+        heuristics::ClearLiteralHeuristic heuristic;
 
         HeuristicResult result = heuristic(cnf1);
         CHECK(result.success);
@@ -117,7 +117,7 @@ TEST_CASE("ClearLiteralHeuristic functionality", "[heuristics]") {
     SECTION("Fails for empty and zero formulas") {
         SylvanZddCnf empty;
         SylvanZddCnf contains_empty = SylvanZddCnf::from_vector({{}});
-        ClearLiteralHeuristic heuristic;
+        heuristics::ClearLiteralHeuristic heuristic;
 
         HeuristicResult result = heuristic(empty);
         CHECK_FALSE(result.success);
@@ -132,7 +132,7 @@ TEST_CASE("ClearLiteralHeuristic functionality", "[heuristics]") {
             {2, 3},
             {1, -3, -4},
         });
-        ClearLiteralHeuristic heuristic;
+        heuristics::ClearLiteralHeuristic heuristic;
 
         HeuristicResult result = heuristic(cnf);
         CHECK_FALSE(result.success);
@@ -143,7 +143,7 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
     using namespace dp;
 
     constexpr auto test_score = [](const SylvanZddCnf::VariableStats &stats) {
-        return static_cast<HeuristicResult::Score>(stats.positive_clause_count + stats.negative_clause_count);
+        return stats.positive_clause_count + stats.negative_clause_count;
     };
 
     SECTION("Correctly finds minimum") {
@@ -161,7 +161,7 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
             {-1, -2},
             {1},
         });
-        MinimalScoreHeuristic<test_score> heuristic{0, 1000};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic{0, 1000};
 
         HeuristicResult result = heuristic(cnf1);
         CHECK(result.success);
@@ -180,7 +180,7 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
             {-1, -4},
             {1, -4},
         });
-        MinimalScoreHeuristic<test_score> heuristic{0, 1000};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic{0, 1000};
 
         HeuristicResult result = heuristic(cnf);
         CHECK(result.success);
@@ -191,7 +191,7 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
     SECTION("Fails for empty and zero formulas") {
         SylvanZddCnf empty;
         SylvanZddCnf contains_empty = SylvanZddCnf::from_vector({{}});
-        MinimalScoreHeuristic<test_score> heuristic{0, 1000};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic{0, 1000};
 
         HeuristicResult result = heuristic(empty);
         CHECK_FALSE(result.success);
@@ -209,31 +209,31 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
             {3},
         });
 
-        MinimalScoreHeuristic<test_score> heuristic1{1, 4};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic1{1, 4};
         HeuristicResult result = heuristic1(cnf);
         CHECK(result.success);
         CHECK(result.literal == 1);
         CHECK(result.score == 1);
 
-        MinimalScoreHeuristic<test_score> heuristic2{2, 4};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic2{2, 4};
         result = heuristic2(cnf);
         CHECK(result.success);
         CHECK(result.literal == 2);
         CHECK(result.score == 2);
 
-        MinimalScoreHeuristic<test_score> heuristic3{3, 4};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic3{3, 4};
         result = heuristic3(cnf);
         CHECK(result.success);
         CHECK(result.literal == 4);
         CHECK(result.score == 3);
 
-        MinimalScoreHeuristic<test_score> heuristic4{3, 3};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic4{3, 3};
         result = heuristic4(cnf);
         CHECK(result.success);
         CHECK(result.literal == 3);
         CHECK(result.score == 4);
 
-        MinimalScoreHeuristic<test_score> heuristic5{5, 1000};
+        heuristics::MinimalScoreHeuristic<test_score> heuristic5{5, 1000};
         result = heuristic5(cnf);
         CHECK_FALSE(result.success);
     }
@@ -242,27 +242,27 @@ TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
         HeuristicResult::Score score;
 
         SylvanZddCnf::VariableStats stats_0_0{0, 0};
-        score = bloat_score(stats_0_0);
+        score = heuristics::scores::bloat_score(stats_0_0);
         CHECK(score == 0);
 
         SylvanZddCnf::VariableStats stats_1_2{1, 2};
-        score = bloat_score(stats_1_2);
+        score = heuristics::scores::bloat_score(stats_1_2);
         CHECK(score == -1);
 
         SylvanZddCnf::VariableStats stats_2_2{2, 2};
-        score = bloat_score(stats_2_2);
+        score = heuristics::scores::bloat_score(stats_2_2);
         CHECK(score == 0);
 
         SylvanZddCnf::VariableStats stats_4_0{4, 0};
-        score = bloat_score(stats_4_0);
+        score = heuristics::scores::bloat_score(stats_4_0);
         CHECK(score == -4);
 
         SylvanZddCnf::VariableStats stats_0_4{0, 4};
-        score = bloat_score(stats_0_4);
+        score = heuristics::scores::bloat_score(stats_0_4);
         CHECK(score == -4);
 
         SylvanZddCnf::VariableStats stats_5_12{5, 12};
-        score = bloat_score(stats_5_12);
+        score = heuristics::scores::bloat_score(stats_5_12);
         CHECK(score == 43);
     }
 }
