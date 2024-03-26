@@ -83,8 +83,10 @@ def create_plots(metrics) -> list[tuple[str, plt.Figure]]:
     ax1.set_ylabel("# absorbed clauses removed")
     ax1.set_yscale("log")
     ax1.bar(xticklabels, absorbed_removed, width=0.8, label="removed absorbed clauses")
-    ax1.xaxis.set_major_locator(ticker.MultipleLocator(2))
-    fig1.legend(loc="upper left")
+    ax1.xaxis.set_major_locator(ticker.MultipleLocator(5))
+    fig1.legend(loc="lower left", ncol=2)
+    fig1.tight_layout()
+    fig1.subplots_adjust(bottom=0.2)
     figures.append(("absorbed", fig1))
 
     # total duration
@@ -94,7 +96,10 @@ def create_plots(metrics) -> list[tuple[str, plt.Figure]]:
     ax2.set_xlabel("# eliminated variables")
     ax2.set_ylabel("duration (ms)")
     ax2.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
-    ax2.plot(durations["EliminateVar_Total"], "red")
+    ax2.plot(durations["EliminateVar_Total"], "red", label="elimination")
+    fig2.legend(loc="lower left")
+    fig2.tight_layout()
+    fig2.subplots_adjust(bottom=0.15)
     figures.append(("duration_total", fig2))
 
     # durations detail
@@ -110,7 +115,9 @@ def create_plots(metrics) -> list[tuple[str, plt.Figure]]:
     ax3.plot(durations["EliminateVar_SubsumedRemoval1"], "magenta", label="subsumed removal (before unification)")
     ax3.plot(durations["EliminateVar_SubsumedRemoval2"], "brown", label="subsumed removal (after unification)")
     ax3.plot(durations["EliminateVar_Unification"], "green", label="unification")
-    fig3.legend(loc="upper left")
+    fig3.legend(loc="lower left", ncol=2)
+    fig3.tight_layout()
+    fig3.subplots_adjust(bottom=0.25)
     figures.append(("duration_detail", fig3))
 
     return figures
