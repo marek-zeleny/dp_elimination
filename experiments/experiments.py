@@ -59,66 +59,116 @@ def run_dp_experiments(args):
         print(f"{block} Experiment finished {block}")
 
 
-def create_summary_table(metrics):
+def create_summary_table(metrics: dict):
     ...
 
 
-def create_plots(metrics) -> list[tuple[str, plt.Figure]]:
-    figures = []
+def plot_eliminated_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    series = metrics["series"]
 
-    # data
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.set_title("Eliminated clauses")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("inverted heuristic score")
+    ax.plot([-x for x in series["HeuristicScores"]], "blue", label="heuristic")
+
+    ax: plt.Axes = ax.twinx()
+    axes.append(ax)
+    ax.set_ylabel("# eliminated clauses")
+    ax.plot(series["EliminatedClauses"], "orange", label="clauses")
+
+    fig.legend(loc="lower left", ncol=2)
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.2)
+    return fig, axes
+
+
+def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
     absorbed_removed = metrics["series"]["AbsorbedClausesRemoved"]
     durations = metrics["durations"]
 
-    # absorbed clauses
-    sub1: tuple[plt.Figure, plt.Axes] = plt.subplots()
-    fig1, ax1 = sub1
-    ax1.set_title("Removed absorbed clauses")
-    ax1.set_xlabel("# eliminated variables")
-    ax1.set_ylabel("duration (ms)")
-    ax1.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
-    ax1.plot(durations["RemoveAbsorbedClausesWithConversion"], "green", label="duration")
-    ax1: plt.Axes = ax1.twinx()
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.set_title("Removed absorbed clauses")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("duration (ms)")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
+    ax.plot(durations["RemoveAbsorbedClausesWithConversion"], "green", label="duration")
+
+    ax: plt.Axes = ax.twinx()
+    axes.append(ax)
     xticklabels = [str(10 * x) for x in range(len(absorbed_removed))]
-    ax1.set_ylabel("# absorbed clauses removed")
-    ax1.set_yscale("log")
-    ax1.bar(xticklabels, absorbed_removed, width=0.8, label="removed absorbed clauses")
-    ax1.xaxis.set_major_locator(ticker.MultipleLocator(5))
-    fig1.legend(loc="lower left", ncol=2)
-    fig1.tight_layout()
-    fig1.subplots_adjust(bottom=0.2)
-    figures.append(("absorbed", fig1))
+    ax.set_ylabel("# absorbed clauses removed")
+    ax.set_yscale("log")
+    ax.bar(xticklabels, absorbed_removed, width=0.8, label="removed absorbed clauses")
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
 
-    # total duration
-    sub2: tuple[plt.Figure, plt.Axes] = plt.subplots()
-    fig2, ax2 = sub2
-    ax2.set_title("Total duration of elimination")
-    ax2.set_xlabel("# eliminated variables")
-    ax2.set_ylabel("duration (ms)")
-    ax2.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
-    ax2.plot(durations["EliminateVar_Total"], "red", label="elimination")
-    fig2.legend(loc="lower left")
-    fig2.tight_layout()
-    fig2.subplots_adjust(bottom=0.15)
-    figures.append(("duration_total", fig2))
+    fig.legend(loc="lower left", ncol=2)
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.2)
+    return fig, axes
 
-    # durations detail
-    sub3: tuple[plt.Figure, plt.Axes] = plt.subplots()
-    fig3, ax3 = sub3
-    ax3.set_title("Durations of elimination stages")
-    ax3.set_xlabel("# eliminated variables")
-    ax3.set_ylabel("duration (ms)")
-    ax3.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
-    ax3.plot(durations["EliminateVar_SubsetDecomposition"], "orange", label="subset decomposition")
-    ax3.plot(durations["EliminateVar_Resolution"], "blue", label="resolution")
-    ax3.plot(durations["EliminateVar_TautologiesRemoval"], "cyan", label="tautologies removal")
-    ax3.plot(durations["EliminateVar_SubsumedRemoval1"], "magenta", label="subsumed removal (before unification)")
-    ax3.plot(durations["EliminateVar_SubsumedRemoval2"], "brown", label="subsumed removal (after unification)")
-    ax3.plot(durations["EliminateVar_Unification"], "green", label="unification")
-    fig3.legend(loc="lower left", ncol=2)
-    fig3.tight_layout()
-    fig3.subplots_adjust(bottom=0.25)
-    figures.append(("duration_detail", fig3))
+
+def plot_total_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    durations = metrics["durations"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.set_title("Total duration of elimination")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("duration (ms)")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
+    ax.plot(durations["EliminateVar_Total"], "red", label="elimination")
+    fig.legend(loc="lower left")
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.15)
+    return fig, axes
+
+
+def plot_duration_detail(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    durations = metrics["durations"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.set_title("Durations of elimination stages")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("duration (ms)")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
+    ax.plot(durations["EliminateVar_SubsetDecomposition"], "orange", label="subset decomposition")
+    ax.plot(durations["EliminateVar_Resolution"], "blue", label="resolution")
+    ax.plot(durations["EliminateVar_TautologiesRemoval"], "cyan", label="tautologies removal")
+    ax.plot(durations["EliminateVar_SubsumedRemoval1"], "magenta", label="subsumed removal (before unification)")
+    ax.plot(durations["EliminateVar_SubsumedRemoval2"], "brown", label="subsumed removal (after unification)")
+    ax.plot(durations["EliminateVar_Unification"], "green", label="unification")
+    fig.legend(loc="lower left", ncol=2)
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.25)
+    return fig, axes
+
+
+def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
+    figures = []
+
+    fig_eliminated, _ = plot_eliminated_clauses(metrics)
+    figures.append(("eliminated", fig_eliminated))
+
+    fig_absorbed, _ = plot_absorbed_clauses(metrics)
+    figures.append(("absorbed", fig_absorbed))
+
+    fig_total_duration, _ = plot_total_duration(metrics)
+    figures.append(("duration_total", fig_total_duration))
+
+    fig_duration_detail, _ = plot_duration_detail(metrics)
+    figures.append(("duration_detail", fig_duration_detail))
 
     return figures
 
@@ -131,11 +181,12 @@ def visualize_metrics(args):
     for _, _, _, output_dir_path in generate_setups(results_dir):
         metrics_path = output_dir_path / "metrics.json"
         with open(metrics_path, "r") as file:
-            metrics = json.load(file)
+            metrics: dict = json.load(file)
             summary = create_summary_table(metrics)
             plots = create_plots(metrics)
             for name, fig in plots:
-                fig.savefig(output_dir_path / f"{name}.png", dpi=args.dpi)
+                format = args.format
+                fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=args.dpi)
 
 
 parser = argparse.ArgumentParser(description="Run DP experiments and visualize results")
@@ -149,7 +200,8 @@ parser_run.add_argument("-r", "--results-dir", type=str, default="results", help
 parser_visual = subparsers.add_parser("visual", description="Process metrics after experiments and visualize them")
 parser_visual.add_argument("results_dir", type=str,
                            help="Directory with results (given as '--results-dir' when running experiments)")
-parser_visual.add_argument("-p", "--dpi", type=int, default=150, help="Resolution of plots")
+parser_visual.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
+parser_visual.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
 parser_visual.set_defaults(func=visualize_metrics)
 
 
