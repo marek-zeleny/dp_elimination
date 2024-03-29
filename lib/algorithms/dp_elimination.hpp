@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <algorithm>
 #include <simple_logger.h>
 #include "algorithms/heuristics.hpp"
 #include "algorithms/unit_propagation.hpp"
@@ -16,6 +17,7 @@ concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cn
 
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
     LOG_INFO << "Eliminating literal " << l;
+    metrics.increase_counter(MetricsCounters::EliminatedVars);
     metrics.append_to_series(MetricsSeries::EliminatedLiterals, std::abs(l));
     auto timer_total = metrics.get_timer(MetricsDurations::EliminateVar_Total);
 
@@ -81,26 +83,52 @@ template<IsHeuristic Heuristic, IsStopCondition StopCondition>
 SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition stop_condition,
                             size_t absorbed_clauses_interval = 0) {
     LOG_INFO << "Starting DP elimination algorithm";
+    // initial metrics collection
+    const size_t clauses_count_start = cnf.clauses_count();
+    metrics.increase_counter(MetricsCounters::TotalClauses, clauses_count_start);
+    const auto init_stats = cnf.get_formula_statistics();
+    const size_t var_count = std::count_if(init_stats.vars.cbegin(), init_stats.vars.cend(),
+                                           [](const SylvanZddCnf::VariableStats &var){
+        return var.positive_clause_count > 0 || var.negative_clause_count > 0;
+    });
+    metrics.increase_counter(MetricsCounters::TotalVars, var_count);
     auto timer = metrics.get_timer(MetricsDurations::EliminateVars);
+
     // start by removing absorbed clauses
     if (absorbed_clauses_interval > 0) {
         remove_absorbed_clauses_from_cnf(cnf);
     }
     size_t i = 0;
+
+    auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
     HeuristicResult result = heuristic(cnf);
+    timer_heuristic1.stop();
+
     // eliminate variables until a stop condition is met
     while (!stop_condition(i, cnf, result)) {
         ++i;
+        metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
+        const auto prev_clauses_count = static_cast<int64_t>(cnf.clauses_count());
+
         cnf = eliminate(cnf, result.literal);
         if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval == 0)) {
             remove_absorbed_clauses_from_cnf(cnf);
         }
+
+        const int64_t removed_clauses = prev_clauses_count - static_cast<int64_t>(cnf.clauses_count());
+        metrics.append_to_series(MetricsSeries::RemovedClauses, removed_clauses);
+
+        auto timer_heuristic2 = metrics.get_timer(MetricsDurations::VarSelection);
         result = heuristic(cnf);
     }
     // clean up by removing absorbed clauses (unless it was already done during the last iteration)
     if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval != 0)) {
         remove_absorbed_clauses_from_cnf(cnf);
     }
+
+    // final metrics collection
+    timer.stop();
+    metrics.increase_counter(MetricsCounters::RemovedClauses, clauses_count_start - cnf.clauses_count());
     return cnf;
 }
 

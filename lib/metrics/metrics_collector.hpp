@@ -37,7 +37,8 @@ private:
     using counter = size_t;
     using counter_collection = std::array<counter, num_counters>;
 
-    using series = std::vector<counter>;
+    using series_value = int64_t;
+    using series = std::vector<series_value>;
     using series_collection = std::array<series, num_series>;
 
     using clock = std::chrono::steady_clock;
@@ -61,11 +62,11 @@ public:
     MetricsCollector(MetricsCollector &&) = delete;
     MetricsCollector &operator=(MetricsCollector &&) = delete;
 
-    void increase_counter(CounterEntries entry, size_t amount = 1) {
+    void increase_counter(CounterEntries entry, counter amount = 1) {
         m_counters[to_underlying(entry)] += amount;
     }
 
-    void append_to_series(SeriesEntries entry, counter value) {
+    void append_to_series(SeriesEntries entry, series_value value) {
         m_series[to_underlying(entry)].push_back(value);
     }
 
