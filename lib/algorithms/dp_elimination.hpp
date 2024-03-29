@@ -111,12 +111,12 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         const auto prev_clauses_count = static_cast<int64_t>(cnf.clauses_count());
 
         cnf = eliminate(cnf, result.literal);
+        const int64_t removed_clauses = prev_clauses_count - static_cast<int64_t>(cnf.clauses_count());
+        metrics.append_to_series(MetricsSeries::EliminatedClauses, removed_clauses);
+
         if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval == 0)) {
             remove_absorbed_clauses_from_cnf(cnf);
         }
-
-        const int64_t removed_clauses = prev_clauses_count - static_cast<int64_t>(cnf.clauses_count());
-        metrics.append_to_series(MetricsSeries::RemovedClauses, removed_clauses);
 
         auto timer_heuristic2 = metrics.get_timer(MetricsDurations::VarSelection);
         result = heuristic(cnf);

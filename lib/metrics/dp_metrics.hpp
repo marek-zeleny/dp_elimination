@@ -31,7 +31,7 @@ inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> c
 enum class MetricsSeries : uint8_t {
     EliminatedLiterals = 0,
     HeuristicScores,
-    RemovedClauses,
+    EliminatedClauses,
     AbsorbedClausesRemoved,
     Last = AbsorbedClausesRemoved,
 };
@@ -39,7 +39,7 @@ enum class MetricsSeries : uint8_t {
 inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> series_names{
         "EliminatedLiterals",
         "HeuristicScores",
-        "RemovedClauses",
+        "EliminatedClauses",
         "AbsorbedClausesRemoved",
 };
 
