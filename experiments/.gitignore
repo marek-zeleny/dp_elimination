@@ -1,2 +1,5 @@
+# jupyter notebook files
+*.ipynb_checkpoints/
+
 # ignore results directory
 results/
