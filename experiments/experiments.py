@@ -55,6 +55,19 @@ def run_dp_experiments(args):
         block = "=" * 10
         print(f"{block} Experiment finished {block}")
 
+
+# data processing template
+def process_metrics(results_dir_path: str, func: Callable[[Path, dict], None]):
+    results_dir = Path(results_dir_path).absolute()
+    if not results_dir.exists() or not results_dir.is_dir():
+        print(f"Invalid path to results: {results_dir}")
+        sys.exit(1)
+    for _, _, _, output_dir_path in generate_setups(results_dir):
+        metrics_path = output_dir_path / "metrics.json"
+        with open(metrics_path, "r") as file:
+            metrics: dict = json.load(file)
+            func(output_dir_path, metrics)
+
 # data processing
 elimination_table_keys: list[str] = [
     "Total",
@@ -168,6 +181,16 @@ def create_tables(metrics: dict) -> list[tuple[str, pd.DataFrame, bool]]:
     overall_summary = create_overall_summary_table(metrics, stages_summary)
     tables.append(("summary", overall_summary, False))
     return tables
+
+
+def summarize_metrics(args):
+    results_dir = args.results_dir
+    format = args.format
+    def process(output_dir_path: Path, metrics: dict):
+        tables = create_tables(metrics)
+        for name, table, include_index in tables:
+            export_table(table, output_dir_path / f"{name}.{format}", format, include_index)
+    process_metrics(results_dir, process)
 
 
 # plotting
@@ -293,29 +316,21 @@ def export_table(table: pd.DataFrame, path: Path, format: str, include_index: bo
     elif format == "tex":
         output = table.to_latex(index=include_index)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f"Table format {format} not supported")
 
     with open(path, "w") as file:
         file.write(output)
 
 
 def visualize_metrics(args):
-    results_dir = Path(args.results_dir).absolute()
-    if not results_dir.exists() or not results_dir.is_dir():
-        print(f"Invalid path to results: {results_dir}")
-        sys.exit(1)
-    for _, _, _, output_dir_path in generate_setups(results_dir):
-        metrics_path = output_dir_path / "metrics.json"
-        with open(metrics_path, "r") as file:
-            metrics: dict = json.load(file)
-            tables = create_tables(metrics)
-            for name, table, include_index in tables:
-                format = args.table_format
-                export_table(table, output_dir_path / f"{name}.{format}", format, include_index)
-            plots = create_plots(metrics)
-            for name, fig in plots:
-                format = args.plot_format
-                fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=args.dpi)
+    results_dir = args.results_dir
+    format = args.format
+    dpi = args.dpi
+    def process(output_dir_path: Path, metrics: dict):
+        plots = create_plots(metrics)
+        for name, fig in plots:
+            fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=dpi)
+    process_metrics(results_dir, process)
 
 
 # CLI
@@ -327,13 +342,19 @@ parser_run.set_defaults(func=run_dp_experiments)
 parser_run.add_argument("dp_executable", type=str, help="Path to the compiled DP executable")
 parser_run.add_argument("-r", "--results-dir", type=str, default="results", help="Directory for storing results")
 
+parser_summary = subparsers.add_parser("summary",
+                                       description="Process metrics after experiments and create summary tables")
+parser_summary.set_defaults(func=summarize_metrics)
+parser_summary.add_argument("results_dir", type=str,
+                           help="Directory with results (given as '--results-dir' when running experiments)")
+parser_summary.add_argument("-f", "--format", type=str, default="md", help="Format of exported tables")
+
 parser_visual = subparsers.add_parser("visual", description="Process metrics after experiments and visualize them")
+parser_visual.set_defaults(func=visualize_metrics)
 parser_visual.add_argument("results_dir", type=str,
                            help="Directory with results (given as '--results-dir' when running experiments)")
 parser_visual.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
-parser_visual.add_argument("-p", "--plot-format", type=str, default="png", help="Format of plot files")
-parser_visual.add_argument("-t", "--table-format", type=str, default="md", help="Format of exported tables")
-parser_visual.set_defaults(func=visualize_metrics)
+parser_visual.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
 
 
 if __name__ == '__main__':
