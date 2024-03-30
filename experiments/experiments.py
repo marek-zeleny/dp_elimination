@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import subprocess
@@ -334,28 +336,35 @@ def visualize_metrics(args):
 
 
 # CLI
-parser = argparse.ArgumentParser(description="Run DP experiments and visualize results")
+parser = argparse.ArgumentParser(description="Run DP experiments and visualize results",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers()
 
-parser_run = subparsers.add_parser("run", description="Run experiments")
+parser_run = subparsers.add_parser("run",
+                                   description="Run experiments",
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_run.set_defaults(func=run_dp_experiments)
 parser_run.add_argument("dp_executable", type=str, help="Path to the compiled DP executable")
 parser_run.add_argument("-r", "--results-dir", type=str, default="results", help="Directory for storing results")
 
-parser_summary = subparsers.add_parser("summary",
-                                       description="Process metrics after experiments and create summary tables")
+parser_summary = subparsers.add_parser("summarize",
+                                       description="Process metrics from experiments and create summary tables",
+                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_summary.set_defaults(func=summarize_metrics)
-parser_summary.add_argument("results_dir", type=str,
-                           help="Directory with results (given as '--results-dir' when running experiments)")
+parser_summary.add_argument("results_dir",
+                            type=str,
+                            help="Directory with results (given as '--results-dir' when running experiments)")
 parser_summary.add_argument("-f", "--format", type=str, default="md", help="Format of exported tables")
 
-parser_visual = subparsers.add_parser("visual", description="Process metrics after experiments and visualize them")
-parser_visual.set_defaults(func=visualize_metrics)
-parser_visual.add_argument("results_dir", type=str,
-                           help="Directory with results (given as '--results-dir' when running experiments)")
-parser_visual.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
-parser_visual.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
-
+parser_visualize = subparsers.add_parser("visualize",
+                                         description="Process metrics from experiments and visualize them",
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser_visualize.set_defaults(func=visualize_metrics)
+parser_visualize.add_argument("results_dir",
+                              type=str,
+                              help="Directory with results (given as '--results-dir' when running experiments)")
+parser_visualize.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
+parser_visualize.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
 
 if __name__ == '__main__':
     args = parser.parse_args()
