@@ -1,0 +1,8 @@
+name: dp-experiments
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pandas
+  - tabulate
+  - matplotlib
