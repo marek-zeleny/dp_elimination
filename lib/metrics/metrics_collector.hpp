@@ -34,7 +34,7 @@ private:
     static constexpr size_t num_series = to_underlying(SeriesEntries::Last) + 1;
     static constexpr size_t num_durations = to_underlying(DurationEntries::Last) + 1;
 
-    using counter = size_t;
+    using counter = int64_t;
     using counter_collection = std::array<counter, num_counters>;
 
     using series_value = int64_t;

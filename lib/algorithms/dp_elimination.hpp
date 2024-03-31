@@ -84,10 +84,10 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
                             size_t absorbed_clauses_interval = 0) {
     LOG_INFO << "Starting DP elimination algorithm";
     // initial metrics collection
-    const size_t clauses_count_start = cnf.clauses_count();
+    const auto clauses_count_start = static_cast<int64_t>(cnf.clauses_count());
     metrics.increase_counter(MetricsCounters::TotalClauses, clauses_count_start);
     const auto init_stats = cnf.get_formula_statistics();
-    const size_t var_count = std::count_if(init_stats.vars.cbegin(), init_stats.vars.cend(),
+    const int64_t var_count = std::count_if(init_stats.vars.cbegin(), init_stats.vars.cend(),
                                            [](const SylvanZddCnf::VariableStats &var){
         return var.positive_clause_count > 0 || var.negative_clause_count > 0;
     });
@@ -128,7 +128,8 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
 
     // final metrics collection
     timer.stop();
-    metrics.increase_counter(MetricsCounters::RemovedClauses, clauses_count_start - cnf.clauses_count());
+    const int64_t removed_clauses = clauses_count_start - static_cast<int64_t>(cnf.clauses_count());
+    metrics.increase_counter(MetricsCounters::RemovedClauses, removed_clauses);
     return cnf;
 }
 

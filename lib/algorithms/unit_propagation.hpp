@@ -82,7 +82,7 @@ inline std::vector<std::vector<int32_t>> remove_absorbed_clauses(const std::vect
             output.push_back(clauses[i]);
         }
     }
-    size_t removed_count = clauses.size() - output.size();
+    const auto removed_count = static_cast<int64_t>(clauses.size() - output.size());
     metrics.increase_counter(MetricsCounters::AbsorbedClausesRemovedTotal, removed_count);
     metrics.append_to_series(MetricsSeries::AbsorbedClausesRemoved, removed_count);
     LOG_INFO << removed_count << " absorbed clauses removed, " << output.size() << " remaining";
