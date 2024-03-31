@@ -1,0 +1,2 @@
+heuristic = "minimal_bloat"
+max-heuristic-score = 2
