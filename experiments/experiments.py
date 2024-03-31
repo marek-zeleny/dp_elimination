@@ -3,6 +3,7 @@
 import os
 import sys
 import subprocess
+import math
 import argparse
 import json
 import pandas as pd
@@ -20,10 +21,13 @@ setups_dir: Path = script_root_dir / "setups"
 # experiments
 input_formulas: list[str] = [
     "bf0432-007",
+    "aim-100-1_6-no-1",
 ]
 
 experiment_setups: list[str] = [
     "minimal_bloat",
+    "minimal_bloat_higher_limit",
+    "clear_literal",
 ]
 
 
@@ -45,15 +49,19 @@ def run_dp_experiments(args):
     results_dir = Path(args.results_dir).absolute()
     for setup_config_path, input_config_path, input_formula_path, output_dir_path in generate_setups(results_dir):
         command_with_args = [str(dp_path.absolute()),
+                             "--input-file", str(input_formula_path),
                              "--config", str(default_config_path),
                              "--config", str(setup_config_path),
-                             "--config", str(input_config_path),
-                             "--input-file", str(input_formula_path),
         ]
+        if input_config_path.exists():
+            command_with_args += ["--config", str(input_config_path)]
         os.makedirs(output_dir_path, exist_ok=True)
         print(" ".join(command_with_args))
         print()
-        subprocess.run(command_with_args, cwd=output_dir_path)
+        print("output:")
+        result = subprocess.run(command_with_args, cwd=output_dir_path)
+        print()
+        print(f"Command exited with code {result.returncode}")
         block = "=" * 10
         print(f"{block} Experiment finished {block}")
 
@@ -87,6 +95,8 @@ def create_elimination_table(metrics: dict) -> pd.DataFrame:
     table = pd.DataFrame(data).transpose()
     table.columns = elimination_table_keys
     table["MeasurementOverhead"] = table["Total"] - table[elimination_table_keys[1:]].sum(axis=1)
+    if table.empty:
+        table.loc[0] = -1
     return table
 
 
@@ -94,6 +104,8 @@ def create_variables_table(metrics: dict) -> pd.DataFrame:
     data = metrics["durations"]["VarSelection"]
     table = pd.DataFrame(data)
     table.columns = ["VarSelection"]
+    if table.empty:
+        table.loc[0] = -1
     return table
 
 
@@ -104,6 +116,8 @@ def create_absorbed_table(metrics: dict) -> pd.DataFrame:
     ]
     table = pd.DataFrame(data).transpose()
     table.columns = ["AbsorbedRemovalDuration", "AbsorbedClausesRemoved"]
+    if table.empty:
+        table.loc[0] = -1
     return table
 
 
@@ -113,6 +127,8 @@ def get_heuristic_correlation(metrics: dict) -> float:
         metrics["series"]["EliminatedClauses"],
     ]
     table = pd.DataFrame(data).transpose()
+    if table.empty:
+        return 0
     correlation = table[0].corr(table[1])
     return correlation
 
@@ -135,13 +151,30 @@ def create_overall_summary_table(metrics: dict, stages_summary: pd.DataFrame) ->
 
 
 def get_part_of_total_func(total_sum: int, multiplier: float) -> Callable[[pd.Series], float]:
+    def ret_0(df_col: pd.Series) -> float:
+        assert df_col.sum() == 0
+        return 0
     def part_of_total(df_col: pd.Series) -> float:
         return (df_col.sum() / total_sum) * multiplier
-    return part_of_total
+    if total_sum == 0:
+        return ret_0
+    else:
+        return part_of_total
+
+
+def std(df_col: pd.Series) -> float:
+    if len(df_col) < 2:
+        return 0
+    else:
+        return df_col.std()
 
 
 def rel_std(df_col: pd.Series) -> float:
-    return (df_col.std() / df_col.mean()) * 100
+    mean = df_col.mean()
+    if mean == 0:
+        return std(df_col)
+    else:
+        return (std(df_col) / mean) * 100
 
 
 def get_aggregation_functions(total_sum: int) -> list:
@@ -151,7 +184,7 @@ def get_aggregation_functions(total_sum: int) -> list:
         get_part_of_total_func(total_sum, 100_000),
         "mean",
         "median",
-        "std",
+        std,
         rel_std,
         "max",
         "argmax",
@@ -194,12 +227,31 @@ def summarize_metrics(args):
             export_table(table, output_dir_path / f"{name}.{format}", format, include_index)
     process_metrics(results_dir, process)
 
-
 # plotting
+scaling_factor_units_map = {
+    0: "us",
+    1: "ms",
+    2: "s",
+    3: "10^3 s",
+}
+
+
 def get_divider(factor: int):
     def divider(val: int, *args):
         return int(val // factor)
     return divider
+
+
+def get_axes_scaling_factor(ax: plt.Axes) -> tuple[int, str]:
+    min_value, max_value = ax.get_ylim()
+    extreme = max(abs(min_value), abs(max_value))
+    if extreme <= 1:
+        exp = 0
+    else:
+        exp = math.floor(math.log(extreme, 1000))
+    factor = 1000 ** exp
+    unit = scaling_factor_units_map[exp]
+    return int(factor), unit
 
 
 def plot_eliminated_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
@@ -209,15 +261,13 @@ def plot_eliminated_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
+    ax.plot([-x for x in series["HeuristicScores"]], "blue", label="inverted heuristic score")
+    ax.plot(series["EliminatedClauses"], "orange", label="eliminated clauses")
+
     ax.set_title("Eliminated clauses")
     ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel("inverted heuristic score")
-    ax.plot([-x for x in series["HeuristicScores"]], "blue", label="heuristic")
-
-    ax: plt.Axes = ax.twinx()
-    axes.append(ax)
-    ax.set_ylabel("# eliminated clauses")
-    ax.plot(series["EliminatedClauses"], "orange", label="clauses")
+    ax.set_ylabel("(expected) # clauses")
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     fig.legend(loc="lower left", ncol=2)
     fig.tight_layout()
@@ -233,19 +283,26 @@ def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
+    ax.plot(durations["RemoveAbsorbedClausesWithConversion"], "green", label="duration")
+    factor, unit = get_axes_scaling_factor(ax)
+
     ax.set_title("Removed absorbed clauses")
     ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel("duration (ms)")
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
-    ax.plot(durations["RemoveAbsorbedClausesWithConversion"], "green", label="duration")
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
 
     ax: plt.Axes = ax.twinx()
     axes.append(ax)
     xticklabels = [str(10 * x) for x in range(len(absorbed_removed))]
     ax.set_ylabel("# absorbed clauses removed")
     ax.set_yscale("log")
-    ax.bar(xticklabels, absorbed_removed, width=0.8, label="removed absorbed clauses")
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+    ax.bar(xticklabels, absorbed_removed, width=0.8, label="removed absorbed clauses (log)")
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(max(
+        1 if len(xticklabels) < 10 else 2,
+        (len(xticklabels) // 25) * 5
+    )))
+    ax.set_ylim(bottom=0.4)
 
     fig.legend(loc="lower left", ncol=2)
     fig.tight_layout()
@@ -260,11 +317,15 @@ def plot_total_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
+    ax.plot(durations["EliminateVar_Total"], "red", label="elimination")
+    factor, unit = get_axes_scaling_factor(ax)
+
     ax.set_title("Total duration of elimination")
     ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel("duration (ms)")
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
-    ax.plot(durations["EliminateVar_Total"], "red", label="elimination")
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
+
     fig.legend(loc="lower left")
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.15)
@@ -278,16 +339,20 @@ def plot_duration_detail(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    ax.set_title("Durations of elimination stages")
-    ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel("duration (ms)")
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(1000)))
     ax.plot(durations["EliminateVar_SubsetDecomposition"], "orange", label="subset decomposition")
     ax.plot(durations["EliminateVar_Resolution"], "blue", label="resolution")
     ax.plot(durations["EliminateVar_TautologiesRemoval"], "cyan", label="tautologies removal")
     ax.plot(durations["EliminateVar_SubsumedRemoval1"], "magenta", label="subsumed removal (before unification)")
     ax.plot(durations["EliminateVar_SubsumedRemoval2"], "brown", label="subsumed removal (after unification)")
     ax.plot(durations["EliminateVar_Unification"], "green", label="unification")
+    factor, unit = get_axes_scaling_factor(ax)
+
+    ax.set_title("Durations of elimination stages")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
+
     fig.legend(loc="lower left", ncol=2)
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.25)
@@ -332,6 +397,7 @@ def visualize_metrics(args):
         plots = create_plots(metrics)
         for name, fig in plots:
             fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=dpi)
+            plt.close(fig)
     process_metrics(results_dir, process)
 
 
