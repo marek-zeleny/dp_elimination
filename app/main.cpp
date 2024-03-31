@@ -10,23 +10,45 @@
 
 using namespace dp;
 
-bool stop_condition(size_t, const SylvanZddCnf &cnf, const HeuristicResult &result) {
-    if (cnf.is_empty() || cnf.contains_empty()) {
-        LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
-        return true;
-    } else if (!result.success) {
-        LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
-        return true;
-    } else if (result.score > 0) {
-        LOG_INFO << "Heuristic with too high score, stopping DP elimination";
-        return true;
-    } else {
-        return false;
+class StopCondition {
+public:
+    explicit StopCondition(HeuristicResult::Score max_score) : m_max_score(max_score) {}
+
+    bool operator()(size_t, const SylvanZddCnf &cnf, const HeuristicResult &result) const {
+        if (cnf.is_empty() || cnf.contains_empty()) {
+            LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
+            return true;
+        } else if (!result.success) {
+            LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
+            return true;
+        } else if (result.score > m_max_score) {
+            LOG_INFO << "Heuristic with too high score (" << result.score << " > " << m_max_score
+                     << "), stopping DP elimination";
+            return true;
+        } else {
+            return false;
+        }
     }
-}
+
+private:
+    const HeuristicResult::Score m_max_score;
+};
 
 SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const ArgsParser &args) {
-    if (args.get_heuristic() == ArgsParser::Heuristic::MinimalBloat) {
+    StopCondition stop_condition{args.get_max_heuristic_score()};
+    if (args.get_heuristic() == ArgsParser::Heuristic::Simple) {
+        LOG_INFO << "Using the Simple heuristic";
+        heuristics::SimpleHeuristic heuristic;
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+    } else if (args.get_heuristic() == ArgsParser::Heuristic::UnitLiteral) {
+        LOG_INFO << "Using the UnitLiteral heuristic";
+        heuristics::UnitLiteralHeuristic heuristic;
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+    } else if (args.get_heuristic() == ArgsParser::Heuristic::ClearLiteral) {
+        LOG_INFO << "Using the ClearLiteral heuristic";
+        heuristics::ClearLiteralHeuristic heuristic;
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+    } else if (args.get_heuristic() == ArgsParser::Heuristic::MinimalBloat) {
         LOG_INFO << "Using the MinimalBloat heuristic";
         heuristics::MinimalScoreHeuristic<heuristics::scores::bloat_score> heuristic{args.get_min_var(),
                                                                                      args.get_max_var()};
@@ -86,9 +108,10 @@ int main(int argc, char *argv[])
     }
 
     // initialize Lace
-    int n_workers = 0; // automatically detect number of workers
+    size_t n_workers = args->get_lace_threads();
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);
+    LOG_INFO << "Lace started with " << lace_workers() << " threads";
 
     // run main Lace thread
     return RUN(impl, &args.value());

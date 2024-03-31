@@ -4,8 +4,12 @@
 #include <unordered_map>
 #include <CLI/CLI.hpp>
 
+// Help message prints them in reversed order
 static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_map {
         {"minimal_bloat", ArgsParser::Heuristic::MinimalBloat},
+        {"clear_literal", ArgsParser::Heuristic::ClearLiteral},
+        {"unit_literal", ArgsParser::Heuristic::UnitLiteral},
+        {"simple", ArgsParser::Heuristic::Simple},
 };
 
 std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
@@ -44,6 +48,9 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
     app.option_defaults()->always_capture_default(true);
+    app.add_option("-s,--max-heuristic-score", args.m_max_heuristic_score,
+                   "Maximum allowed score given by heuristic before stopping the algorithm")
+                   ->group("Algorithm");
     app.add_option("-a,--absorbed-clause-elimination-interval", args.m_absorbed_clause_elimination_interval,
                    "Number of eliminated variables before absorbed clauses are removed (never if 0)")
                    ->group("Algorithm");
@@ -56,6 +63,9 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    ->group("Sylvan");
     app.add_option("--sylvan-cache-size", args.m_sylvan_cache_size,
                    "Sylvan cache size (default and max), should be a power of 2")
+                   ->group("Sylvan");
+    app.add_option("--lace-threads", args.m_lace_threads,
+                   "Number of lace threads (0 for auto-detect)")
                    ->group("Sylvan");
 
     try {
