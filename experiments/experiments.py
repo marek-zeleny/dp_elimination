@@ -131,6 +131,16 @@ def create_absorbed_table(metrics: dict) -> pd.DataFrame:
     return table
 
 
+def create_zbdd_size_table(metrics: dict) -> pd.DataFrame:
+    data = [
+        metrics["series"]["ClauseCounts"],
+        metrics["series"]["NodeCounts"],
+    ]
+    table = pd.DataFrame(data).transpose()
+    table.columns = ["ClauseCounts", "NodeCounts"]
+    return table
+
+
 def get_heuristic_correlation(metrics: dict) -> float:
     data = [
         metrics["series"]["HeuristicScores"],
@@ -151,6 +161,8 @@ def create_overall_summary_table(metrics: dict, stages_summary: pd.DataFrame) ->
         "RemovedClauses": metrics["counters"]["RemovedClauses"],
         "RemovedAbsorbedClauses": metrics["counters"]["AbsorbedClausesRemovedTotal"],
         "HeuristicCorrelation": get_heuristic_correlation(metrics),
+        "ReadDuration": metrics["durations"]["ReadInputFormula"],
+        "WriteDuration": metrics["durations"]["WriteOutputFormula"],
         "TotalDuration": metrics["durations"]["EliminateVars"],
         "VarSelection": stages_summary["VarSelection"].loc["sum"],
         "Elimination": stages_summary["Elimination"].loc["sum"],
@@ -223,6 +235,10 @@ def create_tables(metrics: dict) -> list[tuple[str, pd.DataFrame, bool]]:
     stages_summary.loc["ratio"] //= 100
     tables.append(("algorithm_stages", stages_summary, True))
 
+    sizes = create_zbdd_size_table(metrics)
+    sizes_summary = sizes.aggregate(aggregation_functions[3:]).astype(int, copy=False)
+    tables.append(("zbdd_sizes", sizes_summary, True))
+
     overall_summary = create_overall_summary_table(metrics, stages_summary)
     tables.append(("summary", overall_summary, False))
     return tables
@@ -255,10 +271,12 @@ def get_divider(factor: int):
 def get_axes_scaling_factor(ax: plt.Axes) -> tuple[int, str]:
     min_value, max_value = ax.get_ylim()
     extreme = max(abs(min_value), abs(max_value))
-    if extreme <= 1:
+    if extreme < 1000:
         exp = 0
     else:
         exp = math.floor(math.log(extreme, 1000))
+        if extreme / (1000 ** exp) < 4:
+            exp -= 1
     factor = 1000 ** exp
     unit = scaling_factor_units_map[exp]
     return int(factor), unit
@@ -369,6 +387,71 @@ def plot_duration_detail(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     return fig, axes
 
 
+def plot_read_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    durations = metrics["durations"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.plot(durations["ReadFormula_AddClause"], "green", label="clause addition")
+    factor, unit = get_axes_scaling_factor(ax)
+
+    ax.set_title("Duration of reading input clause")
+    ax.set_xlabel("# added clauses")
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
+
+    fig.legend(loc="lower left")
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.15)
+    return fig, axes
+
+
+def plot_write_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    durations = metrics["durations"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.plot(durations["WriteFormula_PrintClause"], "orange", label="clause writing")
+    factor, unit = get_axes_scaling_factor(ax)
+
+    ax.set_title("Duration of writing output clause")
+    ax.set_xlabel("# written clauses")
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
+
+    fig.legend(loc="lower left")
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.15)
+    return fig, axes
+
+
+def plot_zbdd_size(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    series = metrics["series"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.plot(series["ClauseCounts"], "orange", label="clauses")
+    ax.plot(series["NodeCounts"], "red", label="nodes")
+
+    ax.set_title("ZBDD size")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("count")
+    ax.set_ylim(bottom=0)
+
+    fig.legend(loc="lower left")
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.2)
+    return fig, axes
+
+
 def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
     figures = []
 
@@ -383,6 +466,15 @@ def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
 
     fig_duration_detail, _ = plot_duration_detail(metrics)
     figures.append(("duration_detail", fig_duration_detail))
+
+    fig_read_duration, _ = plot_read_duration(metrics)
+    figures.append(("duration_read", fig_read_duration))
+
+    fig_write_duration, _ = plot_write_duration(metrics)
+    figures.append(("duration_read", fig_write_duration))
+
+    fig_zbdd_size, _ = plot_zbdd_size(metrics)
+    figures.append(("zbdd_size", fig_zbdd_size))
 
     return figures
 
