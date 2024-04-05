@@ -19,7 +19,7 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
                 {-1, 2, -3},
             });
             CHECK_FALSE(cnf.is_empty());
-            CHECK(cnf.clauses_count() == 2);
+            CHECK(cnf.count_clauses() == 2);
         }
 
         SECTION("Order of variables doesn't matter") {
@@ -27,7 +27,7 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
             SylvanZddCnf cnf2 = SylvanZddCnf::from_vector({{-2, 3, 1}});
             SylvanZddCnf cnf3 = SylvanZddCnf::from_vector({{3, -2, 1}});
             CHECK_FALSE(cnf1.is_empty());
-            CHECK(cnf1.clauses_count() == 1);
+            CHECK(cnf1.count_clauses() == 1);
             CHECK(cnf1 == cnf2);
             CHECK(cnf1 == cnf3);
         }
@@ -37,7 +37,7 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
             SylvanZddCnf cnf2 = SylvanZddCnf::from_vector({{-2}, {3}, {1}});
             SylvanZddCnf cnf3 = SylvanZddCnf::from_vector({{3}, {-2}, {1}});
             CHECK_FALSE(cnf1.is_empty());
-            CHECK(cnf1.clauses_count() == 3);
+            CHECK(cnf1.count_clauses() == 3);
             CHECK(cnf1 == cnf2);
             CHECK(cnf1 == cnf3);
         }
