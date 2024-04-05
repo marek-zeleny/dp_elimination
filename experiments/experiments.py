@@ -20,26 +20,24 @@ setups_dir: Path = script_root_dir / "setups"
 
 # experiments
 input_formulas: list[str] = [
-    "dpelim_data/Handmade/ais/ais10.dc",
-    "dpelim_data/Handmade/ais/ais12.dc",
     "dpelim_data/Handmade/ais/ais6.dc",
     "dpelim_data/Handmade/ais/ais8.dc",
-    "dpelim_data/Network/Ace/mastermind_03_08_04.net.dc",
-    "dpelim_data/Network/Ace/mastermind_05_08_03.net.dc",
-    "dpelim_data/Network/Ace/mastermind_06_08_03.net.dc",
-    "dpelim_data/Network/sat-grid-pbl-0010.dc",
-    "dpelim_data/Network/sat-grid-pbl-0015.dc",
+    "dpelim_data/Handmade/ais/ais10.dc",
+    "dpelim_data/Handmade/ais/ais12.dc",
     "dpelim_data/Planning/3blocks.dc",
     "dpelim_data/Planning/tire-1.dc",
     "dpelim_data/Planning/tire-2.dc",
     "dpelim_data/Planning/tire-3.dc",
     "dpelim_data/Planning/tire-4.dc",
+    "dpelim_data/Network/sat-grid-pbl-0010.dc",
+    "dpelim_data/Network/sat-grid-pbl-0015.dc",
+    "dpelim_data/Network/Ace/mastermind_03_08_04.net.dc",
+    "dpelim_data/Network/Ace/mastermind_05_08_03.net.dc",
+    "dpelim_data/Network/Ace/mastermind_06_08_03.net.dc",
 ]
 
 experiment_setups: list[str] = [
     "minimal_bloat",
-    #"minimal_bloat_higher_limit",
-    #"clear_literal",
 ]
 
 
