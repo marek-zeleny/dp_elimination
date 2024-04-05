@@ -30,6 +30,8 @@ inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> c
 // series
 enum class MetricsSeries : uint8_t {
     EliminatedLiterals = 0,
+    ClauseCounts,
+    NodeCounts,
     HeuristicScores,
     EliminatedClauses,
     AbsorbedClausesRemoved,
@@ -38,6 +40,8 @@ enum class MetricsSeries : uint8_t {
 
 inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> series_names{
         "EliminatedLiterals",
+        "ClauseCounts",
+        "NodeCounts",
         "HeuristicScores",
         "EliminatedClauses",
         "AbsorbedClausesRemoved",
@@ -45,7 +49,11 @@ inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> ser
 
 // durations
 enum class MetricsDurations : uint8_t {
-    EliminateVars = 0,
+    ReadInputFormula = 0,
+    WriteOutputFormula,
+    ReadFormula_AddClause,
+    WriteFormula_PrintClause,
+    EliminateVars,
     RemoveAbsorbedClausesWithConversion,
     VarSelection,
     EliminateVar_Total,
@@ -59,6 +67,10 @@ enum class MetricsDurations : uint8_t {
 };
 
 inline const std::array<std::string, to_underlying(MetricsDurations::Last) + 1> duration_names{
+    "ReadInputFormula",
+    "WriteOutputFormula",
+    "ReadFormula_AddClause",
+    "WriteFormula_PrintClause",
     "EliminateVars",
     "RemoveAbsorbedClausesWithConversion",
     "VarSelection",

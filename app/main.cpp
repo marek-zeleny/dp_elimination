@@ -12,18 +12,18 @@ using namespace dp;
 
 class StopCondition {
 public:
-    explicit StopCondition(HeuristicResult::Score max_score) : m_max_score(max_score) {}
+    explicit StopCondition(size_t orig_cnf_size, float max_growth) :
+            m_max_size(static_cast<size_t>(static_cast<float>(orig_cnf_size) * max_growth)) {}
 
-    bool operator()(size_t, const SylvanZddCnf &cnf, const HeuristicResult &result) const {
+    bool operator()(size_t, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {
         if (cnf.is_empty() || cnf.contains_empty()) {
             LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
             return true;
         } else if (!result.success) {
             LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
             return true;
-        } else if (result.score > m_max_score) {
-            LOG_INFO << "Heuristic with too high score (" << result.score << " > " << m_max_score
-                     << "), stopping DP elimination";
+        } else if (cnf_size > m_max_size) {
+            LOG_INFO << "Formula grew too large (" << cnf_size << " > " << m_max_size << "), stopping DP elimination";
             return true;
         } else {
             return false;
@@ -31,11 +31,11 @@ public:
     }
 
 private:
-    const HeuristicResult::Score m_max_score;
+    const size_t m_max_size;
 };
 
 SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const ArgsParser &args) {
-    StopCondition stop_condition{args.get_max_heuristic_score()};
+    StopCondition stop_condition{cnf.count_clauses(), args.get_max_formula_growth()};
     if (args.get_heuristic() == ArgsParser::Heuristic::Simple) {
         LOG_INFO << "Using the Simple heuristic";
         heuristics::SimpleHeuristic heuristic;
@@ -63,11 +63,6 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     // Lace is a C framework, can't pass C++ arguments...
     const ArgsParser &args = *args_ptr;
 
-    // initialize logging
-    if (!args.get_log_file_name().empty()) {
-        simple_logger::Config::logFileName = args.get_log_file_name();
-    }
-
     // initialize Sylvan
     Sylvan::initPackage(args.get_sylvan_table_size(),
                         args.get_sylvan_table_max_size(),
@@ -76,17 +71,20 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     sylvan_init_zdd();
 
     // load input file
-    SylvanZddCnf cnf = SylvanZddCnf::from_file(args.get_input_cnf_file_name());
-    std::cout << "Input formula has " << cnf.clauses_count() << " clauses" << std::endl;
+    std::string input_file_name = args.get_input_cnf_file_name();
+    std::cout << "Reading input formula from file " << input_file_name << "..." << std::endl;
+    SylvanZddCnf cnf = SylvanZddCnf::from_file(input_file_name);
+    std::cout << "Input formula has " << cnf.count_clauses() << " clauses" << std::endl;
 
     // perform the algorithm
     std::cout << "Eliminating variables..." << std::endl;
     SylvanZddCnf result = eliminate_vars_select_heuristic(cnf, args);
 
     // write result to file
-    std::string file_name = args.get_output_cnf_file_name();
-    result.write_dimacs_to_file(file_name);
-    std::cout << "Formula with " << result.clauses_count() << " clauses written to file " << file_name << std::endl;
+    std::string output_file_name = args.get_output_cnf_file_name();
+    result.write_dimacs_to_file(output_file_name);
+    std::cout << "Formula with " << result.count_clauses() << " clauses written to file " << output_file_name
+              << std::endl;
 
     // export metrics
     std::string metrics_file_name = args.get_metrics_file_name();
@@ -105,6 +103,11 @@ int main(int argc, char *argv[])
     std::optional<ArgsParser> args = ArgsParser::parse(argc, argv);
     if (!args.has_value()) {
         return 1;
+    }
+
+    // initialize logging
+    if (!args->get_log_file_name().empty()) {
+        simple_logger::Config::logFileName = args->get_log_file_name();
     }
 
     // initialize Lace

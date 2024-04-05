@@ -16,6 +16,7 @@
 
 #include "io/cnf_reader.hpp"
 #include "io/cnf_writer.hpp"
+#include "metrics/dp_metrics.hpp"
 
 namespace dp {
 
@@ -54,11 +55,13 @@ SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
 }
 
 SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
+    auto timer = metrics.get_timer(MetricsDurations::ReadInputFormula);
     ZDD zdd = zdd_false;
     ZDD clause = zdd_false;
     zdd_refs_pushptr(&zdd);
     zdd_refs_pushptr(&clause);
-    CnfReader::AddClauseFunction func = [&](const CnfReader::Clause &c) {
+    CnfReader::AddClauseFunction func = [&zdd, &clause](const CnfReader::Clause &c) {
+        auto timer = metrics.get_timer(MetricsDurations::ReadFormula_AddClause);
         clause = clause_from_vector(c);
         zdd = zdd_or(zdd, clause);
     };
@@ -73,8 +76,12 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     return SylvanZddCnf(zdd);
 }
 
-size_t SylvanZddCnf::clauses_count() const {
+size_t SylvanZddCnf::count_clauses() const {
     return zdd_satcount(m_zdd);
+}
+
+size_t SylvanZddCnf::count_nodes() const {
+    return zdd_nodecount_one(m_zdd);
 }
 
 bool SylvanZddCnf::is_empty() const {
@@ -466,11 +473,13 @@ void SylvanZddCnf::draw_to_file(const std::string &file_name) const {
 }
 
 void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
+    auto timer = metrics.get_timer(MetricsDurations::WriteOutputFormula);
     auto max_var = static_cast<size_t>(get_largest_variable());
-    size_t num_clauses = clauses_count();
+    size_t num_clauses = count_clauses();
     try {
         CnfWriter writer(file_name, max_var, num_clauses);
-        ClauseFunction func = [&](const Clause &clause) {
+        ClauseFunction func = [&writer](const Clause &clause) {
+            auto timer = metrics.get_timer(MetricsDurations::WriteFormula_PrintClause);
             writer.write_clause(clause);
             return true;
         };

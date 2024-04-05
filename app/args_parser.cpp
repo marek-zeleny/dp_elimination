@@ -48,8 +48,8 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
     app.option_defaults()->always_capture_default(true);
-    app.add_option("-s,--max-heuristic-score", args.m_max_heuristic_score,
-                   "Maximum allowed score given by heuristic before stopping the algorithm")
+    app.add_option("-g,--max-formula-growth", args.m_max_formula_growth,
+                   "Maximum allowed growth of the number of clauses relative to the input formula")
                    ->group("Algorithm");
     app.add_option("-a,--absorbed-clause-elimination-interval", args.m_absorbed_clause_elimination_interval,
                    "Number of eliminated variables before absorbed clauses are removed (never if 0)")

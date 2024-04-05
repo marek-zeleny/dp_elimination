@@ -43,7 +43,8 @@ public:
         return m_zdd == other.m_zdd;
     }
 
-    [[nodiscard]] size_t clauses_count() const;
+    [[nodiscard]] size_t count_clauses() const;
+    [[nodiscard]] size_t count_nodes() const;
     [[nodiscard]] bool is_empty() const;
     [[nodiscard]] bool contains_empty() const;
     [[nodiscard]] Literal get_smallest_variable() const;

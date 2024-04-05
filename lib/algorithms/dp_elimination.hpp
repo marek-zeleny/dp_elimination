@@ -11,8 +11,9 @@
 namespace dp {
 
 template<typename F>
-concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cnf, const HeuristicResult &result) {
-    { f(iteration, cnf, result) } -> std::same_as<bool>;
+concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cnf, size_t cnf_size,
+                                   const HeuristicResult &result) {
+    { f(iteration, cnf, cnf_size, result) } -> std::same_as<bool>;
 };
 
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
@@ -84,8 +85,10 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
                             size_t absorbed_clauses_interval = 0) {
     LOG_INFO << "Starting DP elimination algorithm";
     // initial metrics collection
-    const auto clauses_count_start = static_cast<int64_t>(cnf.clauses_count());
+    const auto clauses_count_start = static_cast<int64_t>(cnf.count_clauses());
     metrics.increase_counter(MetricsCounters::TotalClauses, clauses_count_start);
+    metrics.append_to_series(MetricsSeries::ClauseCounts, clauses_count_start);
+    metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
     const auto init_stats = cnf.get_formula_statistics();
     const int64_t var_count = std::count_if(init_stats.vars.cbegin(), init_stats.vars.cend(),
                                            [](const SylvanZddCnf::VariableStats &var){
@@ -98,6 +101,7 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
     if (absorbed_clauses_interval > 0) {
         remove_absorbed_clauses_from_cnf(cnf);
     }
+    auto clauses_count = static_cast<int64_t>(cnf.count_clauses());
     size_t i = 0;
 
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
@@ -105,18 +109,22 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
     timer_heuristic1.stop();
 
     // eliminate variables until a stop condition is met
-    while (!stop_condition(i, cnf, result)) {
+    while (!stop_condition(i, cnf, clauses_count, result)) {
         ++i;
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
-        const auto prev_clauses_count = static_cast<int64_t>(cnf.clauses_count());
 
         cnf = eliminate(cnf, result.literal);
-        const int64_t removed_clauses = prev_clauses_count - static_cast<int64_t>(cnf.clauses_count());
-        metrics.append_to_series(MetricsSeries::EliminatedClauses, removed_clauses);
+        const auto new_clauses_count = static_cast<int64_t>(cnf.count_clauses());
+        metrics.append_to_series(MetricsSeries::EliminatedClauses, clauses_count - new_clauses_count);
+        clauses_count = new_clauses_count;
 
         if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval == 0)) {
             remove_absorbed_clauses_from_cnf(cnf);
+            clauses_count = static_cast<int64_t>(cnf.count_clauses());
         }
+
+        metrics.append_to_series(MetricsSeries::ClauseCounts, clauses_count);
+        metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
 
         auto timer_heuristic2 = metrics.get_timer(MetricsDurations::VarSelection);
         result = heuristic(cnf);
@@ -124,11 +132,12 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
     // clean up by removing absorbed clauses (unless it was already done during the last iteration)
     if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval != 0)) {
         remove_absorbed_clauses_from_cnf(cnf);
+        clauses_count = static_cast<int64_t>(cnf.count_clauses());
     }
 
     // final metrics collection
     timer.stop();
-    const int64_t removed_clauses = clauses_count_start - static_cast<int64_t>(cnf.clauses_count());
+    const int64_t removed_clauses = clauses_count_start - clauses_count;
     metrics.increase_counter(MetricsCounters::RemovedClauses, removed_clauses);
     return cnf;
 }

@@ -30,7 +30,7 @@ public:
     [[nodiscard]] const std::string &get_metrics_file_name() const { return m_metrics_file_name; }
 
     [[nodiscard]] Heuristic get_heuristic() const { return m_heuristic; }
-    [[nodiscard]] int get_max_heuristic_score() const { return m_max_heuristic_score; }
+    [[nodiscard]] float get_max_formula_growth() const { return m_max_formula_growth; }
     [[nodiscard]] size_t get_absorbed_clause_elimination_interval() const { return m_absorbed_clause_elimination_interval; }
     [[nodiscard]] size_t get_min_var() const { return std::get<0>(m_var_range); }
     [[nodiscard]] size_t get_max_var() const { return std::get<1>(m_var_range); }
@@ -50,7 +50,7 @@ private:
     std::string m_metrics_file_name{"metrics.json"};
 
     Heuristic m_heuristic{Heuristic::None};
-    int m_max_heuristic_score{0};
+    float m_max_formula_growth{1.0f};
     size_t m_absorbed_clause_elimination_interval{0};
     std::tuple<size_t, size_t> m_var_range{0, std::numeric_limits<size_t>::max()};
 
