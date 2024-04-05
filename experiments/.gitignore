@@ -1,5 +1,10 @@
 # jupyter notebook files
 *.ipynb_checkpoints/
 
+# unnecessary input files, but not actual inputs
+*.gz
+*.cnf
+!*.dc.cnf
+
 # ignore results directory
-results/
+results*/

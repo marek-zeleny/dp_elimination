@@ -4,3 +4,4 @@ metrics-file = "metrics.json"
 absorbed-clause-elimination-interval = 10
 sylvan-table-size = [4_194_304, 67_108_864] # 1 << 22, 1 << 26
 sylvan-cache-size = [4_194_304, 67_108_864]
+lace-threads = 6
