@@ -3,6 +3,7 @@
 import os
 import sys
 import subprocess
+import time
 import math
 import argparse
 import json
@@ -69,11 +70,17 @@ def run_dp_experiments(args):
         print(" ".join(command_with_args))
         print()
         print("output:", flush=True)
+        start_time = time.monotonic()
         result = subprocess.run(command_with_args, cwd=output_dir_path)
+        duration = time.monotonic() - start_time
         print()
         print(f"Command exited with code {result.returncode}")
         block = "=" * 10
-        print(f"{block} Experiment finished {block}", flush=True)
+        if result.returncode == 0:
+            result_msg = "Experiment finished"
+        else:
+            result_msg = "Experiment failed"
+        print(f"{block} {result_msg}, runtime {duration} {block}", flush=True)
 
 
 # data processing template
@@ -84,9 +91,13 @@ def process_metrics(results_dir_path: str, func: Callable[[Path, dict], None]):
         sys.exit(1)
     for _, _, _, output_dir_path in generate_setups(results_dir):
         metrics_path = output_dir_path / "metrics.json"
-        with open(metrics_path, "r") as file:
-            metrics: dict = json.load(file)
-            func(output_dir_path, metrics)
+        if metrics_path.exists() and metrics_path.is_file():
+            print(f"Processing metrics file {metrics_path}", flush=True)
+            with open(metrics_path, "r") as file:
+                metrics: dict = json.load(file)
+                func(output_dir_path, metrics)
+        else:
+            print(f"Metrics file {metrics_path} doesn't exist", file=sys.stderr, flush=True)
 
 # data processing
 elimination_table_keys: list[str] = [
