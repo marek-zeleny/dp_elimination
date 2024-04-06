@@ -482,7 +482,7 @@ def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
     figures.append(("duration_read", fig_read_duration))
 
     fig_write_duration, _ = plot_write_duration(metrics)
-    figures.append(("duration_read", fig_write_duration))
+    figures.append(("duration_write", fig_write_duration))
 
     fig_zbdd_size, _ = plot_zbdd_size(metrics)
     figures.append(("zbdd_size", fig_zbdd_size))
