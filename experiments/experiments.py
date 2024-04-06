@@ -54,7 +54,7 @@ def generate_setups(results_dir: Path) -> Generator[tuple[Path, Path, Path, Path
 def run_dp_experiments(args):
     dp_path = Path(args.dp_executable)
     if not dp_path.exists():
-        print(f"Invalid path to dp executable: {dp_path}")
+        print(f"Invalid path to dp executable: {dp_path}", file=sys.stderr)
         sys.exit(1)
     results_dir = Path(args.results_dir).absolute()
     for setup_config_path, input_config_path, input_formula_path, output_dir_path in generate_setups(results_dir):
@@ -68,19 +68,19 @@ def run_dp_experiments(args):
         os.makedirs(output_dir_path, exist_ok=True)
         print(" ".join(command_with_args))
         print()
-        print("output:")
+        print("output:", flush=True)
         result = subprocess.run(command_with_args, cwd=output_dir_path)
         print()
         print(f"Command exited with code {result.returncode}")
         block = "=" * 10
-        print(f"{block} Experiment finished {block}")
+        print(f"{block} Experiment finished {block}", flush=True)
 
 
 # data processing template
 def process_metrics(results_dir_path: str, func: Callable[[Path, dict], None]):
     results_dir = Path(results_dir_path).absolute()
     if not results_dir.exists() or not results_dir.is_dir():
-        print(f"Invalid path to results: {results_dir}")
+        print(f"Invalid path to results: {results_dir}", file=sys.stderr)
         sys.exit(1)
     for _, _, _, output_dir_path in generate_setups(results_dir):
         metrics_path = output_dir_path / "metrics.json"
