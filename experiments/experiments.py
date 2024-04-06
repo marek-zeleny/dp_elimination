@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from typing import Callable, Generator
 
 # path constants
@@ -55,17 +56,17 @@ def generate_setups(results_dir: Path) -> Generator[tuple[Path, Path, Path, Path
 
 def run_experiment(command: list[str], cwd: Path, is_run_in_parallel: bool = True) -> int:
     if is_run_in_parallel:
-        out_file = cwd / "out.txt"
+        out_file = open(cwd / "out.txt", "w")
         err_file = out_file
     else:
         out_file = sys.stdout
         err_file = sys.stderr
 
-    def print_out(*args):
-        print(*args, file=out_file)
+    def print_out(*args, **kwargs):
+        print(*args, **kwargs, file=out_file)
 
-    def print_err(*args):
-        print(*args, file=err_file)
+    def print_err(*args, **kwargs):
+        print(*args, **kwargs, file=err_file)
 
     print_out(" ".join(command))
     print_out()
@@ -73,7 +74,8 @@ def run_experiment(command: list[str], cwd: Path, is_run_in_parallel: bool = Tru
 
     start_time = time.monotonic()
     result: subprocess.CompletedProcess[str] = subprocess.run(command, cwd=cwd, stdout=out_file, stderr=err_file)
-    duration = time.monotonic() - start_time
+    end_time = time.monotonic()
+    duration = timedelta(seconds=end_time - start_time)
 
     print_out()
     print_out(f"Command exited with code {result.returncode}")
@@ -85,6 +87,9 @@ def run_experiment(command: list[str], cwd: Path, is_run_in_parallel: bool = Tru
         result_msg = "Experiment failed"
     print_out(f"{block} {result_msg}, runtime {duration} {block}", flush=True)
 
+    if out_file is not sys.stdout:
+        out_file.flush()
+        out_file.close()
     return result.returncode
 
 
@@ -95,8 +100,8 @@ def run_dp_experiments(args):
         sys.exit(1)
     results_dir = Path(args.results_dir).absolute()
     # prepare execution setups
-    commands = []
-    working_dirs = []
+    commands: list[list[str]] = []
+    working_dirs: list[Path] = []
     for setup_config_path, input_config_path, input_formula_path, output_dir_path in generate_setups(results_dir):
         command_with_args = [str(dp_path.absolute()),
                              "--input-file", str(input_formula_path),
@@ -116,11 +121,13 @@ def run_dp_experiments(args):
     else:
         assert num_processes > 1
         in_parallel = [True for _ in range(len(commands))]
-    print(f"Running {len(commands)} experiments in parallel (max {num_processes} processes)")
+    print(f"Running {len(commands)} experiments in parallel (max {num_processes} processes)\n")
     with ThreadPoolExecutor(max_workers=num_processes) as exec:
         exit_codes = exec.map(run_experiment, commands, working_dirs, in_parallel)
-        for dir, code in zip(working_dirs, exit_codes):
-            print(f"Experiment {dir} exit with code {code}")
+    # print results summary
+    print()
+    for dir, code in zip(working_dirs, exit_codes):
+        print(f"Experiment {dir.name} exited with code {code}")
 
 
 # data processing template
