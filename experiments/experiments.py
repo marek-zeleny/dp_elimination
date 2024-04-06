@@ -52,6 +52,23 @@ def generate_setups(results_dir: Path) -> Generator[tuple[Path, Path, Path, Path
             yield setup_config_path, input_config_path, input_formula_path, output_dir_path
 
 
+def run_experiment(command: list[str], cwd: Path):
+    print(" ".join(command))
+    print()
+    print("output:", flush=True)
+    start_time = time.monotonic()
+    result = subprocess.run(command, cwd=cwd)
+    duration = time.monotonic() - start_time
+    print()
+    print(f"Command exited with code {result.returncode}")
+    block = "=" * 10
+    if result.returncode == 0:
+        result_msg = "Experiment finished"
+    else:
+        result_msg = "Experiment failed"
+    print(f"{block} {result_msg}, runtime {duration} {block}", flush=True)
+
+
 def run_dp_experiments(args):
     dp_path = Path(args.dp_executable)
     if not dp_path.exists():
@@ -67,20 +84,7 @@ def run_dp_experiments(args):
         if input_config_path.exists():
             command_with_args += ["--config", str(input_config_path)]
         os.makedirs(output_dir_path, exist_ok=True)
-        print(" ".join(command_with_args))
-        print()
-        print("output:", flush=True)
-        start_time = time.monotonic()
-        result = subprocess.run(command_with_args, cwd=output_dir_path)
-        duration = time.monotonic() - start_time
-        print()
-        print(f"Command exited with code {result.returncode}")
-        block = "=" * 10
-        if result.returncode == 0:
-            result_msg = "Experiment finished"
-        else:
-            result_msg = "Experiment failed"
-        print(f"{block} {result_msg}, runtime {duration} {block}", flush=True)
+        run_experiment(command_with_args, output_dir_path)
 
 
 # data processing template
