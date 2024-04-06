@@ -37,7 +37,7 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     timer_tautologies.stop();
 
     auto timer_subsumed1 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval1);
-    SylvanZddCnf no_tautologies_or_subsumed = no_tautologies.remove_subsumed_clauses();
+    SylvanZddCnf no_tautologies_or_subsumed = no_tautologies;//.remove_subsumed_clauses();
     timer_subsumed1.stop();
 
     auto timer_unification = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
@@ -45,7 +45,7 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     timer_unification.stop();
 
     auto timer_subsumed2 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval2);
-    SylvanZddCnf no_subsumed = result.remove_subsumed_clauses();
+    SylvanZddCnf no_subsumed = result;//.remove_subsumed_clauses();
     timer_subsumed2.stop();
 
     return no_subsumed;
