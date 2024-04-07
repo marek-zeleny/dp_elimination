@@ -113,7 +113,6 @@ def run_dp_experiments(args):
         os.makedirs(output_dir_path, exist_ok=True)
         commands.append(command_with_args)
         working_dirs.append(output_dir_path)
-        run_experiment(command_with_args, output_dir_path)
     # execute in parallel
     num_processes = args.processes
     if num_processes == 1:
