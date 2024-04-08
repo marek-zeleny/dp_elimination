@@ -54,6 +54,10 @@ def generate_setups(results_dir: Path) -> Generator[tuple[Path, Path, Path, Path
             yield setup_config_path, input_config_path, input_formula_path, output_dir_path
 
 
+def count_setups(args):
+    print(len(list(generate_setups(Path()))))
+
+
 def run_experiment(command: list[str], cwd: Path, is_run_in_parallel: bool = True) -> int:
     if is_run_in_parallel:
         out_file = open(cwd / "out.txt", "w")
@@ -100,9 +104,15 @@ def run_dp_experiments(args):
         sys.exit(1)
     results_dir = Path(args.results_dir).absolute()
     # prepare execution setups
+    setup_index = args.setup_index
     commands: list[list[str]] = []
     working_dirs: list[Path] = []
-    for setup_config_path, input_config_path, input_formula_path, output_dir_path in generate_setups(results_dir):
+    for i, (setup_config_path,
+            input_config_path,
+            input_formula_path,
+            output_dir_path) in enumerate(generate_setups(results_dir)):
+        if setup_index >= 0 and i != setup_index:
+            continue
         command_with_args = [str(dp_path.absolute()),
                              "--input-file", str(input_formula_path),
                              "--config", str(default_config_path),
@@ -117,10 +127,12 @@ def run_dp_experiments(args):
     num_processes = args.processes
     if num_processes == 1:
         in_parallel = [False for _ in range(len(commands))]
+        print(f"Running {len(commands)} experiments serially\n")
     else:
         assert num_processes > 1
+        assert len(commands) > num_processes
         in_parallel = [True for _ in range(len(commands))]
-    print(f"Running {len(commands)} experiments in parallel (max {num_processes} processes)\n")
+        print(f"Running {len(commands)} experiments in parallel (max {num_processes} processes)\n")
     with ThreadPoolExecutor(max_workers=num_processes) as exec:
         exit_codes = exec.map(run_experiment, commands, working_dirs, in_parallel)
     # print results summary
@@ -565,6 +577,11 @@ parser = argparse.ArgumentParser(description="Run DP experiments and visualize r
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers()
 
+parser_count = subparsers.add_parser("count",
+                                     description="Count the number of experiment setups that will be run",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser_count.set_defaults(func=count_setups)
+
 parser_run = subparsers.add_parser("run",
                                    description="Run experiments",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -572,6 +589,10 @@ parser_run.set_defaults(func=run_dp_experiments)
 parser_run.add_argument("dp_executable", type=str, help="Path to the compiled DP executable")
 parser_run.add_argument("-r", "--results-dir", type=str, default="results", help="Directory for storing results")
 parser_run.add_argument("-p", "--processes", type=int, default=1, help="Number of processes spawned concurrently")
+parser_run.add_argument("-i", "--setup-index",
+                        type=int,
+                        default=-1,
+                        help="Run only one experimental setup at the given index")
 
 parser_summary = subparsers.add_parser("summarize",
                                        description="Process metrics from experiments and create summary tables",
