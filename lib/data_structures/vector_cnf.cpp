@@ -99,11 +99,14 @@ VectorCnf &VectorCnf::subtract(const VectorCnf &other) {
 VectorCnf &VectorCnf::multiply(const VectorCnf &other) {
     std::vector<Clause> result;
     for (Clause c1 : m_clauses) {
-        for (const Clause &c2 : m_clauses) {
+        for (const Clause &c2 : other.m_clauses) {
             c1.insert(c1.end(), c2.begin(), c2.end());
-            std::ranges::unique(c1);
             std::ranges::sort(c1);
-            result.push_back(std::move(c1));
+            auto rest = std::ranges::unique(c1);
+            c1.erase(rest.begin(), rest.end());
+            if (std::ranges::find(result, c1) == result.end()) {
+                result.push_back(std::move(c1));
+            }
         }
     }
     std::ranges::sort(result);

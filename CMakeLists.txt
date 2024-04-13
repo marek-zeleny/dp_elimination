@@ -23,6 +23,7 @@ add_library(dp_lib STATIC
         lib/io/cnf_reader.cpp
         lib/io/cnf_writer.cpp
         lib/data_structures/sylvan_zdd_cnf.cpp
+        lib/data_structures/vector_cnf.cpp
         lib/data_structures/watched_literals.cpp
 )
 target_include_directories(dp_lib PUBLIC lib/)
