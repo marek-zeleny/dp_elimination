@@ -114,6 +114,12 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
         cnf = eliminate(cnf, result.literal);
+        if (!cnf.verify_variable_ordering()) {
+            GET_LOG_STREAM_ERROR(log);
+            log << "Invalid variable ordering";
+            log.flush();
+            cnf.draw_to_file("WRONG_ORDERING.dot");
+        }
         const auto new_clauses_count = static_cast<int64_t>(cnf.count_clauses());
         metrics.append_to_series(MetricsSeries::EliminatedClauses, clauses_count - new_clauses_count);
         clauses_count = new_clauses_count;
@@ -123,6 +129,11 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
             clauses_count = static_cast<int64_t>(cnf.count_clauses());
         }
 
+        sylvan_clear_and_mark();
+        sylvan_clear_cache();
+        auto stats = SylvanZddCnf::get_sylvan_stats();
+        LOG_DEBUG << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes();
+        LOG_DEBUG << "Sylvan table usage: " << stats.table_filled << "/" << stats.table_total;
         metrics.append_to_series(MetricsSeries::ClauseCounts, clauses_count);
         metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
 

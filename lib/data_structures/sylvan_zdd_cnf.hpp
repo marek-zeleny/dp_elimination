@@ -32,6 +32,11 @@ public:
         size_t index_shift;
     };
 
+    struct SylvanStats {
+        size_t table_filled;
+        size_t table_total;
+    };
+
     SylvanZddCnf();
     SylvanZddCnf(const SylvanZddCnf &other);
     SylvanZddCnf &operator=(const SylvanZddCnf &other);
@@ -39,6 +44,7 @@ public:
 
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
     static SylvanZddCnf from_file(const std::string &file_name);
+    static SylvanStats get_sylvan_stats();
 
     inline bool operator==(const SylvanZddCnf &other) const {
         return m_zdd == other.m_zdd;
@@ -70,6 +76,8 @@ public:
     void draw_to_file(std::FILE *file) const;
     void draw_to_file(const std::string &file_name) const;
     void write_dimacs_to_file(const std::string &file_name) const;
+
+    [[nodiscard]] bool verify_variable_ordering() const;
 
 private:
     using Var = uint32_t;

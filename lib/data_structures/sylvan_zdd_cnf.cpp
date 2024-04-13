@@ -76,6 +76,12 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     return SylvanZddCnf(zdd);
 }
 
+SylvanZddCnf::SylvanStats SylvanZddCnf::get_sylvan_stats() {
+    SylvanStats stats{};
+    sylvan_table_usage(&stats.table_filled, &stats.table_total);
+    return stats;
+}
+
 size_t SylvanZddCnf::count_clauses() const {
     return zdd_satcount(m_zdd);
 }
@@ -487,6 +493,24 @@ void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
         LOG_ERROR << f.what();
         throw;
     }
+}
+
+static bool verify_variable_ordering_impl(const ZDD &node, uint32_t parent_var) {
+    if (node == zdd_true || node == zdd_false) {
+        return true;
+    }
+    uint32_t var = zdd_getvar(node);
+    if (var <= parent_var) {
+        return false;
+    }
+    if (!verify_variable_ordering_impl(zdd_getlow(node), var)) {
+        return false;
+    }
+    return verify_variable_ordering_impl(zdd_gethigh(node), var);
+}
+
+bool SylvanZddCnf::verify_variable_ordering() const {
+    return verify_variable_ordering_impl(m_zdd, 0);
 }
 
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
