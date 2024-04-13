@@ -1,16 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include "data_structures/sylvan_zdd_cnf.hpp"
 
-#include <sylvan_obj.hpp>
 #include <filesystem>
 #include <algorithm>
 
 TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
     using namespace dp;
-
-    SylvanZddCnf::Clause clause1 = {1, -2, 3};
-    SylvanZddCnf::Clause clause2 = {-1, 2, -3};
-    std::vector<SylvanZddCnf::Clause> clauses = {clause1, clause2};
 
     SECTION("Construction from vector") {
         SECTION("Simple case") {
@@ -226,12 +221,43 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
         }
     }
 
-    SECTION("Set operations") {
+    SECTION("Subset operations (not implemented by Sylvan)") {
         SylvanZddCnf cnf = SylvanZddCnf::from_vector({
             {1, -2, 3},
             {-1, 2, -3},
         });
+        SylvanZddCnf large_cnf = SylvanZddCnf::from_vector({
+            {1},
+            {1, 5},
+            {1, 5, -7},
+            {-1},
+            {-1, 7},
+            {2},
+            {2, 3, -5},
+            {-2, 5},
+            {-3, 5},
+            {4},
+            {4, -5},
+            {-4, 5},
+            {-5},
+            {-5, 7},
+            {6},
+            {6, -7},
+            {-6},
+            {-6, 7},
+            {7, 11},
+            {-7, 12},
+            {8, 11},
+            {-8},
+            {-8, 10},
+            {-9},
+            {-9, 10},
+            {10, 12},
+            {11},
+        });
         SylvanZddCnf expected;
+
+        CHECK(large_cnf.verify_variable_ordering());
 
         SECTION("Subset0") {
             auto result1 = cnf.subset0(-1);
@@ -240,11 +266,47 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
             });
             CHECK(result1 == expected);
 
-            auto result2 = cnf.subset0(1);
+            auto result2 = cnf.subset0(-3);
+            CHECK(result2 == expected);
+
+            auto result3 = cnf.subset0(1);
             expected = SylvanZddCnf::from_vector({
                 {-1, 2, -3},
             });
-            CHECK(result2 == expected);
+            CHECK(result3 == expected);
+
+            auto result4 = cnf.subset0(3);
+            CHECK(result4 == expected);
+
+            auto result5 = large_cnf.subset0(10);
+            expected = SylvanZddCnf::from_vector({
+                {1},
+                {1, 5},
+                {1, 5, -7},
+                {-1},
+                {-1, 7},
+                {2},
+                {2, 3, -5},
+                {-2, 5},
+                {-3, 5},
+                {4},
+                {4, -5},
+                {-4, 5},
+                {-5},
+                {-5, 7},
+                {6},
+                {6, -7},
+                {-6},
+                {-6, 7},
+                {7, 11},
+                {-7, 12},
+                {8, 11},
+                {-8},
+                {-9},
+                {11},
+            });
+            CHECK(result5.verify_variable_ordering());
+            CHECK(result5 == expected);
         }
 
         SECTION("Subset1") {
@@ -254,12 +316,41 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
             });
             CHECK(result1 == expected);
 
-            auto result2 = cnf.subset1(1);
+            auto result2 = cnf.subset1(-3);
+            expected = SylvanZddCnf::from_vector({
+                {-1, 2},
+            });
+            CHECK(result2 == expected);
+
+            auto result3 = cnf.subset1(1);
             expected = SylvanZddCnf::from_vector({
                 {-2, 3},
             });
-            CHECK(result2 == expected);
+            CHECK(result3 == expected);
+
+            auto result4 = cnf.subset1(3);
+            expected = SylvanZddCnf::from_vector({
+                {1, -2},
+            });
+            CHECK(result4 == expected);
+
+            auto result5 = large_cnf.subset1(10);
+            expected = SylvanZddCnf::from_vector({
+                {-8},
+                {-9},
+                {12},
+            });
+            CHECK(result5 == expected);
         }
+
+    }
+
+    SECTION("Set operations (implemented by Sylvan)") {
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector({
+            {1, -2, 3},
+            {-1, 2, -3},
+        });
+        SylvanZddCnf expected;
 
         SylvanZddCnf operand1 = SylvanZddCnf::from_vector({
             {1, -2, 3},
