@@ -3,14 +3,17 @@
 #include <list>
 #include <unordered_map>
 #include <tuple>
+#include <optional>
 #include <cassert>
 
 namespace dp {
 
 template<typename Key, typename T, size_t Capacity, typename Hash = std::hash<Key>>
 class LruCache {
-private:
+public:
     using EntryPair = std::tuple<Key, T>;
+
+private:
     using CacheList = std::list<EntryPair>;
     using CacheMap = std::unordered_map<Key, typename CacheList::iterator, Hash>;
 
@@ -19,31 +22,47 @@ public:
         return m_cache_list.size();
     }
 
-    bool try_get(const Key &key, T &output) {
+    std::optional<T> try_get(const Key &key) {
         typename CacheMap::iterator map_it = m_cache_map.find(key);
         if (map_it == m_cache_map.end()) {
-            return false;
+            return std::nullopt;
         } else {
-            output = std::get<1>(*map_it->second);
             move_to_front(map_it);
-            return true;
+            return std::get<1>(*map_it->second);
         }
     }
 
-    void add(const Key &key, const T &entry) {
+    /**
+     * @brief Adds new entry to the cache under given key.
+     *
+     * If the key already exists, replaces the existing entry with the new one.
+     * If the cache is full, removes the least recently used entry.
+     *
+     * @return If an entry has been removed in the process, returns that key-entry pair; otherwise returns nullopt
+     */
+    std::optional<EntryPair> add(const Key &key, const T &entry) {
         typename CacheMap::iterator map_it = m_cache_map.find(key);
         if (map_it != m_cache_map.end()) {
-            std::get<1>(*map_it->second) = entry;
+            T &e = std::get<1>(*map_it->second);
+            EntryPair removed{key, e};
+            e = entry;
             move_to_front(map_it);
+            return removed;
         } else {
             m_cache_list.emplace_front(key, entry);
             m_cache_map[key] = m_cache_list.begin();
             if (size() > Capacity) {
                 Key removed_key = std::get<0>(m_cache_list.back());
-                [[maybe_unused]]
-                size_t removed = m_cache_map.erase(removed_key);
+                map_it = m_cache_map.find(removed_key);
+                assert(map_it != m_cache_map.end());
+                const T &removed_entry = std::get<1>(*map_it->second);
+                EntryPair removed_pair{removed_key, removed_entry};
+                [[maybe_unused]] size_t removed = m_cache_map.erase(removed_key);
                 assert(removed == 1);
                 m_cache_list.pop_back();
+                return removed_pair;
+            } else {
+                return std::nullopt;
             }
         }
     }

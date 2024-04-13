@@ -259,10 +259,9 @@ ZDD SylvanZddCnf::multiply_impl(const ZDD &p, const ZDD &q) {
         return multiply_impl(q, p);
     }
     // look into the cache
-    ZDD result;
-    std::tuple<ZDD, ZDD> cache_key = std::make_tuple(p, q);
-    if (s_multiply_cache.try_get(cache_key, result)) {
-        return result;
+    std::optional<ZDD> cache_result = try_get_from_binary_cache(s_multiply_cache, p, q);
+    if (cache_result.has_value()) {
+        return *cache_result;
     }
     // general case (recursion)
     Var x = p_var;
@@ -288,9 +287,9 @@ ZDD SylvanZddCnf::multiply_impl(const ZDD &p, const ZDD &q) {
     zdd_refs_push(p1q1);
     ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
     zdd_refs_push(tmp);
-    result = zdd_makenode(x, p0q0, tmp);
+    ZDD result = zdd_makenode(x, p0q0, tmp);
     zdd_refs_pop(5);
-    s_multiply_cache.add(cache_key, result);
+    store_in_binary_cache(s_multiply_cache, p, q, result);
     return result;
 }
 
@@ -308,9 +307,9 @@ ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
         return zdd;
     }
     // look into the cache
-    ZDD result;
-    if (s_remove_tautologies_cache.try_get(zdd, result)) {
-        return result;
+    std::optional<ZDD> cache_result = try_get_from_unary_cache(s_remove_tautologies_cache, zdd);
+    if (cache_result.has_value()) {
+        return *cache_result;
     }
     // recursive step
     Var var = zdd_getvar(zdd);
@@ -318,11 +317,11 @@ ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
     zdd_refs_push(low);
     ZDD high = remove_tautologies_impl(zdd_gethigh(zdd));
     zdd_refs_push(high);
-    Var high_var = zdd_getvar(high);
+    ZDD result;
     if (high == zdd_false || high == zdd_true) {
         // high child doesn't have a variable (is a leaf), do nothing
         result = zdd_makenode(var, low, high);
-    } else if (var / 2 == high_var / 2) {
+    } else if (var / 2 == zdd_getvar(high) / 2) {
         // otherwise compare variables in <zdd> and <high>
         // complements, remove high child of <high>
         result = zdd_makenode(var, low, zdd_getlow(high));
@@ -331,7 +330,7 @@ ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
         result = zdd_makenode(var, low, high);
     }
     zdd_refs_pop(2);
-    s_remove_tautologies_cache.add(zdd, result);
+    store_in_unary_cache(s_remove_tautologies_cache, zdd, result);
     return result;
 }
 
@@ -346,9 +345,9 @@ ZDD SylvanZddCnf::remove_subsumed_clauses_impl(const ZDD &zdd) {
         return zdd;
     }
     // look into the cache
-    ZDD result;
-    if (s_remove_subsumed_clauses_cache.try_get(zdd, result)) {
-        return result;
+    std::optional<ZDD> cache_result = try_get_from_unary_cache(s_remove_subsumed_clauses_cache, zdd);
+    if (cache_result.has_value()) {
+        return *cache_result;
     }
     // recursive step
     Var var = zdd_getvar(zdd);
@@ -358,9 +357,9 @@ ZDD SylvanZddCnf::remove_subsumed_clauses_impl(const ZDD &zdd) {
     zdd_refs_push(high);
     ZDD high_without_supersets = remove_supersets(high, low);
     zdd_refs_push(high_without_supersets);
-    result = zdd_makenode(var, low, high_without_supersets);
+    ZDD result = zdd_makenode(var, low, high_without_supersets);
     zdd_refs_pop(3);
-    s_remove_subsumed_clauses_cache.add(zdd, result);
+    store_in_unary_cache(s_remove_subsumed_clauses_cache, zdd, result);
     return result;
 }
 
@@ -373,10 +372,9 @@ ZDD SylvanZddCnf::remove_supersets(const ZDD &p, const ZDD &q) {
         return p;
     }
     // look into the cache
-    ZDD result;
-    std::tuple<ZDD, ZDD> cache_key = std::make_tuple(p, q);
-    if (s_remove_supersets_cache.try_get(cache_key, result)) {
-        return result;
+    std::optional<ZDD> cache_result = try_get_from_binary_cache(s_remove_supersets_cache, p, q);
+    if (cache_result.has_value()) {
+        return *cache_result;
     }
     // recursive step
     Var p_var = zdd_getvar(p);
@@ -395,9 +393,9 @@ ZDD SylvanZddCnf::remove_supersets(const ZDD &p, const ZDD &q) {
     zdd_refs_push(low);
     ZDD high = zdd_and(tmp1, tmp2);
     zdd_refs_push(high);
-    result = zdd_makenode(top_var, low, high);
+    ZDD result = zdd_makenode(top_var, low, high);
     zdd_refs_pop(4);
-    s_remove_supersets_cache.add(cache_key, result);
+    store_in_binary_cache(s_remove_supersets_cache, p, q, result);
     return result;
 }
 
@@ -529,6 +527,59 @@ ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
 
 bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
     return (zdd & zdd_complement) != 0;
+}
+
+void SylvanZddCnf::store_in_unary_cache(UnaryCache &cache, const ZDD &key, const ZDD &entry) {
+//    Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
+//    Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
+//    zdd_protect(key_ptr.get());
+//    zdd_protect(entry_ptr.get());
+//    auto removed = cache.add(key_ptr, entry_ptr);
+//    if (removed.has_value()) {
+//        zdd_unprotect(std::get<0>(*removed).get());
+//        zdd_unprotect(std::get<1>(*removed).get());
+//    }
+}
+
+void SylvanZddCnf::store_in_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2, const ZDD &entry) {
+//    Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
+//    Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
+//    Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
+//    zdd_protect(key1_ptr.get());
+//    zdd_protect(key2_ptr.get());
+//    zdd_protect(entry_ptr.get());
+//    BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));
+//    auto removed = cache.add(key, entry_ptr);
+//    if (removed.has_value()) {
+//        BinaryCacheKey &removed_key = std::get<0>(*removed);
+//        zdd_unprotect(std::get<0>(removed_key).get());
+//        zdd_unprotect(std::get<1>(removed_key).get());
+//        zdd_unprotect(std::get<1>(*removed).get());
+//    }
+}
+
+std::optional<ZDD> SylvanZddCnf::try_get_from_unary_cache(UnaryCache &cache, const ZDD &key) {
+//    Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
+//    std::optional<Zdd_ptr> result = cache.try_get(key_ptr);
+//    if (result.has_value()) {
+//        return *result.value();
+//    } else {
+//        return std::nullopt;
+//    }
+    return std::nullopt;
+}
+
+std::optional<ZDD> SylvanZddCnf::try_get_from_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2) {
+//    Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
+//    Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
+//    BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));
+//    std::optional<Zdd_ptr> result = cache.try_get(key);
+//    if (result.has_value()) {
+//        return *result.value();
+//    } else {
+//        return std::nullopt;
+//    }
+    return std::nullopt;
 }
 
 } // namespace dp

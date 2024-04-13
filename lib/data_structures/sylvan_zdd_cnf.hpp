@@ -5,6 +5,7 @@
 #include <tuple>
 #include <iostream>
 #include <functional>
+#include <memory>
 #include <cstdio>
 #include <sylvan.h>
 
@@ -92,21 +93,32 @@ private:
     static bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack);
 
     // caching of operation results
-    static constexpr size_t CACHE_SIZE = 32;
+    static constexpr size_t CACHE_SIZE = 0;
 
-    using UnaryCacheEntry = ZDD;
-    using BinaryCacheEntry = std::tuple<ZDD, ZDD>;
-    using UnaryCacheHash = std::hash<UnaryCacheEntry>;
+    using Zdd_ptr = std::shared_ptr<ZDD>;
+    using UnaryCacheKey = Zdd_ptr;
+    using BinaryCacheKey = std::tuple<Zdd_ptr, Zdd_ptr>;
+    struct UnaryCacheHash {
+        static inline std::hash<ZDD> hash{};
+        size_t operator()(const UnaryCacheKey &key) const {
+            return hash(*key);
+        }
+    };
     struct BinaryCacheHash {
-        size_t operator()(const BinaryCacheEntry &pair) const {
+        size_t operator()(const BinaryCacheKey &pair) const {
             size_t seed = 0;
-            hash_combine(seed, std::get<0>(pair));
-            hash_combine(seed, std::get<1>(pair));
+            hash_combine(seed, *std::get<0>(pair));
+            hash_combine(seed, *std::get<1>(pair));
             return seed;
         }
     };
-    using UnaryCache = LruCache<UnaryCacheEntry, ZDD, CACHE_SIZE, UnaryCacheHash>;
-    using BinaryCache = LruCache<BinaryCacheEntry, ZDD, CACHE_SIZE, BinaryCacheHash>;
+    using UnaryCache = LruCache<UnaryCacheKey, Zdd_ptr, CACHE_SIZE, UnaryCacheHash>;
+    using BinaryCache = LruCache<BinaryCacheKey, Zdd_ptr, CACHE_SIZE, BinaryCacheHash>;
+
+    static void store_in_unary_cache(UnaryCache &cache, const ZDD &key, const ZDD &entry);
+    static void store_in_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2, const ZDD &entry);
+    static std::optional<ZDD> try_get_from_unary_cache(UnaryCache &cache, const ZDD &key);
+    static std::optional<ZDD> try_get_from_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2);
 
     inline static BinaryCache s_multiply_cache;
     inline static UnaryCache s_remove_tautologies_cache;

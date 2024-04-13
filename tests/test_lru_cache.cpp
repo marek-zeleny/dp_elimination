@@ -6,44 +6,41 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
     Cache cache;
 
     SECTION("Adds and retrieves elements correctly") {
-        bool found;
-        std::string value;
+        std::optional<std::string> result;
 
         cache.add(1, "one");
         CHECK(cache.size() == 1);
 
-        found = cache.try_get(1, value);
-        CHECK(found);
-        CHECK(value == "one");
+        result = cache.try_get(1);
+        CHECK(result.has_value());
+        CHECK(result.value() == "one");
 
         cache.add(2, "two");
         CHECK(cache.size() == 2);
 
-        found = cache.try_get(2, value);
-        CHECK(found);
-        CHECK(value == "two");
+        result = cache.try_get(2);
+        CHECK(result.has_value());
+        CHECK(result.value() == "two");
 
-        found = cache.try_get(1, value);
-        CHECK(found);
-        CHECK(value == "one");
+        result = cache.try_get(1);
+        CHECK(result.has_value());
+        CHECK(result.value() == "one");
     }
 
     SECTION("Adding an existing key replaces original value") {
-        bool found;
-        std::string value;
+        std::optional<std::string> result;
 
         cache.add(1, "one");
         cache.add(1, "one new");
         CHECK(cache.size() == 1);
 
-        found = cache.try_get(1, value);
-        CHECK(found);
-        CHECK(value == "one new");
+        result = cache.try_get(1);
+        CHECK(result.has_value());
+        CHECK(result.value() == "one new");
     }
 
     SECTION("Exceeding capacity removes the least recently used element") {
-        bool found;
-        std::string value;
+        std::optional<std::string> result;
 
         cache.add(1, "one");
         cache.add(2, "two");
@@ -52,21 +49,21 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
             cache.add(3, "three");
             CHECK(cache.size() == 2);
 
-            found = cache.try_get(1, value);
-            CHECK_FALSE(found);
+            result = cache.try_get(1);
+            CHECK_FALSE(result.has_value());
 
-            found = cache.try_get(2, value);
-            CHECK(found);
-            CHECK(value == "two");
+            result = cache.try_get(2);
+            CHECK(result.has_value());
+            CHECK(result.value() == "two");
 
-            found = cache.try_get(3, value);
-            CHECK(found);
-            CHECK(value == "three");
+            result = cache.try_get(3);
+            CHECK(result.has_value());
+            CHECK(result.value() == "three");
         }
 
         SECTION("Elements are touched before exceeding capacity") {
             SECTION("Touched by getting") {
-                cache.try_get(1, value);
+                cache.try_get(1);
             }
 
             SECTION("Touched by setting") {
@@ -76,16 +73,16 @@ TEST_CASE("LruCache functionality", "[LruCache]") {
             cache.add(3, "three");
             CHECK(cache.size() == 2);
 
-            found = cache.try_get(1, value);
-            CHECK(found);
-            CHECK(value.starts_with("one"));
+            result = cache.try_get(1);
+            CHECK(result.has_value());
+            CHECK(result.value().starts_with("one"));
 
-            found = cache.try_get(2, value);
-            CHECK_FALSE(found);
+            result = cache.try_get(2);
+            CHECK_FALSE(result.has_value());
 
-            found = cache.try_get(3, value);
-            CHECK(found);
-            CHECK(value == "three");
+            result = cache.try_get(3);
+            CHECK(result.has_value());
+            CHECK(result.value() == "three");
         }
     }
 }
