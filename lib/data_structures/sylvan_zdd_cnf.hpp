@@ -102,7 +102,7 @@ private:
     static bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack);
 
     // caching of operation results
-    static constexpr size_t CACHE_SIZE = 0;
+    static constexpr size_t CACHE_SIZE = 1024;
 
     using Zdd_ptr = std::shared_ptr<ZDD>;
     using UnaryCacheKey = Zdd_ptr;

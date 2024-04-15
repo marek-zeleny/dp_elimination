@@ -584,56 +584,54 @@ bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
 }
 
 void SylvanZddCnf::store_in_unary_cache(UnaryCache &cache, const ZDD &key, const ZDD &entry) {
-//    Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
-//    Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
-//    zdd_protect(key_ptr.get());
-//    zdd_protect(entry_ptr.get());
-//    auto removed = cache.add(key_ptr, entry_ptr);
-//    if (removed.has_value()) {
-//        zdd_unprotect(std::get<0>(*removed).get());
-//        zdd_unprotect(std::get<1>(*removed).get());
-//    }
+    Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
+    Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
+    zdd_protect(key_ptr.get());
+    zdd_protect(entry_ptr.get());
+    auto removed = cache.add(key_ptr, entry_ptr);
+    if (removed.has_value()) {
+        zdd_unprotect(std::get<0>(*removed).get());
+        zdd_unprotect(std::get<1>(*removed).get());
+    }
 }
 
 void SylvanZddCnf::store_in_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2, const ZDD &entry) {
-//    Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
-//    Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
-//    Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
-//    zdd_protect(key1_ptr.get());
-//    zdd_protect(key2_ptr.get());
-//    zdd_protect(entry_ptr.get());
-//    BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));
-//    auto removed = cache.add(key, entry_ptr);
-//    if (removed.has_value()) {
-//        BinaryCacheKey &removed_key = std::get<0>(*removed);
-//        zdd_unprotect(std::get<0>(removed_key).get());
-//        zdd_unprotect(std::get<1>(removed_key).get());
-//        zdd_unprotect(std::get<1>(*removed).get());
-//    }
+    Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
+    Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
+    Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
+    zdd_protect(key1_ptr.get());
+    zdd_protect(key2_ptr.get());
+    zdd_protect(entry_ptr.get());
+    BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));
+    auto removed = cache.add(key, entry_ptr);
+    if (removed.has_value()) {
+        BinaryCacheKey &removed_key = std::get<0>(*removed);
+        zdd_unprotect(std::get<0>(removed_key).get());
+        zdd_unprotect(std::get<1>(removed_key).get());
+        zdd_unprotect(std::get<1>(*removed).get());
+    }
 }
 
 std::optional<ZDD> SylvanZddCnf::try_get_from_unary_cache(UnaryCache &cache, const ZDD &key) {
-//    Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
-//    std::optional<Zdd_ptr> result = cache.try_get(key_ptr);
-//    if (result.has_value()) {
-//        return *result.value();
-//    } else {
-//        return std::nullopt;
-//    }
-    return std::nullopt;
+    Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
+    std::optional<Zdd_ptr> result = cache.try_get(key_ptr);
+    if (result.has_value()) {
+        return *result.value();
+    } else {
+        return std::nullopt;
+    }
 }
 
 std::optional<ZDD> SylvanZddCnf::try_get_from_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2) {
-//    Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
-//    Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
-//    BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));
-//    std::optional<Zdd_ptr> result = cache.try_get(key);
-//    if (result.has_value()) {
-//        return *result.value();
-//    } else {
-//        return std::nullopt;
-//    }
-    return std::nullopt;
+    Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
+    Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
+    BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));
+    std::optional<Zdd_ptr> result = cache.try_get(key);
+    if (result.has_value()) {
+        return *result.value();
+    } else {
+        return std::nullopt;
+    }
 }
 
 } // namespace dp
