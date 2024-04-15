@@ -98,14 +98,15 @@ VectorCnf &VectorCnf::subtract(const VectorCnf &other) {
 
 VectorCnf &VectorCnf::multiply(const VectorCnf &other) {
     std::vector<Clause> result;
-    for (Clause c1 : m_clauses) {
+    for (const Clause &c1 : m_clauses) {
         for (const Clause &c2 : other.m_clauses) {
-            c1.insert(c1.end(), c2.begin(), c2.end());
-            std::ranges::sort(c1);
-            auto rest = std::ranges::unique(c1);
-            c1.erase(rest.begin(), rest.end());
-            if (std::ranges::find(result, c1) == result.end()) {
-                result.push_back(std::move(c1));
+            Clause new_clause = c1;
+            new_clause.insert(new_clause.end(), c2.begin(), c2.end());
+            std::ranges::sort(new_clause);
+            auto rest = std::ranges::unique(new_clause);
+            new_clause.erase(rest.begin(), rest.end());
+            if (std::ranges::find(result, new_clause) == result.end()) {
+                result.push_back(std::move(new_clause));
             }
         }
     }
@@ -142,6 +143,16 @@ void VectorCnf::for_all_clauses(ClauseFunction &func) const {
 
 std::vector<VectorCnf::Clause> VectorCnf::to_vector() const {
     return m_clauses;
+}
+
+void VectorCnf::print_clauses(std::ostream &output) const {
+    for (const auto &clause : m_clauses) {
+        output << "{";
+        for (const auto &l: clause) {
+            output << " " << l << ",";
+        }
+        output << "}\n";
+    }
 }
 
 } // namespace dp

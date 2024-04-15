@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <iostream>
 
 namespace dp {
 
@@ -35,6 +36,8 @@ public:
     void for_all_clauses(ClauseFunction &func) const;
 
     [[nodiscard]] std::vector<Clause> to_vector() const;
+
+    void print_clauses(std::ostream &output = std::cout) const;
 
 private:
     std::vector<Clause> m_clauses;
