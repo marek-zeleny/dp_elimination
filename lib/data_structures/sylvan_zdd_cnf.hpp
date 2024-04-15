@@ -7,14 +7,11 @@
 #include <functional>
 #include <memory>
 #include <cstdio>
-#include <sylvan.h>
 
 #include "utils.hpp"
 #include "data_structures/lru_cache.hpp"
 
 namespace dp {
-
-using namespace sylvan;
 
 class SylvanZddCnf {
 public:
@@ -37,6 +34,9 @@ public:
         size_t table_total;
     };
 
+    static SylvanStats get_sylvan_stats();
+    static void call_sylvan_gc();
+
     SylvanZddCnf();
     SylvanZddCnf(const SylvanZddCnf &other);
     SylvanZddCnf &operator=(const SylvanZddCnf &other);
@@ -44,7 +44,6 @@ public:
 
     static SylvanZddCnf from_vector(const std::vector<Clause> &clauses);
     static SylvanZddCnf from_file(const std::string &file_name);
-    static SylvanStats get_sylvan_stats();
 
     inline bool operator==(const SylvanZddCnf &other) const {
         return m_zdd == other.m_zdd;
@@ -81,6 +80,7 @@ public:
     [[nodiscard]] bool verify_variable_ordering() const;
 
 private:
+    using ZDD = uint64_t;
     using Var = uint32_t;
 
     ZDD m_zdd;

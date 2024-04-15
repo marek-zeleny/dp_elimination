@@ -61,6 +61,8 @@ SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const Args
 
 TASK_1(int, impl, const ArgsParser *, args_ptr)
 {
+    using namespace sylvan;
+
     // Lace is a C framework, can't pass C++ arguments...
     const ArgsParser &args = *args_ptr;
 

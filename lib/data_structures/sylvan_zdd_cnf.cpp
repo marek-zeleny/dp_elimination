@@ -18,9 +18,25 @@
 #include "io/cnf_writer.hpp"
 #include "metrics/dp_metrics.hpp"
 
+using namespace sylvan;
+
 namespace dp {
 
+SylvanZddCnf::SylvanStats SylvanZddCnf::get_sylvan_stats() {
+    SylvanStats stats{};
+    sylvan_table_usage(&stats.table_filled, &stats.table_total);
+    return stats;
+}
+
+void SylvanZddCnf::call_sylvan_gc() {
+    LOG_DEBUG << "Calling GC";
+    sylvan_clear_cache();
+    sylvan_clear_and_mark();
+    sylvan_rehash_all();
+}
+
 SylvanZddCnf::SylvanZddCnf() : m_zdd(zdd_false) {
+    static_assert(std::is_same_v<SylvanZddCnf::ZDD, sylvan::ZDD>);
     zdd_protect(&m_zdd);
 }
 
@@ -104,12 +120,6 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     assert(zdd_satcount(zdd) == clause_count);
     zdd_refs_popptr(1);
     return SylvanZddCnf(zdd);
-}
-
-SylvanZddCnf::SylvanStats SylvanZddCnf::get_sylvan_stats() {
-    SylvanStats stats{};
-    sylvan_table_usage(&stats.table_filled, &stats.table_total);
-    return stats;
 }
 
 size_t SylvanZddCnf::count_clauses() const {

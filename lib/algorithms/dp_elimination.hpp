@@ -133,10 +133,7 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
             clauses_count = static_cast<int64_t>(cnf.count_clauses());
         }
 #ifndef NDEBUG // only for debug build
-        LOG_DEBUG << "Calling GC";
-        sylvan_clear_cache();
-        sylvan_clear_and_mark();
-        sylvan_rehash_all();
+        SylvanZddCnf::call_sylvan_gc();
 #endif
         auto stats = SylvanZddCnf::get_sylvan_stats();
         LOG_INFO << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes() <<
