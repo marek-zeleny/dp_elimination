@@ -41,38 +41,68 @@ SylvanZddCnf::~SylvanZddCnf() {
     zdd_unprotect(&m_zdd);
 }
 
+static bool verify_variable_ordering_impl(const ZDD &node, uint32_t parent_var) {
+    if (node == zdd_true || node == zdd_false) {
+        return true;
+    }
+    uint32_t var = zdd_getvar(node);
+    if (var <= parent_var) {
+        LOG_ERROR << "Invalid ZDD ordering found: node " << node << ", var " << var << ", parent " << parent_var;
+        return false;
+    }
+    if (!verify_variable_ordering_impl(zdd_getlow(node), var)) {
+        return false;
+    }
+    return verify_variable_ordering_impl(zdd_gethigh(node), var);
+}
+
+bool SylvanZddCnf::verify_variable_ordering() const {
+    return verify_variable_ordering_impl(m_zdd, 0);
+}
+
 SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
     ZDD zdd = zdd_false;
-    ZDD clause = zdd_false;
     zdd_refs_pushptr(&zdd);
-    zdd_refs_pushptr(&clause);
-    for (auto &c: clauses) {
-        clause = clause_from_vector(c);
+    size_t i = 0;
+    for (auto it = clauses.begin(); it != clauses.end(); ++it) {
+        ZDD clause = clause_from_vector(*it);
+        zdd_refs_push(clause);
+        assert(verify_variable_ordering_impl(zdd, 0));
+        assert(verify_variable_ordering_impl(clause, 0));
         zdd = zdd_or(zdd, clause);
+        zdd_refs_pop(1);
+        assert(std::find(clauses.begin(), it, *it) != it || zdd_satcount(zdd) == ++i);
     }
-    zdd_refs_popptr(2);
+    assert(zdd_satcount(zdd) == i);
+    zdd_refs_popptr(1);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     auto timer = metrics.get_timer(MetricsDurations::ReadInputFormula);
+    size_t clause_count = 0;
     ZDD zdd = zdd_false;
-    ZDD clause = zdd_false;
     zdd_refs_pushptr(&zdd);
-    zdd_refs_pushptr(&clause);
-    CnfReader::AddClauseFunction func = [&zdd, &clause](const CnfReader::Clause &c) {
+    CnfReader::AddClauseFunction func = [&zdd, &clause_count](const CnfReader::Clause &c) {
+        ++clause_count;
         auto timer = metrics.get_timer(MetricsDurations::ReadFormula_AddClause);
-        clause = clause_from_vector(c);
+        ZDD clause = clause_from_vector(c);
+        zdd_refs_push(clause);
+        assert(verify_variable_ordering_impl(zdd, 0));
+        assert(verify_variable_ordering_impl(clause, 0));
         zdd = zdd_or(zdd, clause);
+        zdd_refs_pop(1);
+        assert(zdd_satcount(zdd) == clause_count);
     };
     try {
         CnfReader::read_from_file(file_name, func);
     } catch (const CnfReader::failure &f) {
         LOG_ERROR << f.what();
-        zdd_refs_popptr(2);
+        zdd_refs_popptr(1);
         throw;
     }
-    zdd_refs_popptr(2);
+    assert(zdd_satcount(zdd) == clause_count);
+    zdd_refs_popptr(1);
     return SylvanZddCnf(zdd);
 }
 
@@ -90,6 +120,18 @@ size_t SylvanZddCnf::count_nodes() const {
     return zdd_nodecount_one(m_zdd);
 }
 
+static size_t count_depth_impl(const ZDD &zdd) {
+    if (zdd == zdd_true || zdd == zdd_false) {
+        return 0;
+    } else {
+        return std::max(count_depth_impl(zdd_getlow(zdd)), count_depth_impl(zdd_gethigh(zdd))) + 1;
+    }
+}
+
+size_t SylvanZddCnf::count_depth() const {
+    return count_depth_impl(m_zdd);
+}
+
 bool SylvanZddCnf::is_empty() const {
     return m_zdd == zdd_false;
 }
@@ -99,11 +141,7 @@ bool SylvanZddCnf::contains_empty() const {
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::get_smallest_variable() const {
-    if (m_zdd == zdd_false || m_zdd == zdd_true) {
-        return 0;
-    }
-    Var v = zdd_getvar(m_zdd);
-    return std::abs(var_to_literal(v));
+    return std::abs(get_root_literal());
 }
 
 namespace {
@@ -224,6 +262,8 @@ SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
 }
 
 SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {
+    assert(verify_variable_ordering());
+    assert(other.verify_variable_ordering());
     ZDD zdd = zdd_or(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
@@ -291,10 +331,16 @@ ZDD SylvanZddCnf::multiply_impl(const ZDD &p, const ZDD &q) {
     zdd_refs_push(p1q0);
     ZDD p1q1 = multiply_impl(p1, q1);
     zdd_refs_push(p1q1);
-    ZDD tmp = zdd_or(zdd_or(p1q1, p1q0), p0q1);
-    zdd_refs_push(tmp);
-    ZDD result = zdd_makenode(x, p0q0, tmp);
-    zdd_refs_pop(5);
+    assert(verify_variable_ordering_impl(p1q1, 0));
+    assert(verify_variable_ordering_impl(p1q0, 0));
+    ZDD tmp1 = zdd_or(p1q1, p1q0);
+    zdd_refs_pop(2);
+    zdd_refs_push(tmp1);
+    assert(verify_variable_ordering_impl(tmp1, 0));
+    assert(verify_variable_ordering_impl(p0q1, 0));
+    ZDD tmp2 = zdd_or(tmp1, p0q1);
+    zdd_refs_pop(3);
+    ZDD result = zdd_makenode(x, p0q0, tmp2);
     store_in_binary_cache(s_multiply_cache, p, q, result);
     return result;
 }
@@ -322,7 +368,7 @@ ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
     ZDD low = remove_tautologies_impl(zdd_getlow(zdd));
     zdd_refs_push(low);
     ZDD high = remove_tautologies_impl(zdd_gethigh(zdd));
-    zdd_refs_push(high);
+    zdd_refs_pop(1);
     ZDD result;
     if (high == zdd_false || high == zdd_true) {
         // high child doesn't have a variable (is a leaf), do nothing
@@ -335,7 +381,6 @@ ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
         // not complements, do nothing
         result = zdd_makenode(var, low, high);
     }
-    zdd_refs_pop(2);
     store_in_unary_cache(s_remove_tautologies_cache, zdd, result);
     return result;
 }
@@ -435,6 +480,7 @@ auto SylvanZddCnf::to_vector() const -> std::vector<Clause> {
         return true;
     };
     for_all_clauses(func);
+    assert(output.size() == count_clauses());
     return output;
 }
 
@@ -495,24 +541,6 @@ void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
     }
 }
 
-static bool verify_variable_ordering_impl(const ZDD &node, uint32_t parent_var) {
-    if (node == zdd_true || node == zdd_false) {
-        return true;
-    }
-    uint32_t var = zdd_getvar(node);
-    if (var <= parent_var) {
-        return false;
-    }
-    if (!verify_variable_ordering_impl(zdd_getlow(node), var)) {
-        return false;
-    }
-    return verify_variable_ordering_impl(zdd_gethigh(node), var);
-}
-
-bool SylvanZddCnf::verify_variable_ordering() const {
-    return verify_variable_ordering_impl(m_zdd, 0);
-}
-
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
     assert (l != 0);
     if (l > 0) {
@@ -545,7 +573,9 @@ ZDD SylvanZddCnf::set_from_vector(const Clause &clause) {
 ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
     std::vector<uint8_t> signs(clause.size(), 1);
     ZDD domain = set_from_vector(clause);
+    zdd_refs_push(domain);
     ZDD zdd_clause = zdd_cube(domain, signs.data(), zdd_true);
+    zdd_refs_pop(1);
     return zdd_clause;
 }
 

@@ -52,6 +52,7 @@ public:
 
     [[nodiscard]] size_t count_clauses() const;
     [[nodiscard]] size_t count_nodes() const;
+    [[nodiscard]] size_t count_depth() const;
     [[nodiscard]] bool is_empty() const;
     [[nodiscard]] bool contains_empty() const;
     [[nodiscard]] Literal get_smallest_variable() const;
