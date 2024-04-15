@@ -54,6 +54,7 @@ public:
     [[nodiscard]] size_t count_depth() const;
     [[nodiscard]] bool is_empty() const;
     [[nodiscard]] bool contains_empty() const;
+    [[nodiscard]] bool contains_unit_literal(const Literal &literal) const;
     [[nodiscard]] Literal get_smallest_variable() const;
     [[nodiscard]] Literal get_largest_variable() const;
     [[nodiscard]] Literal get_root_literal() const;

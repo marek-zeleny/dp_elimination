@@ -61,17 +61,15 @@ SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const Args
 
 TASK_1(int, impl, const ArgsParser *, args_ptr)
 {
-    using namespace sylvan;
-
     // Lace is a C framework, can't pass C++ arguments...
     const ArgsParser &args = *args_ptr;
 
     // initialize Sylvan
-    Sylvan::initPackage(args.get_sylvan_table_size(),
+    sylvan::Sylvan::initPackage(args.get_sylvan_table_size(),
                         args.get_sylvan_table_max_size(),
                         args.get_sylvan_cache_size(),
                         args.get_sylvan_cache_max_size());
-    sylvan_init_zdd();
+    sylvan::sylvan_init_zdd();
 
     // load input file
     std::string input_file_name = args.get_input_cnf_file_name();
@@ -96,7 +94,7 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     metrics.export_json(metrics_file);
 
     // quit sylvan, free memory
-    Sylvan::quitPackage();
+    sylvan::Sylvan::quitPackage();
     return 0;
 }
 

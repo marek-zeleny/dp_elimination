@@ -16,17 +16,12 @@ concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cn
     { f(iteration, cnf, cnf_size, result) } -> std::same_as<bool>;
 };
 
-inline SylvanZddCnf remove_unit_literals(SylvanZddCnf cnf) {
-    SylvanZddCnf::Literal l = cnf.get_unit_literal();
-    while (l != 0) {
-        SylvanZddCnf without_l = cnf.subset0(l);
-        SylvanZddCnf with_not_l = cnf.subset1(-l);
-        cnf = without_l.unify(with_not_l);
-        l = cnf.get_unit_literal();
-    }
-    return cnf;
-}
+template<typename F>
+concept IsClauseRemoval = requires(F f, const SylvanZddCnf &cnf) {
+    { f(cnf) } -> std::same_as<SylvanZddCnf>;
+};
 
+[[nodiscard]]
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
     LOG_INFO << "Eliminating literal " << l;
     metrics.increase_counter(MetricsCounters::EliminatedVars);
@@ -85,19 +80,16 @@ bool is_sat(SylvanZddCnf set, Heuristic heuristic = {}) {
     }
 }
 
-static inline void remove_absorbed_clauses_from_cnf(SylvanZddCnf &cnf) {
-    if (cnf.is_empty() || cnf.contains_empty()) {
-        return;
-    }
-    auto timer = metrics.get_timer(MetricsDurations::RemoveAbsorbedClausesWithConversion);
-    std::vector<SylvanZddCnf::Clause> vector = cnf.to_vector();
-    vector = remove_absorbed_clauses(vector);
-    cnf = SylvanZddCnf::from_vector(vector);
-}
+using absorbed_clause_detection::remove_absorbed_clauses_with_conversion;
 
-template<IsHeuristic Heuristic, IsStopCondition StopCondition>
+template<IsHeuristic Heuristic, IsStopCondition StopCondition,
+        IsClauseRemoval AbsorbedClauseRemoval = decltype(remove_absorbed_clauses_with_conversion)>
+[[nodiscard]]
 SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition stop_condition,
-                            size_t absorbed_clauses_interval = 0) {
+                            size_t absorbed_clauses_interval = 0,
+                            AbsorbedClauseRemoval removed_absorbed_clauses = remove_absorbed_clauses_with_conversion) {
+    using unit_propagation::unit_propagation;
+
     LOG_INFO << "Starting DP elimination algorithm";
     // initial metrics collection
     const auto clauses_count_start = static_cast<int64_t>(cnf.count_clauses());
@@ -113,9 +105,9 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
     auto timer = metrics.get_timer(MetricsDurations::EliminateVars);
 
     // start by removing absorbed clauses
-    cnf = remove_unit_literals(cnf);
+    cnf = unit_propagation(cnf);
     if (absorbed_clauses_interval > 0) {
-        remove_absorbed_clauses_from_cnf(cnf);
+        cnf = removed_absorbed_clauses(cnf);
     }
     auto clauses_count = static_cast<int64_t>(cnf.count_clauses());
     size_t i = 0;
@@ -134,9 +126,9 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         metrics.append_to_series(MetricsSeries::EliminatedClauses, clauses_count - new_clauses_count);
         clauses_count = new_clauses_count;
 
-        cnf = remove_unit_literals(cnf);
+        cnf = unit_propagation(cnf);
         if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval == 0)) {
-            remove_absorbed_clauses_from_cnf(cnf);
+            cnf = removed_absorbed_clauses(cnf);
             clauses_count = static_cast<int64_t>(cnf.count_clauses());
         }
 #ifndef NDEBUG // only for debug build
@@ -154,7 +146,7 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
     }
     // clean up by removing absorbed clauses (unless it was already done during the last iteration)
     if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval != 0)) {
-        remove_absorbed_clauses_from_cnf(cnf);
+        cnf = removed_absorbed_clauses(cnf);
         clauses_count = static_cast<int64_t>(cnf.count_clauses());
     }
 

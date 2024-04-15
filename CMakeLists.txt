@@ -25,6 +25,7 @@ add_library(dp_lib STATIC
         lib/data_structures/sylvan_zdd_cnf.cpp
         lib/data_structures/vector_cnf.cpp
         lib/data_structures/watched_literals.cpp
+        lib/algorithms/unit_propagation.cpp
 )
 target_include_directories(dp_lib PUBLIC lib/)
 target_link_libraries(dp_lib PUBLIC sylvan PUBLIC simple_logger PUBLIC nlohmann_json::nlohmann_json)

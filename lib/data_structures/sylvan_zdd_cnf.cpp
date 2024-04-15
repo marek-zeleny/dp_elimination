@@ -150,6 +150,17 @@ bool SylvanZddCnf::contains_empty() const {
     return contains_empty_set(m_zdd);
 }
 
+bool SylvanZddCnf::contains_unit_literal(const Literal &literal) const {
+    Var searched_var = literal_to_var(literal);
+    ZDD zdd = m_zdd;
+    Var v = zdd_getvar(zdd);
+    while (v < searched_var && zdd != zdd_false && zdd != zdd_true) {
+        zdd = zdd_getlow(zdd);
+        v = zdd_getvar(zdd);
+    }
+    return v == searched_var && contains_empty_set(zdd_gethigh(zdd));
+}
+
 SylvanZddCnf::Literal SylvanZddCnf::get_smallest_variable() const {
     return std::abs(get_root_literal());
 }
