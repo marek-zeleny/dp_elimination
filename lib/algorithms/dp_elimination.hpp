@@ -6,6 +6,7 @@
 #include "algorithms/heuristics.hpp"
 #include "algorithms/unit_propagation.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
+#include "data_structures/vector_cnf.hpp"
 #include "metrics/dp_metrics.hpp"
 
 namespace dp {
@@ -16,32 +17,101 @@ concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cn
     { f(iteration, cnf, cnf_size, result) } -> std::same_as<bool>;
 };
 
-inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
+template<size_t N>
+static void verify_zdd_consistency(const SylvanZddCnf &cnf, const VectorCnf &vec,
+                                   const std::array<SylvanZddCnf, N> &operands,
+                                   const std::source_location location = std::source_location::current()) {
+#ifdef NDEBUG
+    return;
+#else
+    constexpr auto level = simple_logger::LogLevel::Debug;
+    simple_logger::Log<level> log{simple_logger::Config::getDefaultStream<level>(), location};
+    log << "Verifying ZDD consistency";
+    log.getStream().flush();
+    if (!cnf.verify_variable_ordering()) {
+        log << "\nInvalid ZDD variable ordering with root " << cnf.get_root_literal() << "\n";
+        log.getStream().flush();
+        log << "Expected ZDD:\n";
+        SylvanZddCnf::from_vector(vec.to_vector()).print_clauses(log.getStream());
+        log << "Actual ZDD:\n";
+        cnf.print_clauses(log.getStream());
+        log << "Operands:\n";
+        for (const auto &op : operands) {
+            log << "op\n";
+            op.print_clauses(log.getStream());
+        }
+    } else if (cnf != SylvanZddCnf::from_vector(vec.to_vector())) {
+        log << "\nUnexpected ZDD form with root " << cnf.get_root_literal() << "\n";
+        log.getStream().flush();
+        size_t clauses = cnf.count_clauses();
+        size_t expected_clauses = vec.count_clauses();
+        log << "Clauses: " << clauses << " (expected " << expected_clauses << ")\n";
+        if (clauses == expected_clauses) {
+            log << "Expected ZDD:\n";
+            SylvanZddCnf::from_vector(vec.to_vector()).print_clauses(log.getStream());
+            log << "Actual ZDD:\n";
+            cnf.print_clauses(log.getStream());
+        } else {
+            log << "Expected vector:\n";
+            vec.print_clauses(log.getStream());
+            log << "Actual vector:\n";
+            VectorCnf::from_vector(cnf.to_vector()).print_clauses(log.getStream());
+        }
+        log << "Operands:\n";
+        for (const auto &op : operands) {
+            log << "op\n";
+            op.print_clauses(log.getStream());
+        }
+    } else {
+        return;
+    }
+    log.getStream().flush();
+    throw std::runtime_error("Inconsistent ZDD");
+#endif
+}
+
+inline SylvanZddCnf eliminate(const SylvanZddCnf &set, VectorCnf &vec, const SylvanZddCnf::Literal &l) {
     LOG_INFO << "Eliminating literal " << l;
     metrics.increase_counter(MetricsCounters::EliminatedVars);
     metrics.append_to_series(MetricsSeries::EliminatedLiterals, std::abs(l));
     auto timer_total = metrics.get_timer(MetricsDurations::EliminateVar_Total);
 
+    verify_zdd_consistency<0>(set, vec, {});
+
+    LOG_DEBUG << "Decomposition";
     auto timer_decomposition = metrics.get_timer(MetricsDurations::EliminateVar_SubsetDecomposition);
     SylvanZddCnf with_l = set.subset1(l);
+    auto tmp1 = vec;
+    verify_zdd_consistency<1>(with_l, tmp1.subset1(l), {set});
+
     SylvanZddCnf with_not_l = set.subset1(-l);
+    auto tmp2 = vec;
+    verify_zdd_consistency<1>(with_not_l, tmp2.subset1(-l), {set});
+
     SylvanZddCnf without_l = set.subset0(l).subset0(-l);
+    verify_zdd_consistency<1>(without_l, vec.subset0(l).subset0(-l), {set});
     timer_decomposition.stop();
 
+    LOG_DEBUG << "Resolution";
     auto timer_resolution = metrics.get_timer(MetricsDurations::EliminateVar_Resolution);
     SylvanZddCnf resolvents = with_l.multiply(with_not_l);
+    verify_zdd_consistency<2>(resolvents, tmp1.multiply(tmp2), {with_l, with_not_l});
     timer_resolution.stop();
 
+    LOG_DEBUG << "Removing tautologies";
     auto timer_tautologies = metrics.get_timer(MetricsDurations::EliminateVar_TautologiesRemoval);
     SylvanZddCnf no_tautologies = resolvents.remove_tautologies();
+    verify_zdd_consistency<1>(no_tautologies, tmp1.remove_tautologies(), {resolvents});
     timer_tautologies.stop();
 
     auto timer_subsumed1 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval1);
     SylvanZddCnf no_tautologies_or_subsumed = no_tautologies;//.remove_subsumed_clauses();
     timer_subsumed1.stop();
 
+    LOG_DEBUG << "Union";
     auto timer_unification = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
     SylvanZddCnf result = no_tautologies_or_subsumed.unify(without_l);
+    verify_zdd_consistency<2>(result, vec.unify(tmp1), {no_tautologies_or_subsumed, without_l});
     timer_unification.stop();
 
     auto timer_subsumed2 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval2);
@@ -49,6 +119,12 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     timer_subsumed2.stop();
 
     return no_subsumed;
+}
+
+// for tests only
+inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
+    auto vec = VectorCnf::from_vector(set.to_vector());
+    return eliminate(set, vec, l);
 }
 
 template<IsHeuristic Heuristic = heuristics::SimpleHeuristic>
@@ -81,7 +157,7 @@ static inline void remove_absorbed_clauses_from_cnf(SylvanZddCnf &cnf) {
 }
 
 template<IsHeuristic Heuristic, IsStopCondition StopCondition>
-SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition stop_condition,
+SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, VectorCnf vec, Heuristic heuristic, StopCondition stop_condition,
                             size_t absorbed_clauses_interval = 0) {
     LOG_INFO << "Starting DP elimination algorithm";
     // initial metrics collection
@@ -113,7 +189,7 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         ++i;
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
-        cnf = eliminate(cnf, result.literal);
+        cnf = eliminate(cnf, vec, result.literal);
         if (!cnf.verify_variable_ordering()) {
             GET_LOG_STREAM_ERROR(log);
             log << "Invalid variable ordering";
@@ -129,10 +205,13 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
             clauses_count = static_cast<int64_t>(cnf.count_clauses());
         }
 
-        sylvan_clear_and_mark();
+        LOG_DEBUG << "Calling GC";
         sylvan_clear_cache();
+        sylvan_clear_and_mark();
+        sylvan_rehash_all();
         auto stats = SylvanZddCnf::get_sylvan_stats();
-        LOG_DEBUG << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes();
+        LOG_DEBUG << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes() <<
+                  ", depth: " << cnf.count_depth();
         LOG_DEBUG << "Sylvan table usage: " << stats.table_filled << "/" << stats.table_total;
         metrics.append_to_series(MetricsSeries::ClauseCounts, clauses_count);
         metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
