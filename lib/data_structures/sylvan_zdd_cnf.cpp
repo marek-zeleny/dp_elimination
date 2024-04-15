@@ -584,6 +584,9 @@ bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
 }
 
 void SylvanZddCnf::store_in_unary_cache(UnaryCache &cache, const ZDD &key, const ZDD &entry) {
+    if constexpr (UnaryCache::Capacity == 0) {
+        return;
+    }
     Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
     Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
     zdd_protect(key_ptr.get());
@@ -596,6 +599,9 @@ void SylvanZddCnf::store_in_unary_cache(UnaryCache &cache, const ZDD &key, const
 }
 
 void SylvanZddCnf::store_in_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2, const ZDD &entry) {
+    if constexpr (BinaryCache::Capacity == 0) {
+        return;
+    }
     Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
     Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
     Zdd_ptr entry_ptr = std::make_shared<ZDD>(entry);
@@ -613,6 +619,9 @@ void SylvanZddCnf::store_in_binary_cache(BinaryCache &cache, const ZDD &key1, co
 }
 
 std::optional<ZDD> SylvanZddCnf::try_get_from_unary_cache(UnaryCache &cache, const ZDD &key) {
+    if constexpr (UnaryCache::Capacity == 0) {
+        return std::nullopt;
+    }
     Zdd_ptr key_ptr = std::make_shared<ZDD>(key);
     std::optional<Zdd_ptr> result = cache.try_get(key_ptr);
     if (result.has_value()) {
@@ -623,6 +632,9 @@ std::optional<ZDD> SylvanZddCnf::try_get_from_unary_cache(UnaryCache &cache, con
 }
 
 std::optional<ZDD> SylvanZddCnf::try_get_from_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2) {
+    if constexpr (BinaryCache::Capacity == 0) {
+        return std::nullopt;
+    }
     Zdd_ptr key1_ptr = std::make_shared<ZDD>(key1);
     Zdd_ptr key2_ptr = std::make_shared<ZDD>(key2);
     BinaryCacheKey key = std::make_tuple(std::move(key1_ptr), std::move(key2_ptr));

@@ -8,9 +8,10 @@
 
 namespace dp {
 
-template<typename Key, typename T, size_t Capacity, typename Hash = std::hash<Key>>
+template<typename Key, typename T, size_t Capacity_, typename Hash = std::hash<Key>>
 class LruCache {
 public:
+    static constexpr size_t Capacity = Capacity_;
     using EntryPair = std::tuple<Key, T>;
 
 private:
