@@ -16,6 +16,17 @@ concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cn
     { f(iteration, cnf, cnf_size, result) } -> std::same_as<bool>;
 };
 
+inline SylvanZddCnf remove_unit_literals(SylvanZddCnf cnf) {
+    SylvanZddCnf::Literal l = cnf.get_unit_literal();
+    while (l != 0) {
+        SylvanZddCnf without_l = cnf.subset0(l);
+        SylvanZddCnf with_not_l = cnf.subset1(-l);
+        cnf = without_l.unify(with_not_l);
+        l = cnf.get_unit_literal();
+    }
+    return cnf;
+}
+
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
     LOG_INFO << "Eliminating literal " << l;
     metrics.increase_counter(MetricsCounters::EliminatedVars);
@@ -102,6 +113,7 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
     auto timer = metrics.get_timer(MetricsDurations::EliminateVars);
 
     // start by removing absorbed clauses
+    cnf = remove_unit_literals(cnf);
     if (absorbed_clauses_interval > 0) {
         remove_absorbed_clauses_from_cnf(cnf);
     }
@@ -118,16 +130,11 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
         cnf = eliminate(cnf, result.literal);
-        if (!cnf.verify_variable_ordering()) {
-            GET_LOG_STREAM_ERROR(log);
-            log << "Invalid variable ordering";
-            log.flush();
-            cnf.draw_to_file("WRONG_ORDERING.dot");
-        }
         const auto new_clauses_count = static_cast<int64_t>(cnf.count_clauses());
         metrics.append_to_series(MetricsSeries::EliminatedClauses, clauses_count - new_clauses_count);
         clauses_count = new_clauses_count;
 
+        cnf = remove_unit_literals(cnf);
         if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval == 0)) {
             remove_absorbed_clauses_from_cnf(cnf);
             clauses_count = static_cast<int64_t>(cnf.count_clauses());
