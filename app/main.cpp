@@ -5,7 +5,6 @@
 #include <simple_logger.h>
 #include "args_parser.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
-#include "data_structures/vector_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
 #include "algorithms/heuristics.hpp"
 #include "metrics/dp_metrics.hpp"
@@ -36,25 +35,25 @@ private:
     const size_t m_max_size;
 };
 
-SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const VectorCnf &vec, const ArgsParser &args) {
+SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const ArgsParser &args) {
     StopCondition stop_condition{cnf.count_clauses(), args.get_max_formula_growth()};
     if (args.get_heuristic() == ArgsParser::Heuristic::Simple) {
         LOG_INFO << "Using the Simple heuristic";
         heuristics::SimpleHeuristic heuristic;
-        return eliminate_vars(cnf, vec, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
     } else if (args.get_heuristic() == ArgsParser::Heuristic::UnitLiteral) {
         LOG_INFO << "Using the UnitLiteral heuristic";
         heuristics::UnitLiteralHeuristic heuristic;
-        return eliminate_vars(cnf, vec, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
     } else if (args.get_heuristic() == ArgsParser::Heuristic::ClearLiteral) {
         LOG_INFO << "Using the ClearLiteral heuristic";
         heuristics::ClearLiteralHeuristic heuristic;
-        return eliminate_vars(cnf, vec, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
     } else if (args.get_heuristic() == ArgsParser::Heuristic::MinimalBloat) {
         LOG_INFO << "Using the MinimalBloat heuristic";
         heuristics::MinimalScoreHeuristic<heuristics::scores::bloat_score> heuristic{args.get_min_var(),
                                                                                      args.get_max_var()};
-        return eliminate_vars(cnf, vec, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
+        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
     } else {
         throw std::logic_error("Heuristic not implemented");
     }
@@ -76,12 +75,11 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     std::string input_file_name = args.get_input_cnf_file_name();
     std::cout << "Reading input formula from file " << input_file_name << "..." << std::endl;
     SylvanZddCnf cnf = SylvanZddCnf::from_file(input_file_name);
-    auto vec = VectorCnf::from_file(input_file_name);
     std::cout << "Input formula has " << cnf.count_clauses() << " clauses" << std::endl;
 
     // perform the algorithm
     std::cout << "Eliminating variables..." << std::endl;
-    SylvanZddCnf result = eliminate_vars_select_heuristic(cnf, vec, args);
+    SylvanZddCnf result = eliminate_vars_select_heuristic(cnf, args);
 
     // write result to file
     std::string output_file_name = args.get_output_cnf_file_name();
@@ -128,7 +126,7 @@ int main(int argc, char *argv[])
     // initialize Lace
     size_t n_workers = args->get_lace_threads();
     size_t deque_size = 0; // default value for the size of task deques for the workers
-    lace_set_stacksize(limit.rlim_cur);
+    //lace_set_stacksize(limit.rlim_cur);
     lace_start(n_workers, deque_size);
     LOG_INFO << "Lace started with " << lace_workers() << " threads";
 
