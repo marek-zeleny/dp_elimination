@@ -44,7 +44,7 @@ private:
     const size_t m_max_size;
 };
 
-bool never_absorbed_condition(bool, size_t, size_t) {
+bool never_absorbed_condition(bool, size_t, size_t, size_t) {
     return false;
 }
 
@@ -52,7 +52,7 @@ class IntervalAbsorbedCondition {
 public:
     explicit IntervalAbsorbedCondition(size_t interval) : m_interval(interval) {}
 
-    bool operator()(bool main_loop, size_t iter, size_t) const {
+    bool operator()(bool main_loop, size_t iter, size_t, size_t) const {
         if (main_loop) {
             return iter % m_interval == m_interval - 1;
         } else {
@@ -68,26 +68,16 @@ class GrowthAbsorbedCondition {
 public:
     explicit GrowthAbsorbedCondition(float max_growth) : m_max_growth(max_growth) {}
 
-    bool operator()(bool main_loop, size_t iter, size_t size) {
-        if (impl(main_loop, iter, size)) {
-            m_prev_size = size;
-            return true;
+    bool operator()(bool main_loop, size_t, size_t prev_size, size_t size) const {
+        if (main_loop) {
+            return static_cast<float>(size) > static_cast<float>(prev_size) * m_max_growth;
         } else {
-            return false;
+            return size > prev_size;
         }
     }
 
 private:
     const float m_max_growth;
-    size_t m_prev_size{0};
-
-    bool impl(bool main_loop, size_t, size_t size) const {
-        if (main_loop) {
-            return static_cast<float>(size) > static_cast<float>(m_prev_size) * m_max_growth;
-        } else {
-            return size > m_prev_size;
-        }
-    }
 };
 
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {

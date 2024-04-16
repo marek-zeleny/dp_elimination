@@ -13,7 +13,8 @@ namespace dp {
 
 using StopCondition_f = std::function<bool(size_t iteration, const SylvanZddCnf &cnf, size_t cnf_size,
         const HeuristicResult &result)>;
-using AbsorbedCondition_f = std::function<bool(bool in_main_loop, size_t iteration, size_t cnf_size)>;
+using AbsorbedCondition_f = std::function<bool(bool in_main_loop, size_t iteration, size_t prev_cnf_size,
+        size_t cnf_size)>;
 using ClauseModifier_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
 using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
 
@@ -103,9 +104,12 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &
     // start by removing absorbed clauses
     cnf = unit_propagation(cnf);
     size_t clauses_count = cnf.count_clauses();
+    size_t last_absorbed_clauses_count = 0;
     size_t iter = 0;
-    if (config.remove_absorbed_condition(false, 0, clauses_count)) {
+    if (config.remove_absorbed_condition(false, 0, last_absorbed_clauses_count, clauses_count)) {
         cnf = config.remove_absorbed_clauses(cnf);
+        clauses_count = cnf.count_clauses();
+        last_absorbed_clauses_count = clauses_count;
     }
 
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
@@ -123,9 +127,10 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &
         clauses_count = new_clauses_count;
 
         cnf = unit_propagation(cnf);
-        if (config.remove_absorbed_condition(true, iter, clauses_count)) {
+        if (config.remove_absorbed_condition(true, iter, last_absorbed_clauses_count, clauses_count)) {
             cnf = config.remove_absorbed_clauses(cnf);
-            clauses_count = static_cast<int64_t>(cnf.count_clauses());
+            clauses_count = cnf.count_clauses();
+            last_absorbed_clauses_count = clauses_count;
         }
 #ifndef NDEBUG // only for debug build
         SylvanZddCnf::call_sylvan_gc();
@@ -141,9 +146,9 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &
         result = config.heuristic(cnf);
     }
     // clean up by removing absorbed clauses (unless it was already done during the last iteration)
-    if (config.remove_absorbed_condition(false, iter, clauses_count)) {
+    if (config.remove_absorbed_condition(false, iter, last_absorbed_clauses_count, clauses_count)) {
         cnf = config.remove_absorbed_clauses(cnf);
-        clauses_count = static_cast<int64_t>(cnf.count_clauses());
+        clauses_count = cnf.count_clauses();
     }
 
     // final metrics collection
