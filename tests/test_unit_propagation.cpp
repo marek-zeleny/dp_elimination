@@ -3,6 +3,7 @@
 
 TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
     using namespace dp;
+    using absorbed_clause_detection::is_clause_absorbed;
     
     SECTION("Clause already in formula is absorbed") {
         std::vector<std::vector<int32_t>> clauses {
@@ -86,6 +87,7 @@ TEST_CASE("is_clause_absorbed tests", "[unit propagation]") {
 
 TEST_CASE("remove_absorbed_clauses algorithm", "[unit propagation]") {
     using namespace dp;
+    using absorbed_clause_detection::remove_absorbed_clauses;
 
     SECTION("No absorbed clauses") {
         std::vector<std::vector<int32_t>> clauses = {
