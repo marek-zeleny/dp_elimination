@@ -19,17 +19,12 @@ struct HeuristicResult {
         score(score), literal(literal), success(success) {}
 };
 
-template<typename F>
-concept IsHeuristic = requires(F f, const SylvanZddCnf &cnf) {
-    { f(cnf) } -> std::same_as<HeuristicResult>;
-};
+namespace heuristics {
 
 template<typename F>
 concept IsScoreEvaluator = requires(F f, const SylvanZddCnf::VariableStats &stats) {
     { f(stats) } -> std::convertible_to<HeuristicResult::Score>;
 };
-
-namespace heuristics {
 
 class SimpleHeuristic {
 public:

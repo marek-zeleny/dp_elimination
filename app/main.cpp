@@ -6,6 +6,7 @@
 #include "args_parser.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
 #include "algorithms/dp_elimination.hpp"
+#include "algorithms/unit_propagation.hpp"
 #include "algorithms/heuristics.hpp"
 #include "metrics/dp_metrics.hpp"
 
@@ -35,28 +36,33 @@ private:
     const size_t m_max_size;
 };
 
-SylvanZddCnf eliminate_vars_select_heuristic(const SylvanZddCnf &cnf, const ArgsParser &args) {
-    StopCondition stop_condition{cnf.count_clauses(), args.get_max_formula_growth()};
-    if (args.get_heuristic() == ArgsParser::Heuristic::Simple) {
-        LOG_INFO << "Using the Simple heuristic";
-        heuristics::SimpleHeuristic heuristic;
-        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
-    } else if (args.get_heuristic() == ArgsParser::Heuristic::UnitLiteral) {
-        LOG_INFO << "Using the UnitLiteral heuristic";
-        heuristics::UnitLiteralHeuristic heuristic;
-        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
-    } else if (args.get_heuristic() == ArgsParser::Heuristic::ClearLiteral) {
-        LOG_INFO << "Using the ClearLiteral heuristic";
-        heuristics::ClearLiteralHeuristic heuristic;
-        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
-    } else if (args.get_heuristic() == ArgsParser::Heuristic::MinimalBloat) {
-        LOG_INFO << "Using the MinimalBloat heuristic";
-        heuristics::MinimalScoreHeuristic<heuristics::scores::bloat_score> heuristic{args.get_min_var(),
-                                                                                     args.get_max_var()};
-        return eliminate_vars(cnf, heuristic, stop_condition, args.get_absorbed_clause_elimination_interval());
-    } else {
-        throw std::logic_error("Heuristic not implemented");
+EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
+    EliminationAlgorithmConfig config;
+    config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_formula_growth());
+    config.remove_absorbed_clauses = absorbed_clause_detection::remove_absorbed_clauses_with_conversion;
+    config.absorbed_clauses_interval = args.get_absorbed_clause_elimination_interval();
+    switch (args.get_heuristic()) {
+        case ArgsParser::Heuristic::Simple:
+            LOG_INFO << "Using the Simple heuristic";
+            config.heuristic = heuristics::SimpleHeuristic();
+            break;
+        case ArgsParser::Heuristic::UnitLiteral:
+            LOG_INFO << "Using the UnitLiteral heuristic";
+            config.heuristic = heuristics::UnitLiteralHeuristic();
+            break;
+        case ArgsParser::Heuristic::ClearLiteral:
+            LOG_INFO << "Using the ClearLiteral heuristic";
+            config.heuristic = heuristics::ClearLiteralHeuristic();
+            break;
+        case ArgsParser::Heuristic::MinimalBloat:
+            LOG_INFO << "Using the MinimalBloat heuristic";
+            config.heuristic = heuristics::MinimalScoreHeuristic<heuristics::scores::bloat_score>(args.get_min_var(),
+                                                                                                  args.get_max_var());
+            break;
+        default:
+            throw std::logic_error("Heuristic not implemented");
     }
+    return config;
 }
 
 TASK_1(int, impl, const ArgsParser *, args_ptr)
@@ -79,7 +85,8 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
 
     // perform the algorithm
     std::cout << "Eliminating variables..." << std::endl;
-    SylvanZddCnf result = eliminate_vars_select_heuristic(cnf, args);
+    EliminationAlgorithmConfig config = create_config_from_args(cnf, args);
+    SylvanZddCnf result = eliminate_vars(cnf, config);
 
     // write result to file
     std::string output_file_name = args.get_output_cnf_file_name();

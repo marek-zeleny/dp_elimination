@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <algorithm>
+#include <functional>
 #include <simple_logger.h>
 #include "algorithms/heuristics.hpp"
 #include "algorithms/unit_propagation.hpp"
@@ -10,16 +11,9 @@
 
 namespace dp {
 
-template<typename F>
-concept IsStopCondition = requires(F f, size_t iteration, const SylvanZddCnf &cnf, size_t cnf_size,
-                                   const HeuristicResult &result) {
-    { f(iteration, cnf, cnf_size, result) } -> std::same_as<bool>;
-};
-
-template<typename F>
-concept IsClauseRemoval = requires(F f, const SylvanZddCnf &cnf) {
-    { f(cnf) } -> std::same_as<SylvanZddCnf>;
-};
+using StopCondition_f = std::function<bool(size_t, const SylvanZddCnf &, size_t, const HeuristicResult &)>;
+using ClauseModifier_f = std::function<SylvanZddCnf(const SylvanZddCnf &)>;
+using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &)>;
 
 [[nodiscard]]
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
@@ -61,8 +55,7 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     return no_subsumed;
 }
 
-template<IsHeuristic Heuristic = heuristics::SimpleHeuristic>
-bool is_sat(SylvanZddCnf set, Heuristic heuristic = {}) {
+bool is_sat(SylvanZddCnf set, const Heuristic_f &heuristic = heuristics::SimpleHeuristic()) {
     LOG_INFO << "Starting DP elimination algorithm";
     while (true) {
         {
@@ -80,14 +73,15 @@ bool is_sat(SylvanZddCnf set, Heuristic heuristic = {}) {
     }
 }
 
-using absorbed_clause_detection::remove_absorbed_clauses_with_conversion;
+struct EliminationAlgorithmConfig {
+    Heuristic_f heuristic;
+    StopCondition_f stop_condition;
+    ClauseModifier_f remove_absorbed_clauses;
+    size_t absorbed_clauses_interval;
+};
 
-template<IsHeuristic Heuristic, IsStopCondition StopCondition,
-        IsClauseRemoval AbsorbedClauseRemoval = decltype(remove_absorbed_clauses_with_conversion)>
 [[nodiscard]]
-SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition stop_condition,
-                            size_t absorbed_clauses_interval = 0,
-                            AbsorbedClauseRemoval removed_absorbed_clauses = remove_absorbed_clauses_with_conversion) {
+SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &config) {
     using unit_propagation::unit_propagation;
 
     LOG_INFO << "Starting DP elimination algorithm";
@@ -106,18 +100,18 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
 
     // start by removing absorbed clauses
     cnf = unit_propagation(cnf);
-    if (absorbed_clauses_interval > 0) {
-        cnf = removed_absorbed_clauses(cnf);
+    if (config.absorbed_clauses_interval > 0) {
+        cnf = config.remove_absorbed_clauses(cnf);
     }
     auto clauses_count = static_cast<int64_t>(cnf.count_clauses());
     size_t i = 0;
 
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
-    HeuristicResult result = heuristic(cnf);
+    HeuristicResult result = config.heuristic(cnf);
     timer_heuristic1.stop();
 
     // eliminate variables until a stop condition is met
-    while (!stop_condition(i, cnf, clauses_count, result)) {
+    while (!config.stop_condition(i, cnf, clauses_count, result)) {
         ++i;
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
@@ -127,8 +121,8 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         clauses_count = new_clauses_count;
 
         cnf = unit_propagation(cnf);
-        if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval == 0)) {
-            cnf = removed_absorbed_clauses(cnf);
+        if ((config.absorbed_clauses_interval > 0) && (i % config.absorbed_clauses_interval == 0)) {
+            cnf = config.remove_absorbed_clauses(cnf);
             clauses_count = static_cast<int64_t>(cnf.count_clauses());
         }
 #ifndef NDEBUG // only for debug build
@@ -142,11 +136,11 @@ SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, Heuristic heuristic, StopCondition
         metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
 
         auto timer_heuristic2 = metrics.get_timer(MetricsDurations::VarSelection);
-        result = heuristic(cnf);
+        result = config.heuristic(cnf);
     }
     // clean up by removing absorbed clauses (unless it was already done during the last iteration)
-    if ((absorbed_clauses_interval > 0) && (i % absorbed_clauses_interval != 0)) {
-        cnf = removed_absorbed_clauses(cnf);
+    if ((config.absorbed_clauses_interval > 0) && (i % config.absorbed_clauses_interval != 0)) {
+        cnf = config.remove_absorbed_clauses(cnf);
         clauses_count = static_cast<int64_t>(cnf.count_clauses());
     }
 
