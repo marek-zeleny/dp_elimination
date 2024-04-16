@@ -12,17 +12,25 @@
 
 using namespace dp;
 
-class StopCondition {
+bool generic_stop_condition(size_t, const SylvanZddCnf &cnf, size_t, const HeuristicResult &result) {
+    if (cnf.is_empty() || cnf.contains_empty()) {
+        LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
+        return true;
+    } else if (!result.success) {
+        LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
+        return true;
+    } else {
+        return false;
+    }
+}
+
+class GrowthStopCondition {
 public:
-    explicit StopCondition(size_t orig_cnf_size, float max_growth) :
+    explicit GrowthStopCondition(size_t orig_cnf_size, float max_growth) :
             m_max_size(static_cast<size_t>(static_cast<float>(orig_cnf_size) * max_growth)) {}
 
-    bool operator()(size_t, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {
-        if (cnf.is_empty() || cnf.contains_empty()) {
-            LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
-            return true;
-        } else if (!result.success) {
-            LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
+    bool operator()(size_t iter, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {
+        if (generic_stop_condition(iter, cnf, cnf_size, result)) {
             return true;
         } else if (cnf_size > m_max_size) {
             LOG_INFO << "Formula grew too large (" << cnf_size << " > " << m_max_size << "), stopping DP elimination";
@@ -36,11 +44,55 @@ private:
     const size_t m_max_size;
 };
 
+bool never_absorbed_condition(bool, size_t, size_t) {
+    return false;
+}
+
+class IntervalAbsorbedCondition {
+public:
+    explicit IntervalAbsorbedCondition(size_t interval) : m_interval(interval) {}
+
+    bool operator()(bool main_loop, size_t iter, size_t) const {
+        if (main_loop) {
+            return iter % m_interval == m_interval - 1;
+        } else {
+            return iter % m_interval != m_interval - 1;
+        }
+    }
+
+private:
+    const size_t m_interval;
+};
+
+class GrowthAbsorbedCondition {
+public:
+    explicit GrowthAbsorbedCondition(float max_growth) : m_max_growth(max_growth) {}
+
+    bool operator()(bool main_loop, size_t iter, size_t size) {
+        if (impl(main_loop, iter, size)) {
+            m_prev_size = size;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+private:
+    const float m_max_growth;
+    size_t m_prev_size{0};
+
+    bool impl(bool main_loop, size_t, size_t size) const {
+        if (main_loop) {
+            return static_cast<float>(size) > static_cast<float>(m_prev_size) * m_max_growth;
+        } else {
+            return size > m_prev_size;
+        }
+    }
+};
+
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
     EliminationAlgorithmConfig config;
-    config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_formula_growth());
-    config.remove_absorbed_clauses = absorbed_clause_detection::remove_absorbed_clauses_with_conversion;
-    config.absorbed_clauses_interval = args.get_absorbed_clause_elimination_interval();
+
     switch (args.get_heuristic()) {
         case ArgsParser::Heuristic::Simple:
             LOG_INFO << "Using the Simple heuristic";
@@ -62,6 +114,43 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
         default:
             throw std::logic_error("Heuristic not implemented");
     }
+
+    switch (args.get_stop_condition()) {
+        case ArgsParser::StopCondition::Growth:
+            config.stop_condition = GrowthStopCondition(cnf.count_clauses(), args.get_max_formula_growth());
+            break;
+        case ArgsParser::StopCondition::AllVariables:
+            config.stop_condition = generic_stop_condition;
+            break;
+        default:
+            throw std::logic_error("Stop condition not implemented");
+    }
+
+    switch (args.get_absorbed_removal_condition()) {
+        case ArgsParser::AbsorbedRemovalCondition::Never:
+            config.remove_absorbed_condition = never_absorbed_condition;
+            break;
+        case ArgsParser::AbsorbedRemovalCondition::Interval:
+            config.remove_absorbed_condition = IntervalAbsorbedCondition(args.get_absorbed_removal_interval());
+            break;
+        case ArgsParser::AbsorbedRemovalCondition::FormulaGrowth:
+            config.remove_absorbed_condition = GrowthAbsorbedCondition(args.get_absorbed_removal_growth());
+            break;
+        default:
+            throw std::logic_error("Absorbed removal condition not implemented");
+    }
+
+    switch (args.get_absorbed_removal_algorithm()) {
+        case ArgsParser::AbsorbedRemovalAlgorithm::ZBDD:
+            config.remove_absorbed_clauses = absorbed_clause_detection::remove_absorbed_clauses_without_conversion;
+            break;
+        case ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals:
+            config.remove_absorbed_clauses = absorbed_clause_detection::remove_absorbed_clauses_with_conversion;
+            break;
+        default:
+            throw std::logic_error("Absorbed removal algorithm not implemented");
+    }
+
     return config;
 }
 

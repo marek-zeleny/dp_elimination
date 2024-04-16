@@ -12,6 +12,22 @@ static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_ma
         {"simple", ArgsParser::Heuristic::Simple},
 };
 
+static const std::unordered_map<std::string, ArgsParser::StopCondition> stop_condition_map {
+        {"all_variables", ArgsParser::StopCondition::AllVariables},
+        {"growth", ArgsParser::StopCondition::Growth},
+};
+
+static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalAlgorithm> absorbed_removal_algorithm_map {
+        {"watched_literals", ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals},
+        {"zbdd", ArgsParser::AbsorbedRemovalAlgorithm::ZBDD},
+};
+
+static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalCondition> absorbed_removal_condition_map {
+        {"formula_growth", ArgsParser::AbsorbedRemovalCondition::FormulaGrowth},
+        {"interval", ArgsParser::AbsorbedRemovalCondition::Interval},
+        {"never", ArgsParser::AbsorbedRemovalCondition::Never},
+};
+
 std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     ArgsParser args;
     CLI::App app("Davis Putnam elimination algorithm for preprocessing CNF formulas");
@@ -47,13 +63,43 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
+    app.add_option("-s,--stop-condition", args.m_stop_condition,
+                   "Condition for stopping elimination")
+                   ->group("Algorithm")
+                   ->required()
+                   ->transform(CLI::CheckedTransformer(stop_condition_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
     app.option_defaults()->always_capture_default(true);
     app.add_option("-g,--max-formula-growth", args.m_max_formula_growth,
-                   "Maximum allowed growth of the number of clauses relative to the input formula")
+                   "Maximum allowed growth of the number of clauses relative to the input formula"
+                   "; needs max-formula-growth=growth")
                    ->group("Algorithm");
-    app.add_option("-a,--absorbed-clause-elimination-interval", args.m_absorbed_clause_elimination_interval,
-                   "Number of eliminated variables before absorbed clauses are removed (never if 0)")
-                   ->group("Algorithm");
+    app.add_option("--absorbed-removal-algorithm", args.m_absorbed_removal_algorithm,
+                   "Algorithm for removing absorbed clauses")
+                   ->group("Algorithm")
+                   ->transform(CLI::CheckedTransformer(absorbed_removal_algorithm_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
+    app.add_option("--absorbed-removal-condition", args.m_absorbed_removal_condition,
+                   "Condition on when to remove absorbed clauses")
+                   ->group("Algorithm")
+                   ->transform(CLI::CheckedTransformer(absorbed_removal_condition_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
+    app.add_option("--absorbed-removal-interval", args.m_absorbed_removal_interval,
+                   "Number of eliminated variables before absorbed clauses are removed"
+                   "; needs absorbed-removal-condition=interval")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
+    app.add_option("--absorbed-removal-growth", args.m_absorbed_removal_growth,
+                   "Relative growth of formula before absorbed clauses are removed (must be larger than 1)"
+                   "; needs absorbed-removal-condition=formula_growth")
+                    ->group("Algorithm")
+                    ->check(CLI::Range(1.0f, 1000.0f));
     app.add_option("-v,--var-range", args.m_var_range,
                    "Range of variables that are allowed to be eliminated")
                    ->group("Algorithm");
