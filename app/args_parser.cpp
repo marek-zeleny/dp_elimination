@@ -58,11 +58,11 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "Range of variables that are allowed to be eliminated")
                    ->group("Algorithm");
 
-    app.add_option("--sylvan-table-size", args.m_sylvan_table_size,
-                   "Sylvan table size (default and max), should be a power of 2")
+    app.add_option("--sylvan-table-size", args.m_sylvan_table_size_pow,
+                   "Sylvan table size (default and max) as a base-2 logarithm (20 -> 24 MB)")
                    ->group("Sylvan");
-    app.add_option("--sylvan-cache-size", args.m_sylvan_cache_size,
-                   "Sylvan cache size (default and max), should be a power of 2")
+    app.add_option("--sylvan-cache-size", args.m_sylvan_cache_size_pow,
+                   "Sylvan cache size (default and max) as a base-2 logarithm (20 -> 36 MB)")
                    ->group("Sylvan");
     app.add_option("--lace-threads", args.m_lace_threads,
                    "Number of lace threads (0 for auto-detect)")

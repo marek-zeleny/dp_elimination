@@ -35,10 +35,18 @@ public:
     [[nodiscard]] size_t get_min_var() const { return std::get<0>(m_var_range); }
     [[nodiscard]] size_t get_max_var() const { return std::get<1>(m_var_range); }
 
-    [[nodiscard]] size_t get_sylvan_table_size() const { return std::get<0>(m_sylvan_table_size); }
-    [[nodiscard]] size_t get_sylvan_table_max_size() const { return std::get<1>(m_sylvan_table_size); }
-    [[nodiscard]] size_t get_sylvan_cache_size() const { return std::get<0>(m_sylvan_cache_size); }
-    [[nodiscard]] size_t get_sylvan_cache_max_size() const { return std::get<1>(m_sylvan_cache_size); }
+    [[nodiscard]] size_t get_sylvan_table_size() const {
+        return 1LL << std::get<0>(m_sylvan_table_size_pow);
+    }
+    [[nodiscard]] size_t get_sylvan_table_max_size() const {
+        return 1LL << std::get<1>(m_sylvan_table_size_pow);
+    }
+    [[nodiscard]] size_t get_sylvan_cache_size() const {
+        return 1LL << std::get<0>(m_sylvan_cache_size_pow);
+    }
+    [[nodiscard]] size_t get_sylvan_cache_max_size() const {
+        return 1LL << std::get<1>(m_sylvan_cache_size_pow);
+    }
     [[nodiscard]] size_t get_lace_threads() const { return m_lace_threads; }
 
 private:
@@ -54,7 +62,7 @@ private:
     size_t m_absorbed_clause_elimination_interval{0};
     std::tuple<size_t, size_t> m_var_range{0, std::numeric_limits<size_t>::max()};
 
-    std::tuple<size_t, size_t> m_sylvan_table_size{1LL<<22, 1LL<<26};
-    std::tuple<size_t, size_t> m_sylvan_cache_size{1LL<<22, 1LL<<26};
+    std::tuple<uint8_t, uint8_t> m_sylvan_table_size_pow{20, 25};
+    std::tuple<uint8_t, uint8_t> m_sylvan_cache_size_pow{20, 25};
     size_t m_lace_threads{0};
 };
