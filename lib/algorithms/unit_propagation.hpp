@@ -14,7 +14,7 @@ namespace unit_propagation {
 SylvanZddCnf unit_propagation_step(const SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal);
 
 [[nodiscard]]
-SylvanZddCnf unit_propagation(SylvanZddCnf cnf);
+SylvanZddCnf unit_propagation(SylvanZddCnf cnf, bool count_metrics = false);
 
 [[nodiscard]]
 bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &stop_literal);

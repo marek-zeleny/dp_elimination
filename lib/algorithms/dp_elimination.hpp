@@ -42,23 +42,15 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     SylvanZddCnf no_tautologies = resolvents.remove_tautologies();
     timer_tautologies.stop();
 
-    auto timer_subsumed1 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval1);
-    SylvanZddCnf no_tautologies_or_subsumed = no_tautologies;//.remove_subsumed_clauses();
-    timer_subsumed1.stop();
-
     LOG_DEBUG << "Union";
     auto timer_unification = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
-    SylvanZddCnf result = no_tautologies_or_subsumed.unify(without_l);
+    SylvanZddCnf result = no_tautologies.unify(without_l);
     timer_unification.stop();
 
-    auto timer_subsumed2 = metrics.get_timer(MetricsDurations::EliminateVar_SubsumedRemoval2);
-    SylvanZddCnf no_subsumed = result;//.remove_subsumed_clauses();
-    timer_subsumed2.stop();
-
-    return no_subsumed;
+    return result;
 }
 
-bool is_sat(SylvanZddCnf set, const Heuristic_f &heuristic = heuristics::SimpleHeuristic()) {
+inline bool is_sat(SylvanZddCnf set, const Heuristic_f &heuristic = heuristics::SimpleHeuristic()) {
     LOG_INFO << "Starting DP elimination algorithm";
     while (true) {
         {
@@ -76,6 +68,15 @@ bool is_sat(SylvanZddCnf set, const Heuristic_f &heuristic = heuristics::SimpleH
     }
 }
 
+inline long count_vars(const SylvanZddCnf &cnf) {
+    const auto stats = cnf.get_formula_statistics();
+    long var_count = std::count_if(stats.vars.cbegin(), stats.vars.cend(),
+                                     [](const SylvanZddCnf::VariableStats &var) {
+        return var.positive_clause_count > 0 || var.negative_clause_count > 0;
+    });
+    return var_count;
+}
+
 struct EliminationAlgorithmConfig {
     Heuristic_f heuristic;
     StopCondition_f stop_condition;
@@ -84,77 +85,77 @@ struct EliminationAlgorithmConfig {
 };
 
 [[nodiscard]]
-SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &config) {
+inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &config) {
     using unit_propagation::unit_propagation;
 
     LOG_INFO << "Starting DP elimination algorithm";
     // initial metrics collection
     const auto clauses_count_start = static_cast<int64_t>(cnf.count_clauses());
-    metrics.increase_counter(MetricsCounters::TotalClauses, clauses_count_start);
     metrics.append_to_series(MetricsSeries::ClauseCounts, clauses_count_start);
     metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
-    const auto init_stats = cnf.get_formula_statistics();
-    const int64_t var_count = std::count_if(init_stats.vars.cbegin(), init_stats.vars.cend(),
-                                           [](const SylvanZddCnf::VariableStats &var){
-        return var.positive_clause_count > 0 || var.negative_clause_count > 0;
-    });
-    metrics.increase_counter(MetricsCounters::TotalVars, var_count);
-    auto timer = metrics.get_timer(MetricsDurations::EliminateVars);
+    metrics.increase_counter(MetricsCounters::InitVars, count_vars(cnf));
+    auto timer = metrics.get_timer(MetricsDurations::AlgorithmTotal);
 
-    // start by removing absorbed clauses
-    cnf = unit_propagation(cnf);
-    size_t clauses_count = cnf.count_clauses();
+    // helper lambda function for removing absorbed clauses
+    size_t clauses_count;
     size_t last_absorbed_clauses_count = 0;
     size_t iter = 0;
-    if (config.remove_absorbed_condition(false, 0, last_absorbed_clauses_count, clauses_count)) {
-        cnf = config.remove_absorbed_clauses(cnf);
-        clauses_count = cnf.count_clauses();
-        last_absorbed_clauses_count = clauses_count;
-    }
+    auto conditionally_remove_absorbed = [&](bool main_loop) {
+        if (config.remove_absorbed_condition(main_loop, iter, last_absorbed_clauses_count, clauses_count)) {
+            cnf = config.remove_absorbed_clauses(cnf);
+            clauses_count = cnf.count_clauses();
+            last_absorbed_clauses_count = clauses_count;
+        }
+    };
 
+    // start by initial unit propagation and removing absorbed clauses
+    cnf = unit_propagation(cnf, true);
+    clauses_count = cnf.count_clauses();
+
+    conditionally_remove_absorbed(false);
+
+    // prepare for main loop
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
     HeuristicResult result = config.heuristic(cnf);
     timer_heuristic1.stop();
 
     // eliminate variables until a stop condition is met
     while (!config.stop_condition(iter, cnf, clauses_count, result)) {
-        ++iter;
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
         cnf = eliminate(cnf, result.literal);
-        const auto new_clauses_count = static_cast<int64_t>(cnf.count_clauses());
-        metrics.append_to_series(MetricsSeries::EliminatedClauses, clauses_count - new_clauses_count);
-        clauses_count = new_clauses_count;
+        metrics.append_to_series(MetricsSeries::ClauseCountDifference,
+                                 static_cast<int64_t>(clauses_count) - static_cast<int64_t>(cnf.count_clauses()));
+        cnf = unit_propagation(cnf, true);
+        clauses_count = cnf.count_clauses();
 
-        cnf = unit_propagation(cnf);
-        if (config.remove_absorbed_condition(true, iter, last_absorbed_clauses_count, clauses_count)) {
-            cnf = config.remove_absorbed_clauses(cnf);
-            clauses_count = cnf.count_clauses();
-            last_absorbed_clauses_count = clauses_count;
-        }
+        conditionally_remove_absorbed(true);
+
 #ifndef NDEBUG // only for debug build
         SylvanZddCnf::call_sylvan_gc();
 #endif
-        auto stats = SylvanZddCnf::get_sylvan_stats();
-        LOG_INFO << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes() <<
-                  ", depth: " << cnf.count_depth();
-        LOG_DEBUG << "Sylvan table usage: " << stats.table_filled << "/" << stats.table_total;
-        metrics.append_to_series(MetricsSeries::ClauseCounts, clauses_count);
+
+        if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
+            auto stats = SylvanZddCnf::get_sylvan_stats();
+            LOG_DEBUG << "Sylvan table usage: " << stats.table_filled << "/" << stats.table_total;
+        }
+        LOG_INFO << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes()
+                 << ", depth: " << cnf.count_depth();
+        metrics.append_to_series(MetricsSeries::ClauseCounts, static_cast<int64_t>(clauses_count));
         metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
 
         auto timer_heuristic2 = metrics.get_timer(MetricsDurations::VarSelection);
         result = config.heuristic(cnf);
+        timer_heuristic2.stop();
+        ++iter;
     }
-    // clean up by removing absorbed clauses (unless it was already done during the last iteration)
-    if (config.remove_absorbed_condition(false, iter, last_absorbed_clauses_count, clauses_count)) {
-        cnf = config.remove_absorbed_clauses(cnf);
-        clauses_count = cnf.count_clauses();
-    }
+
+    // clean up by removing absorbed clauses
+    conditionally_remove_absorbed(false);
 
     // final metrics collection
     timer.stop();
-    const int64_t removed_clauses = clauses_count_start - clauses_count;
-    metrics.increase_counter(MetricsCounters::RemovedClauses, removed_clauses);
+    metrics.increase_counter(MetricsCounters::FinalVars, count_vars(cnf));
     return cnf;
 }
 

@@ -9,22 +9,22 @@ namespace dp {
 
 // counters
 enum class MetricsCounters : uint8_t {
-    TotalVars = 0,
-    TotalClauses,
+    InitVars = 0,
+    FinalVars,
     EliminatedVars,
-    RemovedClauses,
     RemoveAbsorbedClausesCallCount,
-    AbsorbedClausesRemovedTotal,
-    Last = AbsorbedClausesRemovedTotal,
+    AbsorbedClausesRemoved,
+    UnitLiteralsRemoved,
+    Last = UnitLiteralsRemoved,
 };
 
 inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> counter_names{
-    "TotalVars",
-    "TotalClauses",
+    "InitVars",
+    "FinalVars",
     "EliminatedVars",
-    "RemovedClauses",
     "RemoveAbsorbedClausesCallCount",
-    "AbsorbedClausesRemovedTotal",
+    "AbsorbedClausesRemoved",
+    "UnitLiteralsRemoved",
 };
 
 // series
@@ -33,9 +33,10 @@ enum class MetricsSeries : uint8_t {
     ClauseCounts,
     NodeCounts,
     HeuristicScores,
-    EliminatedClauses,
+    ClauseCountDifference,
     AbsorbedClausesRemoved,
-    Last = AbsorbedClausesRemoved,
+    UnitLiteralsRemoved,
+    Last = UnitLiteralsRemoved,
 };
 
 inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> series_names{
@@ -43,8 +44,9 @@ inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> ser
         "ClauseCounts",
         "NodeCounts",
         "HeuristicScores",
-        "EliminatedClauses",
+        "ClauseCountDifference",
         "AbsorbedClausesRemoved",
+        "UnitLiteralsRemoved",
 };
 
 // durations
@@ -53,15 +55,15 @@ enum class MetricsDurations : uint8_t {
     WriteOutputFormula,
     ReadFormula_AddClause,
     WriteFormula_PrintClause,
-    EliminateVars,
-    RemoveAbsorbedClausesWithConversion,
+    AlgorithmTotal,
+    RemoveAbsorbedClauses_Serialize,
+    RemoveAbsorbedClauses_Search,
+    RemoveAbsorbedClauses_Build,
     VarSelection,
     EliminateVar_Total,
     EliminateVar_SubsetDecomposition,
     EliminateVar_Resolution,
     EliminateVar_TautologiesRemoval,
-    EliminateVar_SubsumedRemoval1,
-    EliminateVar_SubsumedRemoval2,
     EliminateVar_Unification,
     Last = EliminateVar_Unification,
 };
@@ -71,15 +73,15 @@ inline const std::array<std::string, to_underlying(MetricsDurations::Last) + 1> 
     "WriteOutputFormula",
     "ReadFormula_AddClause",
     "WriteFormula_PrintClause",
-    "EliminateVars",
-    "RemoveAbsorbedClausesWithConversion",
+    "AlgorithmTotal",
+    "RemoveAbsorbedClauses_Serialize",
+    "RemoveAbsorbedClauses_Search",
+    "RemoveAbsorbedClauses_Build",
     "VarSelection",
     "EliminateVar_Total",
     "EliminateVar_SubsetDecomposition",
     "EliminateVar_Resolution",
     "EliminateVar_TautologiesRemoval",
-    "EliminateVar_SubsumedRemoval1",
-    "EliminateVar_SubsumedRemoval2",
     "EliminateVar_Unification",
 };
 
