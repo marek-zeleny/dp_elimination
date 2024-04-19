@@ -27,12 +27,6 @@ public:
         MinimalBloat,
     };
 
-    enum class StopCondition : EnumUnderlyingType {
-        None,
-        Growth,
-        AllVariables,
-    };
-
     enum class AbsorbedRemovalAlgorithm : EnumUnderlyingType {
         None,
         ZBDD,
@@ -52,12 +46,13 @@ public:
     [[nodiscard]] const std::string &get_metrics_file_name() const { return m_metrics_file_name; }
 
     [[nodiscard]] Heuristic get_heuristic() const { return m_heuristic; }
-    [[nodiscard]] StopCondition get_stop_condition() const { return m_stop_condition; }
-    [[nodiscard]] float get_max_formula_growth() const { return m_max_formula_growth; }
     [[nodiscard]] AbsorbedRemovalAlgorithm get_absorbed_removal_algorithm() const { return m_absorbed_removal_algorithm; }
     [[nodiscard]] AbsorbedRemovalCondition get_absorbed_removal_condition() const { return m_absorbed_removal_condition; }
     [[nodiscard]] size_t get_absorbed_removal_interval() const { return m_absorbed_removal_interval; }
     [[nodiscard]] float get_absorbed_removal_growth() const { return m_absorbed_removal_growth; }
+
+    [[nodiscard]] const std::optional<size_t> &get_max_iterations() const { return m_max_iterations; }
+    [[nodiscard]] const std::optional<float> &get_max_formula_growth() const { return m_max_formula_growth; }
     [[nodiscard]] size_t get_min_var() const { return std::get<0>(m_var_range); }
     [[nodiscard]] size_t get_max_var() const { return std::get<1>(m_var_range); }
 
@@ -77,21 +72,22 @@ public:
 
 private:
     ArgsParser() = default;
-
+    // files
     std::string m_input_cnf_file_name{};
     std::string m_output_cnf_file_name{"result.cnf"};
     std::string m_log_file_name{"dp.log"};
     std::string m_metrics_file_name{"metrics.json"};
-
+    // algorithm
     Heuristic m_heuristic{Heuristic::None};
-    StopCondition m_stop_condition{StopCondition::None};
-    float m_max_formula_growth{1.0f};
     AbsorbedRemovalAlgorithm m_absorbed_removal_algorithm{AbsorbedRemovalAlgorithm::WatchedLiterals};
     AbsorbedRemovalCondition m_absorbed_removal_condition{AbsorbedRemovalCondition::FormulaGrowth};
     size_t m_absorbed_removal_interval{0};
     float m_absorbed_removal_growth{1.5};
+    // stop conditions
+    std::optional<size_t> m_max_iterations{};
+    std::optional<float> m_max_formula_growth{};
     std::tuple<size_t, size_t> m_var_range{0, std::numeric_limits<size_t>::max()};
-
+    // sylvan
     std::tuple<uint8_t, uint8_t> m_sylvan_table_size_pow{20, 25};
     std::tuple<uint8_t, uint8_t> m_sylvan_cache_size_pow{20, 25};
     size_t m_lace_threads{0};

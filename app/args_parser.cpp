@@ -12,11 +12,6 @@ static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_ma
         {"simple", ArgsParser::Heuristic::Simple},
 };
 
-static const std::unordered_map<std::string, ArgsParser::StopCondition> stop_condition_map {
-        {"all_variables", ArgsParser::StopCondition::AllVariables},
-        {"growth", ArgsParser::StopCondition::Growth},
-};
-
 static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalAlgorithm> absorbed_removal_algorithm_map {
         {"watched_literals", ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals},
         {"zbdd", ArgsParser::AbsorbedRemovalAlgorithm::ZBDD},
@@ -40,7 +35,7 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    ->multi_option_policy(CLI::MultiOptionPolicy::Reverse);
     app.allow_config_extras(CLI::config_extras_mode::error);
 
-    app.add_option("-i,--input-file", args.m_input_cnf_file_name,
+    app.add_option("input-file", args.m_input_cnf_file_name,
                    "File containing the input formula in DIMACS format")
                    ->group("Files")
                    ->required();
@@ -63,19 +58,7 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
-    app.add_option("-s,--stop-condition", args.m_stop_condition,
-                   "Condition for stopping elimination")
-                   ->group("Algorithm")
-                   ->required()
-                   ->transform(CLI::CheckedTransformer(stop_condition_map,
-                                                       CLI::ignore_case,
-                                                       CLI::ignore_space,
-                                                       CLI::ignore_underscore));
     app.option_defaults()->always_capture_default(true);
-    app.add_option("-g,--max-formula-growth", args.m_max_formula_growth,
-                   "Maximum allowed growth of the number of clauses relative to the input formula"
-                   "; needs max-formula-growth=growth")
-                   ->group("Algorithm");
     app.add_option("--absorbed-removal-algorithm", args.m_absorbed_removal_algorithm,
                    "Algorithm for removing absorbed clauses")
                    ->group("Algorithm")
@@ -100,9 +83,17 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "; needs absorbed-removal-condition=formula_growth")
                     ->group("Algorithm")
                     ->check(CLI::Range(1.0f, 1000.0f));
+
+    app.add_option("-i,--max-iterations", args.m_max_iterations,
+                   "Maximum number of iterations before stopping")
+            ->group("Stop conditions");
+    app.add_option("-g,--max-formula-growth", args.m_max_formula_growth,
+                   "Maximum allowed growth of the number of clauses relative to the input formula"
+                   "; needs max-formula-growth=growth")
+            ->group("Stop conditions");
     app.add_option("-v,--var-range", args.m_var_range,
                    "Range of variables that are allowed to be eliminated")
-                   ->group("Algorithm");
+                   ->group("Stop conditions");
 
     app.add_option("--sylvan-table-size", args.m_sylvan_table_size_pow,
                    "Sylvan table size (default and max) as a base-2 logarithm (20 -> 24 MB)")

@@ -1,10 +1,12 @@
 output-file = "junk/result.cnf"
 log-file = "junk/dp.log"
 metrics-file = "junk/metrics.json"
+
 heuristic = "minimal_bloat"
-stop-condition = "growth"
-max-formula-growth = 1.8
 absorbed-removal-condition = "interval"
 absorbed-removal-interval = 10
+
+max-formula-growth = 1.8
+
 sylvan-table-size = [20, 25] # 24 MB, 768 MB
 sylvan-cache-size = [20, 25] # 36 MB, 1152 MB

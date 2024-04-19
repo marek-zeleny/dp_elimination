@@ -12,28 +12,24 @@
 
 using namespace dp;
 
-bool generic_stop_condition(size_t, const SylvanZddCnf &cnf, size_t, const HeuristicResult &result) {
-    if (cnf.is_empty() || cnf.contains_empty()) {
-        LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
-        return true;
-    } else if (!result.success) {
-        LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
-        return true;
-    } else {
-        return false;
-    }
-}
-
-class GrowthStopCondition {
+class StopCondition {
 public:
-    explicit GrowthStopCondition(size_t orig_cnf_size, float max_growth) :
-            m_max_size(static_cast<size_t>(static_cast<float>(orig_cnf_size) * max_growth)) {}
+    StopCondition(size_t orig_cnf_size, const std::optional<size_t> &max_iterations,
+                  const std::optional<float> &max_growth) :
+            m_max_iterations(max_iterations), m_max_size(get_max_size(orig_cnf_size, max_iterations)) {}
 
     bool operator()(size_t iter, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {
-        if (generic_stop_condition(iter, cnf, cnf_size, result)) {
+        if (cnf.is_empty() || cnf.contains_empty()) {
+            LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
             return true;
-        } else if (cnf_size > m_max_size) {
-            LOG_INFO << "Formula grew too large (" << cnf_size << " > " << m_max_size << "), stopping DP elimination";
+        } else if (!result.success) {
+            LOG_INFO << "Didn't find variable to be eliminated, stopping DP elimination";
+            return true;
+        } else if (m_max_iterations.has_value() && iter > m_max_iterations) {
+            LOG_INFO << "Maximum number of iterations reached (" << iter << "), stopping DP elimination";
+            return true;
+        } else if (m_max_size.has_value() && cnf_size > m_max_size) {
+            LOG_INFO << "Formula grew too large (" << cnf_size << " > " << *m_max_size << "), stopping DP elimination";
             return true;
         } else {
             return false;
@@ -41,7 +37,16 @@ public:
     }
 
 private:
-    const size_t m_max_size;
+    const std::optional<size_t> m_max_iterations;
+    const std::optional<size_t> m_max_size;
+
+    static std::optional<size_t> get_max_size(size_t orig_cnf_size, const std::optional<float> &max_growth) {
+        if (max_growth.has_value()) {
+            return static_cast<size_t>(static_cast<float>(orig_cnf_size) * max_growth.value());
+        } else {
+            return std::nullopt;
+        }
+    }
 };
 
 bool never_absorbed_condition(bool, size_t, size_t, size_t) {
@@ -82,6 +87,8 @@ private:
 
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
     EliminationAlgorithmConfig config;
+    config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_iterations(),
+                                          args.get_max_formula_growth());
 
     switch (args.get_heuristic()) {
         case ArgsParser::Heuristic::Simple:
@@ -103,17 +110,6 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             break;
         default:
             throw std::logic_error("Heuristic not implemented");
-    }
-
-    switch (args.get_stop_condition()) {
-        case ArgsParser::StopCondition::Growth:
-            config.stop_condition = GrowthStopCondition(cnf.count_clauses(), args.get_max_formula_growth());
-            break;
-        case ArgsParser::StopCondition::AllVariables:
-            config.stop_condition = generic_stop_condition;
-            break;
-        default:
-            throw std::logic_error("Stop condition not implemented");
     }
 
     switch (args.get_absorbed_removal_condition()) {
@@ -185,9 +181,7 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
 }
 
 void set_stack_limit(size_t size) {
-    struct rlimit limit;
-    limit.rlim_cur = size;
-    limit.rlim_max = size;
+    rlimit limit{size, size};
     setrlimit(RLIMIT_STACK, &limit);
     if (getrlimit(RLIMIT_STACK, &limit) == 0) {
         std::cout << "Stack limit: " << limit.rlim_cur << " / " << limit.rlim_max << std::endl;
