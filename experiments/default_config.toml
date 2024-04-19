@@ -2,12 +2,6 @@ output-file = "result.cnf"
 log-file = "dp.log"
 metrics-file = "metrics.json"
 
-absorbed-removal-algorithm = "watched_literals"
-absorbed-removal-condition = "formula_growth"
-absorbed-removal-growth = 1.2
-
-max-formula-growth = 1.2
-
 sylvan-table-size = [20, 25] # 24 MB, 768 MB
 sylvan-cache-size = [20, 25] # 36 MB, 1152 MB
-lace-threads = 6
+lace-threads = 4
