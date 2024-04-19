@@ -125,7 +125,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
 
         cnf = eliminate(cnf, result.literal);
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
-                                 static_cast<int64_t>(clauses_count) - static_cast<int64_t>(cnf.count_clauses()));
+                                 static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));
         cnf = unit_propagation(cnf, true);
         clauses_count = cnf.count_clauses();
 
