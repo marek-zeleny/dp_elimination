@@ -163,8 +163,6 @@ elimination_table_keys: list[str] = [
     "SubsetDecomposition",
     "Resolution",
     "Unification",
-    "SubsumedRemoval1",
-    "SubsumedRemoval2",
     "TautologiesRemoval",
 ]
 
@@ -189,12 +187,24 @@ def create_variables_table(metrics: dict) -> pd.DataFrame:
 
 
 def create_absorbed_table(metrics: dict) -> pd.DataFrame:
-    data = [
-        metrics["durations"]["RemoveAbsorbedClausesWithConversion"],
-        metrics["series"]["AbsorbedClausesRemoved"],
-    ]
+    if len(metrics["durations"]["RemoveAbsorbedClauses_Serialize"]) == 0:
+        assert len(metrics["durations"]["RemoveAbsorbedClauses_Build"]) == 0
+        data = [
+            metrics["durations"]["RemoveAbsorbedClauses_Search"],
+            metrics["series"]["AbsorbedClausesRemoved"],
+        ]
+        columns = ["Search", "AbsorbedClausesRemoved"]
+    else:
+        data = [
+            metrics["durations"]["RemoveAbsorbedClauses_Serialize"],
+            metrics["durations"]["RemoveAbsorbedClauses_Search"],
+            metrics["durations"]["RemoveAbsorbedClauses_Build"],
+            metrics["series"]["AbsorbedClausesRemoved"],
+        ]
+        columns = ["Serialize", "Search", "Build", "AbsorbedClausesRemoved"]
     table = pd.DataFrame(data).transpose()
-    table.columns = ["AbsorbedRemovalDuration", "AbsorbedClausesRemoved"]
+    table.columns = columns
+    table.insert(0, "TotalDuration", table.iloc[:, :-1].sum(axis=1))
     if table.empty:
         table.loc[0] = -1
     return table
@@ -213,7 +223,7 @@ def create_zbdd_size_table(metrics: dict) -> pd.DataFrame:
 def get_heuristic_correlation(metrics: dict) -> float:
     data = [
         metrics["series"]["HeuristicScores"],
-        metrics["series"]["EliminatedClauses"],
+        metrics["series"]["ClauseCountDifference"],
     ]
     table = pd.DataFrame(data).transpose()
     if table.empty:
@@ -224,15 +234,17 @@ def get_heuristic_correlation(metrics: dict) -> float:
 
 def create_overall_summary_table(metrics: dict, stages_summary: pd.DataFrame) -> pd.DataFrame:
     data = {
-        "TotalVars": metrics["counters"]["TotalVars"],
+        "InitVars": metrics["counters"]["InitVars"],
+        "FinalVars": metrics["counters"]["FinalVars"],
         "EliminatedVars": metrics["counters"]["EliminatedVars"],
-        "TotalClauses": metrics["counters"]["TotalClauses"],
-        "RemovedClauses": metrics["counters"]["RemovedClauses"],
-        "RemovedAbsorbedClauses": metrics["counters"]["AbsorbedClausesRemovedTotal"],
+        "InitClauses": metrics["series"]["ClauseCounts"][0],
+        "FinalClauses": metrics["series"]["ClauseCounts"][-1],
+        "RemovedUnitLiterals": metrics["counters"]["UnitLiteralsRemoved"],
+        "RemovedAbsorbedClauses": metrics["counters"]["AbsorbedClausesRemoved"],
         "HeuristicCorrelation": get_heuristic_correlation(metrics),
         "ReadDuration": metrics["durations"]["ReadInputFormula"],
         "WriteDuration": metrics["durations"]["WriteOutputFormula"],
-        "TotalDuration": metrics["durations"]["EliminateVars"],
+        "AlgorithmDuration": metrics["durations"]["AlgorithmTotal"],
         "VarSelection": stages_summary["VarSelection"].loc["sum"],
         "Elimination": stages_summary["Elimination"].loc["sum"],
         "AbsorbedRemoval": stages_summary["AbsorbedRemovalDuration"].loc["sum"],
@@ -298,9 +310,13 @@ def create_tables(metrics: dict) -> list[tuple[str, pd.DataFrame, bool]]:
 
     absorbed = create_absorbed_table(metrics)
     absorbed_summary = absorbed.aggregate(aggregation_functions).astype(int, copy=False)
+    tables.append(("absorbed_clauses", absorbed_summary, True))
 
-    stages_summary = pd.concat([elimination_summary["Total"], variables_summary, absorbed_summary], axis=1) \
-                    .rename(columns={"Total": "Elimination"}, index={"part_of_total": "ratio"})
+    stages_summary = pd.concat([
+        elimination_summary[["Total"]].rename(columns={"Total": "Elimination"}),
+        variables_summary,
+        absorbed_summary[["TotalDuration", "AbsorbedClausesRemoved"]].rename(columns={"TotalDuration": "AbsorbedRemovalDuration"})
+    ], axis=1).rename(index={"part_of_total": "ratio"})
     stages_summary.loc["ratio"] //= 100
     tables.append(("algorithm_stages", stages_summary, True))
 
@@ -351,17 +367,38 @@ def get_axes_scaling_factor(ax: plt.Axes) -> tuple[int, str]:
     return int(factor), unit
 
 
-def plot_eliminated_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+def plot_zbdd_size(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     axes = []
     series = metrics["series"]
 
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    ax.plot([-x for x in series["HeuristicScores"]], "blue", label="inverted heuristic score")
-    ax.plot(series["EliminatedClauses"], "orange", label="eliminated clauses")
+    ax.plot(series["ClauseCounts"], "orange", label="clauses")
+    ax.plot(series["NodeCounts"], "red", label="nodes")
 
-    ax.set_title("Eliminated clauses")
+    ax.set_title("ZBDD size")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("count")
+    ax.set_ylim(bottom=0)
+
+    fig.legend(loc="lower left")
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.2)
+    return fig, axes
+
+
+def plot_heuristic_accuracy(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    series = metrics["series"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.plot(series["HeuristicScores"], "blue", label="heuristic score")
+    ax.plot(series["ClauseCountDifference"], "orange", label="clause count difference")
+
+    ax.set_title("Heuristic accuracy")
     ax.set_xlabel("# eliminated variables")
     ax.set_ylabel("(expected) # clauses")
     ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
@@ -369,6 +406,27 @@ def plot_eliminated_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     fig.legend(loc="lower left", ncol=2)
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.2)
+    return fig, axes
+
+
+def plot_unit_literals(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    series = metrics["series"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    ax.plot(series["UnitLiteralsRemoved"], "red", label="unit literals")
+
+    ax.set_title("Unit literals removed")
+    ax.set_xlabel("# eliminated variables")
+    ax.set_ylabel("# literals")
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax.set_ylim(bottom=0)
+
+    fig.legend(loc="lower left")
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.15)
     return fig, axes
 
 
@@ -380,26 +438,25 @@ def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    ax.plot(durations["RemoveAbsorbedClausesWithConversion"], "green", label="duration")
-    factor, unit = get_axes_scaling_factor(ax)
-
+    xticklabels = range(len(absorbed_removed))
     ax.set_title("Removed absorbed clauses")
-    ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel(f"duration ({unit})")
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_xlabel("# invocations")
+    ax.set_ylabel("# absorbed clauses removed")
+    ax.bar(xticklabels, absorbed_removed, color="coral", width=0.4, label="removed clauses")
     ax.set_ylim(bottom=0)
 
     ax: plt.Axes = ax.twinx()
     axes.append(ax)
-    xticklabels = [str(10 * x) for x in range(len(absorbed_removed))]
-    ax.set_ylabel("# absorbed clauses removed")
-    ax.set_yscale("log")
-    ax.bar(xticklabels, absorbed_removed, width=0.8, label="removed absorbed clauses (log)")
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(max(
-        1 if len(xticklabels) < 10 else 2,
-        (len(xticklabels) // 25) * 5
-    )))
-    ax.set_ylim(bottom=0.4)
+    ax.plot(durations["RemoveAbsorbedClauses_Search"], "green", label="search")
+    if len(durations["RemoveAbsorbedClauses_Serialize"]) > 0:
+        assert len(durations["RemoveAbsorbedClauses_Build"]) > 0
+        ax.plot(durations["RemoveAbsorbedClauses_Serialize"], "blue", label="serialize")
+        ax.plot(durations["RemoveAbsorbedClauses_Build"], "cyan", label="build")
+    factor, unit = get_axes_scaling_factor(ax)
+
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
 
     fig.legend(loc="lower left", ncol=2)
     fig.tight_layout()
@@ -407,29 +464,7 @@ def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     return fig, axes
 
 
-def plot_total_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
-    axes = []
-    durations = metrics["durations"]
-
-    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
-    fig, ax = sub
-    axes.append(ax)
-    ax.plot(durations["EliminateVar_Total"], "red", label="elimination")
-    factor, unit = get_axes_scaling_factor(ax)
-
-    ax.set_title("Total duration of elimination")
-    ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel(f"duration ({unit})")
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
-    ax.set_ylim(bottom=0)
-
-    fig.legend(loc="lower left")
-    fig.tight_layout()
-    fig.subplots_adjust(bottom=0.15)
-    return fig, axes
-
-
-def plot_duration_detail(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+def plot_elimination_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     axes = []
     durations = metrics["durations"]
 
@@ -437,14 +472,13 @@ def plot_duration_detail(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     fig, ax = sub
     axes.append(ax)
     ax.plot(durations["EliminateVar_SubsetDecomposition"], "orange", label="subset decomposition")
-    ax.plot(durations["EliminateVar_Resolution"], "blue", label="resolution")
-    ax.plot(durations["EliminateVar_TautologiesRemoval"], "cyan", label="tautologies removal")
-    ax.plot(durations["EliminateVar_SubsumedRemoval1"], "magenta", label="subsumed removal (before unification)")
-    ax.plot(durations["EliminateVar_SubsumedRemoval2"], "brown", label="subsumed removal (after unification)")
+    ax.plot(durations["EliminateVar_Resolution"], "brown", label="resolution")
+    ax.plot(durations["EliminateVar_TautologiesRemoval"], "royalblue", label="tautologies removal")
     ax.plot(durations["EliminateVar_Unification"], "green", label="unification")
+    ax.plot(durations["EliminateVar_Total"], "red", label="total")
     factor, unit = get_axes_scaling_factor(ax)
 
-    ax.set_title("Durations of elimination stages")
+    ax.set_title("Duration of variable elimination")
     ax.set_xlabel("# eliminated variables")
     ax.set_ylabel(f"duration ({unit})")
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
@@ -500,50 +534,29 @@ def plot_write_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     return fig, axes
 
 
-def plot_zbdd_size(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
-    axes = []
-    series = metrics["series"]
-
-    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
-    fig, ax = sub
-    axes.append(ax)
-    ax.plot(series["ClauseCounts"], "orange", label="clauses")
-    ax.plot(series["NodeCounts"], "red", label="nodes")
-
-    ax.set_title("ZBDD size")
-    ax.set_xlabel("# eliminated variables")
-    ax.set_ylabel("count")
-    ax.set_ylim(bottom=0)
-
-    fig.legend(loc="lower left")
-    fig.tight_layout()
-    fig.subplots_adjust(bottom=0.2)
-    return fig, axes
-
-
 def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
     figures = []
 
-    fig_eliminated, _ = plot_eliminated_clauses(metrics)
-    figures.append(("eliminated", fig_eliminated))
+    fig_zbdd_size, _ = plot_zbdd_size(metrics)
+    figures.append(("zbdd_size", fig_zbdd_size))
+
+    fig_eliminated, _ = plot_heuristic_accuracy(metrics)
+    figures.append(("heuristic", fig_eliminated))
+
+    fig_unit_literals, _ = plot_unit_literals(metrics)
+    figures.append(("unit_literals", fig_unit_literals))
 
     fig_absorbed, _ = plot_absorbed_clauses(metrics)
     figures.append(("absorbed", fig_absorbed))
 
-    fig_total_duration, _ = plot_total_duration(metrics)
-    figures.append(("duration_total", fig_total_duration))
-
-    fig_duration_detail, _ = plot_duration_detail(metrics)
-    figures.append(("duration_detail", fig_duration_detail))
+    fig_elimination_duration, _ = plot_elimination_duration(metrics)
+    figures.append(("duration_elimination", fig_elimination_duration))
 
     fig_read_duration, _ = plot_read_duration(metrics)
     figures.append(("duration_read", fig_read_duration))
 
     fig_write_duration, _ = plot_write_duration(metrics)
     figures.append(("duration_write", fig_write_duration))
-
-    fig_zbdd_size, _ = plot_zbdd_size(metrics)
-    figures.append(("zbdd_size", fig_zbdd_size))
 
     return figures
 
