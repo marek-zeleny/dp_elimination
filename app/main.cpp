@@ -1,4 +1,5 @@
 #include <vector>
+#include <chrono>
 #include <stdexcept>
 #include <sys/resource.h>
 #include <sylvan_obj.hpp>
@@ -13,10 +14,14 @@
 using namespace dp;
 
 class StopCondition {
+private:
+    using clock = std::chrono::steady_clock;
+
 public:
     StopCondition(size_t orig_cnf_size, const std::optional<size_t> &max_iterations,
-                  const std::optional<float> &max_growth) :
-            m_max_iterations(max_iterations), m_max_size(get_max_size(orig_cnf_size, max_iterations)) {}
+                  const std::optional<float> &max_growth, const std::optional<size_t> &max_duration_seconds) :
+            m_max_iterations(max_iterations), m_max_size(get_max_size(orig_cnf_size, max_iterations)),
+            m_max_end_time(get_max_end_time(max_duration_seconds)) {}
 
     bool operator()(size_t iter, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {
         if (cnf.is_empty() || cnf.contains_empty()) {
@@ -31,6 +36,9 @@ public:
         } else if (m_max_size.has_value() && cnf_size > m_max_size) {
             LOG_INFO << "Formula grew too large (" << cnf_size << " > " << *m_max_size << "), stopping DP elimination";
             return true;
+        } else if (m_max_end_time.has_value() && clock::now() > m_max_end_time) {
+            LOG_INFO << "Maximum duration time reached, stopping DP elimination";
+            return true;
         } else {
             return false;
         }
@@ -39,10 +47,19 @@ public:
 private:
     const std::optional<size_t> m_max_iterations;
     const std::optional<size_t> m_max_size;
+    const std::optional<clock::time_point> m_max_end_time;
 
     static std::optional<size_t> get_max_size(size_t orig_cnf_size, const std::optional<float> &max_growth) {
         if (max_growth.has_value()) {
             return static_cast<size_t>(static_cast<float>(orig_cnf_size) * max_growth.value());
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    static std::optional<clock::time_point> get_max_end_time(const std::optional<size_t> &max_duration_seconds) {
+        if (max_duration_seconds.has_value()) {
+            return clock::now() + std::chrono::seconds(max_duration_seconds.value());
         } else {
             return std::nullopt;
         }
@@ -88,7 +105,7 @@ private:
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
     EliminationAlgorithmConfig config;
     config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_iterations(),
-                                          args.get_max_formula_growth());
+                                          args.get_max_formula_growth(), args.get_max_duration_seconds());
 
     switch (args.get_heuristic()) {
         case ArgsParser::Heuristic::Simple:

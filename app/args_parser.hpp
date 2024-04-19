@@ -52,6 +52,7 @@ public:
     [[nodiscard]] float get_absorbed_removal_growth() const { return m_absorbed_removal_growth; }
 
     [[nodiscard]] const std::optional<size_t> &get_max_iterations() const { return m_max_iterations; }
+    [[nodiscard]] const std::optional<size_t> &get_max_duration_seconds() const { return m_max_duration_seconds; }
     [[nodiscard]] const std::optional<float> &get_max_formula_growth() const { return m_max_formula_growth; }
     [[nodiscard]] size_t get_min_var() const { return std::get<0>(m_var_range); }
     [[nodiscard]] size_t get_max_var() const { return std::get<1>(m_var_range); }
@@ -85,6 +86,7 @@ private:
     float m_absorbed_removal_growth{1.5};
     // stop conditions
     std::optional<size_t> m_max_iterations{};
+    std::optional<size_t> m_max_duration_seconds{};
     std::optional<float> m_max_formula_growth{};
     std::tuple<size_t, size_t> m_var_range{0, std::numeric_limits<size_t>::max()};
     // sylvan

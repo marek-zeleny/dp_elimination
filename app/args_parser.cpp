@@ -75,22 +75,24 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_underscore));
     app.add_option("--absorbed-removal-interval", args.m_absorbed_removal_interval,
                    "Number of eliminated variables before absorbed clauses are removed"
-                   "; needs absorbed-removal-condition=interval")
+                   "\nneeds absorbed-removal-condition=interval")
                    ->group("Algorithm")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
     app.add_option("--absorbed-removal-growth", args.m_absorbed_removal_growth,
                    "Relative growth of formula before absorbed clauses are removed (must be larger than 1)"
-                   "; needs absorbed-removal-condition=formula_growth")
+                   "\nneeds absorbed-removal-condition=formula_growth")
                     ->group("Algorithm")
                     ->check(CLI::Range(1.0f, 1000.0f));
 
     app.add_option("-i,--max-iterations", args.m_max_iterations,
                    "Maximum number of iterations before stopping")
-            ->group("Stop conditions");
+                   ->group("Stop conditions");
+    app.add_option("-t,--timeout,--max-duration,--max-duration-seconds", args.m_max_duration_seconds,
+                   "Maximum duration (timeout) in seconds (can overshoot, waits until iteration ends)")
+                   ->group("Stop conditions");
     app.add_option("-g,--max-formula-growth", args.m_max_formula_growth,
-                   "Maximum allowed growth of the number of clauses relative to the input formula"
-                   "; needs max-formula-growth=growth")
-            ->group("Stop conditions");
+                   "Maximum allowed growth of the number of clauses relative to the input formula")
+                   ->group("Stop conditions");
     app.add_option("-v,--var-range", args.m_var_range,
                    "Range of variables that are allowed to be eliminated")
                    ->group("Stop conditions");
