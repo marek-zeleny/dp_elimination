@@ -114,7 +114,7 @@ def run_dp_experiments(args):
         if setup_index >= 0 and i != setup_index:
             continue
         command_with_args = [str(dp_path.absolute()),
-                             "--input-file", str(input_formula_path),
+                             str(input_formula_path),
                              "--config", str(default_config_path),
                              "--config", str(setup_config_path),
         ]
