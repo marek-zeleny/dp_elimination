@@ -20,7 +20,7 @@ private:
 public:
     StopCondition(size_t orig_cnf_size, const std::optional<size_t> &max_iterations,
                   const std::optional<float> &max_growth, const std::optional<size_t> &max_duration_seconds) :
-            m_max_iterations(max_iterations), m_max_size(get_max_size(orig_cnf_size, max_iterations)),
+            m_max_iterations(max_iterations), m_max_size(get_max_size(orig_cnf_size, max_growth)),
             m_max_end_time(get_max_end_time(max_duration_seconds)) {}
 
     bool operator()(size_t iter, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {

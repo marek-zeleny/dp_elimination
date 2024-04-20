@@ -19,6 +19,7 @@ SylvanZddCnf unit_propagation_step(const SylvanZddCnf &cnf, const SylvanZddCnf::
 }
 
 SylvanZddCnf unit_propagation(SylvanZddCnf cnf, bool count_metrics) {
+    LOG_DEBUG << "Running unit propagation";
     SylvanZddCnf::Literal l = cnf.get_unit_literal();
     int removed = 0;
     while (l != 0 && !cnf.contains_empty()) {
@@ -30,10 +31,12 @@ SylvanZddCnf unit_propagation(SylvanZddCnf cnf, bool count_metrics) {
         metrics.increase_counter(MetricsCounters::UnitLiteralsRemoved, removed);
         metrics.append_to_series(MetricsSeries::UnitLiteralsRemoved, removed);
     }
+    LOG_DEBUG << "Unit propagation complete, removed " << removed << " unit clauses";
     return cnf;
 }
 
 bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &stop_literal) {
+    LOG_TRACE << "Checking if literal " << stop_literal << " is implied by unit propagation";
     SylvanZddCnf::Literal l = cnf.get_unit_literal();
     while (l != 0) {
         if (l == stop_literal || cnf.contains_empty() || cnf.contains_unit_literal(stop_literal)) {
@@ -79,7 +82,7 @@ bool is_clause_absorbed(const SylvanZddCnf &cnf, const SylvanZddCnf::Clause &cla
             return false;
         }
     }
-    GET_LOG_STREAM_DEBUG(log);
+    GET_LOG_STREAM_TRACE(log);
     log << "found absorbed clause: {";
     for (const auto &l: clause) {
         log << l << ", ";
@@ -148,7 +151,7 @@ bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &cl
             return false;
         }
     }
-    GET_LOG_STREAM_DEBUG(log_stream);
+    GET_LOG_STREAM_TRACE(log_stream);
     log_stream << "found absorbed clause: {";
     for (auto &l: clause) {
         log_stream << l << ", ";
@@ -189,8 +192,10 @@ std::vector<SylvanZddCnf::Clause> remove_absorbed_clauses(const std::vector<Sylv
 
 SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf) {
     if (cnf.is_empty() || cnf.contains_empty()) {
+        LOG_DEBUG << "Empty formula or clause, skipping absorbed detection";
         return cnf;
     }
+    LOG_DEBUG << "Serializing ZDD into vector";
     auto timer_serialize = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Serialize);
     std::vector<SylvanZddCnf::Clause> vector = cnf.to_vector();
     timer_serialize.stop();
@@ -199,6 +204,7 @@ SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf) {
     vector = remove_absorbed_clauses(vector);
     timer_search.stop();
 
+    LOG_DEBUG << "Building ZDD from vector";
     auto timer_build = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Build);
     return SylvanZddCnf::from_vector(vector);
 }

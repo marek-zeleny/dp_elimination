@@ -3,11 +3,36 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <tuple>
 #include <stdexcept>
 #include <limits>
 #include <simple_logger.h>
 
 namespace dp {
+
+static bool skip_line(const std::string &line) {
+    // last condition: when compiling on Linux and reading a Windows file, this deals with CRLF line endings
+    return line.empty() || line[0] == 'c' || (line.length() == 1 && line[0] == '\r');
+}
+
+static std::tuple<size_t, size_t> try_start_reading(const std::string &line, const size_t &line_num) {
+    size_t num_vars;
+    size_t num_clauses;
+    std::istringstream iss(line);
+    std::string token;
+    iss >> token;
+    if (token == "p") {
+        std::string type;
+        if ((iss >> type >> num_vars >> num_clauses) && type == "cnf") { // TODO
+            LOG_INFO << "reading CNF formula with " << num_vars << " variables and " << num_clauses << " clauses";
+            return std::make_tuple(num_vars, num_clauses);
+        } else {
+            throw CnfReader::failure("invalid problem definition (p)", line_num);
+        }
+    } else {
+        throw CnfReader::failure("doesn't contain problem definition (p).", line_num);
+    }
+}
 
 void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
     std::string line;
@@ -16,69 +41,66 @@ void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
     size_t clause_count = 0;
     size_t num_vars;
     size_t num_clauses;
+    size_t percent_size;
     size_t min_var = std::numeric_limits<size_t>::max();
     size_t max_var = std::numeric_limits<size_t>::min();
     size_t line_num = 0;
-    while (std::getline(input, line)) {
-        ++line_num;
-        if (line.empty()) {
-            continue;
-        } else if (line.length() == 1 && line[0] == '\r') {
-            // when compiling on Linux and reading a Windows file, this deals with CRLF line endings
-            continue;
-        } else if (line[0] == 'c') {
-            continue;
-        }
-        if (!started) {
+    {
+        GET_LOG_STREAM_DEBUG(log_progress);
+        while (std::getline(input, line)) {
+            ++line_num;
+            if (skip_line(line)) {
+                continue;
+            }
+            if (!started) {
+                std::tie(num_vars, num_clauses) = try_start_reading(line, line_num);
+                started = true;
+                log_progress << "Tracking reading progress:\n0 % |->";
+                for (int i = 0; i < 96; ++i) {
+                    log_progress << " ";
+                }
+                log_progress << "<-| 100 %\n    |";
+                percent_size = num_clauses / 100;
+            }
             std::istringstream iss(line);
-            std::string token;
-            iss >> token;
-            if (token == "p") {
-                std::string type;
-                if ((iss >> type >> num_vars >> num_clauses) && type == "cnf") { // TODO
-                    started = true;
-                    LOG_INFO << "reading CNF formula with " << num_vars << " variables and " << num_clauses
-                             << " clauses";
-                    continue;
+            Literal literal;
+            while ((iss >> literal)) {
+                if (literal == 0) {
+                    func(curr_clause);
+                    curr_clause.clear();
+                    ++clause_count;
+                    if (clause_count % percent_size == 0) {
+                        log_progress << ".";
+                        log_progress.flush();
+                    }
                 } else {
-                    throw failure("invalid problem definition (p)", line_num);
-                }
-            } else {
-                throw failure("doesn't contain problem definition (p).", line_num);
-            }
-        }
-        std::istringstream iss(line);
-        Literal literal;
-        while ((iss >> literal)) {
-            if (literal == 0) {
-                func(curr_clause);
-                curr_clause.clear();
-                ++clause_count;
-            } else {
-                curr_clause.push_back(literal);
-                auto var = static_cast<size_t>(std::abs(literal));
-                if (var > max_var) {
-                    if (var - min_var > num_vars) {
-                        print_warning("variable outside the range defined in the problem definition (p)", line_num);
-                    } else {
-                        max_var = var;
+                    curr_clause.push_back(literal);
+                    auto var = static_cast<size_t>(std::abs(literal));
+                    if (var > max_var) {
+                        if (var - min_var > num_vars) {
+                            print_warning("variable outside the range defined in the problem definition (p)", line_num);
+                        } else {
+                            max_var = var;
+                        }
                     }
-                }
-                if (var < min_var) {
-                    if (max_var - var > num_vars) {
-                        print_warning("variable outside the range defined in the problem definition (p)", line_num);
-                    } else {
-                        min_var = var;
+                    if (var < min_var) {
+                        if (max_var - var > num_vars) {
+                            print_warning("variable outside the range defined in the problem definition (p)", line_num);
+                        } else {
+                            min_var = var;
+                        }
                     }
                 }
             }
         }
+        // the final 0 might be omitted
+        if (!curr_clause.empty()) {
+            func(curr_clause);
+            ++clause_count;
+        }
+        log_progress << "|";
     }
-    // the final 0 might be omitted
-    if (!curr_clause.empty()) {
-        func(curr_clause);
-        ++clause_count;
-    }
+
     if (clause_count != num_clauses) {
         print_warning("the number of clauses doesn't match the problem definition (p)", line_num);
     }
