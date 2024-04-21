@@ -45,60 +45,51 @@ void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
     size_t min_var = std::numeric_limits<size_t>::max();
     size_t max_var = std::numeric_limits<size_t>::min();
     size_t line_num = 0;
-    {
-        GET_LOG_STREAM_DEBUG(log_progress);
-        while (std::getline(input, line)) {
-            ++line_num;
-            if (skip_line(line)) {
-                continue;
-            }
-            if (!started) {
-                std::tie(num_vars, num_clauses) = try_start_reading(line, line_num);
-                started = true;
-                log_progress << "Tracking reading progress:\n0 % |->";
-                for (int i = 0; i < 96; ++i) {
-                    log_progress << " ";
+    while (std::getline(input, line)) {
+        ++line_num;
+        if (skip_line(line)) {
+            continue;
+        }
+        if (!started) {
+            std::tie(num_vars, num_clauses) = try_start_reading(line, line_num);
+            started = true;
+            percent_size = num_clauses / 100;
+        }
+        std::istringstream iss(line);
+        Literal literal;
+        while ((iss >> literal)) {
+            if (literal == 0) {
+                func(curr_clause);
+                curr_clause.clear();
+                ++clause_count;
+                if (clause_count % percent_size == 0) {
+                    LOG_DEBUG << "Reading progress: " << clause_count << "/" << num_clauses
+                              << " (" << 100 * clause_count / num_clauses << " %)";
                 }
-                log_progress << "<-| 100 %\n    |";
-                percent_size = num_clauses / 100;
-            }
-            std::istringstream iss(line);
-            Literal literal;
-            while ((iss >> literal)) {
-                if (literal == 0) {
-                    func(curr_clause);
-                    curr_clause.clear();
-                    ++clause_count;
-                    if (clause_count % percent_size == 0) {
-                        log_progress << ".";
-                        log_progress.flush();
+            } else {
+                curr_clause.push_back(literal);
+                auto var = static_cast<size_t>(std::abs(literal));
+                if (var > max_var) {
+                    if (var - min_var > num_vars) {
+                        print_warning("variable outside the range defined in the problem definition (p)", line_num);
+                    } else {
+                        max_var = var;
                     }
-                } else {
-                    curr_clause.push_back(literal);
-                    auto var = static_cast<size_t>(std::abs(literal));
-                    if (var > max_var) {
-                        if (var - min_var > num_vars) {
-                            print_warning("variable outside the range defined in the problem definition (p)", line_num);
-                        } else {
-                            max_var = var;
-                        }
-                    }
-                    if (var < min_var) {
-                        if (max_var - var > num_vars) {
-                            print_warning("variable outside the range defined in the problem definition (p)", line_num);
-                        } else {
-                            min_var = var;
-                        }
+                }
+                if (var < min_var) {
+                    if (max_var - var > num_vars) {
+                        print_warning("variable outside the range defined in the problem definition (p)", line_num);
+                    } else {
+                        min_var = var;
                     }
                 }
             }
         }
-        // the final 0 might be omitted
-        if (!curr_clause.empty()) {
-            func(curr_clause);
-            ++clause_count;
-        }
-        log_progress << "|";
+    }
+    // the final 0 might be omitted
+    if (!curr_clause.empty()) {
+        func(curr_clause);
+        ++clause_count;
     }
 
     if (clause_count != num_clauses) {

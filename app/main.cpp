@@ -168,6 +168,7 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
                         args.get_sylvan_cache_size(),
                         args.get_sylvan_cache_max_size());
     sylvan::sylvan_init_zdd();
+    SylvanZddCnf::hook_sylvan_gc_log();
 
     // load input file
     std::string input_file_name = args.get_input_cnf_file_name();

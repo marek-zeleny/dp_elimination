@@ -36,6 +36,7 @@ public:
 
     static SylvanStats get_sylvan_stats();
     static void call_sylvan_gc();
+    static void hook_sylvan_gc_log();
 
     SylvanZddCnf();
     SylvanZddCnf(const SylvanZddCnf &other);

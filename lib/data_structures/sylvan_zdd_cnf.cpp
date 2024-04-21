@@ -29,10 +29,31 @@ SylvanZddCnf::SylvanStats SylvanZddCnf::get_sylvan_stats() {
 }
 
 void SylvanZddCnf::call_sylvan_gc() {
-    LOG_DEBUG << "Calling GC";
+    LOG_DEBUG << "Calling Sylvan GC manually";
     sylvan_clear_cache();
     sylvan_clear_and_mark();
     sylvan_rehash_all();
+}
+
+namespace {
+
+VOID_TASK_0(sylvan_log_before_gc) {
+    auto stats = SylvanZddCnf::get_sylvan_stats();
+    LOG_DEBUG << "Sylvan: calling GC, table usage " << stats.table_filled << "/" << stats.table_total;
+}
+
+VOID_TASK_0(sylvan_log_after_gc) {
+    auto stats = SylvanZddCnf::get_sylvan_stats();
+    LOG_DEBUG << "Sylvan: GC complete, table usage " << stats.table_filled << "/" << stats.table_total;
+}
+
+} // namespace
+
+void SylvanZddCnf::hook_sylvan_gc_log() {
+    if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
+        sylvan_gc_hook_pregc(sylvan_log_before_gc_CALL);
+        sylvan_gc_hook_postgc(sylvan_log_after_gc_CALL);
+    }
 }
 
 SylvanZddCnf::SylvanZddCnf() : m_zdd(zdd_false) {
