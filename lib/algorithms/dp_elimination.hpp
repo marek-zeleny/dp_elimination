@@ -87,6 +87,7 @@ struct EliminationAlgorithmConfig {
 [[nodiscard]]
 inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &config) {
     using unit_propagation::unit_propagation;
+    assert(cnf.verify_variable_ordering());
 
     LOG_INFO << "Starting DP elimination algorithm";
     // initial metrics collection
@@ -103,6 +104,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     auto conditionally_remove_absorbed = [&](bool main_loop) {
         if (config.remove_absorbed_condition(main_loop, iter, last_absorbed_clauses_count, clauses_count)) {
             cnf = config.remove_absorbed_clauses(cnf);
+            assert(cnf.verify_variable_ordering());
             clauses_count = cnf.count_clauses();
             last_absorbed_clauses_count = clauses_count;
         }
@@ -110,6 +112,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
 
     // start by initial unit propagation and removing absorbed clauses
     cnf = unit_propagation(cnf, true);
+    assert(cnf.verify_variable_ordering());
     clauses_count = cnf.count_clauses();
 
     conditionally_remove_absorbed(false);
@@ -124,16 +127,14 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
         cnf = eliminate(cnf, result.literal);
+        assert(cnf.verify_variable_ordering());
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
                                  static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));
         cnf = unit_propagation(cnf, true);
+        assert(cnf.verify_variable_ordering());
         clauses_count = cnf.count_clauses();
 
         conditionally_remove_absorbed(true);
-
-#ifndef NDEBUG // only for debug build
-        SylvanZddCnf::call_sylvan_gc();
-#endif
 
         if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
             auto stats = SylvanZddCnf::get_sylvan_stats();
