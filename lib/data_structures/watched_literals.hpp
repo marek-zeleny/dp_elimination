@@ -25,6 +25,9 @@ public:
                                        const std::unordered_set<size_t> &deactivated_clauses);
     static Assignment negate(const Assignment &a);
 
+    void add_clause(const Clause &clause, bool active = true);
+    void add_clauses(const std::vector<Clause> &clauses, const std::unordered_set<size_t> &deactivated_clauses);
+
     bool contains_empty() const;
     size_t get_assignment_level() const;
     bool assign_value(Literal l);
@@ -63,6 +66,8 @@ private:
     size_t m_empty_count{0};
     size_t m_initial_empty_count{0};
 
+    void init();
+    void add_clause_impl(const Clause &clause, bool active);
     void activate_clause(size_t clause_index, bool skip_if_active);
     void deactivate_clause(size_t clause_index, bool skip_if_not_active);
     bool propagate();

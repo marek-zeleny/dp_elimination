@@ -15,24 +15,9 @@ WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_
     m_variables.resize(m_max_var - m_min_var + 1, {});
     // initialize clauses
     for (size_t i = 0; i < clauses.size(); ++i) {
-        const Clause &c = clauses[i];
-        m_clauses.emplace_back(c);
-        ClauseData &data = m_clauses.back();
-        data.watched1 = 0;
-        data.watched2 = c.size() <= 1 ? 0 : 1;
-        if (deactivated_clauses.contains(i)) {
-            data.is_active = false;
-        } else {
-            activate_clause(i, false);
-        }
+        add_clause_impl(clauses[i], !deactivated_clauses.contains(i));
     }
-    m_empty_count = m_initial_empty_count;
-    m_unit_clauses = m_initial_unit_clauses;
-    // propagate
-    m_stack.emplace_back();
-    if (!contains_empty()) {
-        propagate();
-    }
+    init();
 }
 
 WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var) :
@@ -64,6 +49,29 @@ WatchedLiterals::Assignment WatchedLiterals::negate(const Assignment &a) {
         case Assignment::positive:      return Assignment::negative;
         default: throw std::logic_error("Unexpected enum value");
     }
+}
+
+void WatchedLiterals::add_clause(const dp::WatchedLiterals::Clause &clause, bool active) {
+    // backtrack to empty stack
+    backtrack_to(0);
+    backtrack_impl();
+    assert(m_stack.empty());
+    // add clause and (de)activate
+    add_clause_impl(clause, active);
+    init();
+}
+
+void WatchedLiterals::add_clauses(const std::vector<Clause> &clauses,
+                                  const std::unordered_set<size_t> &deactivated_clauses) {
+    // backtrack to empty stack
+    backtrack_to(0);
+    backtrack_impl();
+    assert(m_stack.empty());
+    // add clauses and (de)activate
+    for (size_t i = 0; i < clauses.size(); ++i) {
+        add_clause_impl(clauses[i], !deactivated_clauses.contains(i));
+    }
+    init();
 }
 
 bool WatchedLiterals::contains_empty() const {
@@ -131,13 +139,7 @@ void WatchedLiterals::change_active_clauses(const std::vector<size_t> &activate_
     for (auto &idx: deactivate_indices) {
         deactivate_clause(idx, true);
     }
-    m_empty_count = m_initial_empty_count;
-    m_unit_clauses = m_initial_unit_clauses;
-    // propagate
-    m_stack.emplace_back();
-    if (!contains_empty()) {
-        propagate();
-    }
+    init();
 }
 
 void WatchedLiterals::print_clauses(std::ostream &os) const {
@@ -168,6 +170,29 @@ void WatchedLiterals::print_stack(std::ostream &os) const {
             os << l << "@" << i << " ";
         }
         ++i;
+    }
+}
+
+void WatchedLiterals::init() {
+    m_empty_count = m_initial_empty_count;
+    m_unit_clauses = m_initial_unit_clauses;
+    // propagate
+    m_stack.emplace_back();
+    if (!contains_empty()) {
+        propagate();
+    }
+}
+
+void WatchedLiterals::add_clause_impl(const dp::WatchedLiterals::Clause &clause, bool active) {
+    const size_t idx = m_clauses.size();
+    m_clauses.emplace_back(clause);
+    ClauseData &data = m_clauses.back();
+    data.watched1 = 0;
+    data.watched2 = clause.size() <= 1 ? 0 : 1;
+    if (active) {
+        activate_clause(idx, false);
+    } else {
+        data.is_active = false;
     }
 }
 
