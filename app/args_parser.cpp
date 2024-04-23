@@ -3,6 +3,7 @@
 #include <utility>
 #include <unordered_map>
 #include <CLI/CLI.hpp>
+#include <simple_logger.h>
 
 // Help message prints them in reversed order
 static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_map {
@@ -121,5 +122,6 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
         app.exit(e);
         return std::nullopt;
     }
+    LOG_INFO << "Used configuration:\n" << app.config_to_str(true, false);
     return std::move(args);
 }
