@@ -36,6 +36,9 @@ SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf);
 [[nodiscard]]
 SylvanZddCnf remove_absorbed_clauses_without_conversion(const SylvanZddCnf &cnf);
 
+[[nodiscard]]
+SylvanZddCnf unify_with_non_absorbed_with_conversion(const SylvanZddCnf &stable, const SylvanZddCnf &checked);
+
 } // namespace absorbed_clause_detection
 
 } // namespace dp

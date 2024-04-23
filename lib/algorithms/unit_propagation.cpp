@@ -210,6 +210,20 @@ SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf) {
     return SylvanZddCnf::from_vector(vector);
 }
 
+SylvanZddCnf unify_with_non_absorbed_with_conversion(const SylvanZddCnf &stable, const SylvanZddCnf &checked) {
+    std::vector<SylvanZddCnf::Clause> clauses = stable.to_vector();
+    auto watched = WatchedLiterals::from_vector(clauses);
+    SylvanZddCnf::ClauseFunction func = [&clauses, &watched](const SylvanZddCnf::Clause &c) {
+        if (is_clause_absorbed(watched, c)) {
+            clauses.emplace_back(c);
+            watched.add_clause(clauses.back());
+        }
+        return true;
+    };
+    checked.for_all_clauses(func);
+    return SylvanZddCnf::from_vector(clauses);
+}
+
 } // namespace absorbed_clause_detection
 
 } // namespace dp
