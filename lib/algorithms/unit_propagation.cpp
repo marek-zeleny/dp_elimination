@@ -28,8 +28,9 @@ std::vector<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool coun
         removed_literals.push_back(l);
     }
     if (count_metrics) {
-        metrics.increase_counter(MetricsCounters::UnitLiteralsRemoved, static_cast<int64_t>(removed_literals.size()));
-        metrics.append_to_series(MetricsSeries::UnitLiteralsRemoved, static_cast<int64_t>(removed_literals.size()));
+        auto count = static_cast<int64_t>(removed_literals.size());
+        metrics.increase_counter(MetricsCounters::UnitLiteralsRemoved, count);
+        metrics.append_to_series(MetricsSeries::UnitLiteralsRemoved, count);
     }
     LOG_DEBUG << "Unit propagation complete, removed " << removed_literals.size() << " unit clauses";
     return removed_literals;
