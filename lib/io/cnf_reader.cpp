@@ -54,6 +54,9 @@ void CnfReader::read_from_stream(std::istream &input, AddClauseFunction &func) {
             std::tie(num_vars, num_clauses) = try_start_reading(line, line_num);
             started = true;
             percent_size = num_clauses / 100;
+            if (percent_size == 0) {
+                percent_size = 1;
+            }
         }
         std::istringstream iss(line);
         Literal literal;
