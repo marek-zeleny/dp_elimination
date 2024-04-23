@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+#include <deque>
 #include <iostream>
 #include <functional>
 #include <memory>
@@ -88,6 +89,24 @@ private:
     ZDD m_zdd;
 
     explicit SylvanZddCnf(ZDD zdd);
+
+    // logarithmic building
+    class LogarithmicBuilder {
+    public:
+        LogarithmicBuilder();
+        ~LogarithmicBuilder();
+
+        void add_clause(const Clause &c);
+        [[nodiscard]] ZDD get_result() const;
+        [[nodiscard]] size_t get_size() const;
+
+    private:
+        using entry = std::tuple<ZDD, size_t>;
+        static constexpr size_t unit_size = 1024;
+        std::deque<entry> m_forest;
+
+        void check_and_merge();
+    };
 
     // helper functions
     static Var literal_to_var(Literal l);

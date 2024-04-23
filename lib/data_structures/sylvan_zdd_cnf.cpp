@@ -98,48 +98,32 @@ bool SylvanZddCnf::verify_variable_ordering() const {
 }
 
 SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
-    ZDD zdd = zdd_false;
-    zdd_refs_pushptr(&zdd);
-    size_t i = 0;
-    for (auto it = clauses.begin(); it != clauses.end(); ++it) {
-        ZDD clause = clause_from_vector(*it);
-        zdd_refs_push(clause);
-        assert(verify_variable_ordering_impl(zdd, 0));
-        assert(verify_variable_ordering_impl(clause, 0));
-        zdd = zdd_or(zdd, clause);
-        zdd_refs_pop(1);
-        assert(std::find(clauses.begin(), it, *it) != it || zdd_satcount(zdd) == ++i);
+    LogarithmicBuilder builder;
+    for (const auto &c : clauses) {
+        builder.add_clause(c);
     }
-    assert(zdd_satcount(zdd) == i);
-    zdd_refs_popptr(1);
+    ZDD zdd = builder.get_result();
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
     auto timer = metrics.get_timer(MetricsDurations::ReadInputFormula);
     size_t clause_count = 0;
-    ZDD zdd = zdd_false;
-    zdd_refs_pushptr(&zdd);
-    CnfReader::AddClauseFunction func = [&zdd, &clause_count](const CnfReader::Clause &c) {
+    LogarithmicBuilder builder;
+    CnfReader::AddClauseFunction func = [&builder, &clause_count](const CnfReader::Clause &c) {
         ++clause_count;
         auto timer = metrics.get_timer(MetricsDurations::ReadFormula_AddClause);
-        ZDD clause = clause_from_vector(c);
-        zdd_refs_push(clause);
-        assert(verify_variable_ordering_impl(zdd, 0));
-        assert(verify_variable_ordering_impl(clause, 0));
-        zdd = zdd_or(zdd, clause);
-        zdd_refs_pop(1);
-        assert(zdd_satcount(zdd) == clause_count);
+        builder.add_clause(c);
     };
     try {
         CnfReader::read_from_file(file_name, func);
     } catch (const CnfReader::failure &f) {
         LOG_ERROR << f.what();
-        zdd_refs_popptr(1);
         throw;
     }
+    ZDD zdd = builder.get_result();
+    assert(builder.get_size() == clause_count);
     assert(zdd_satcount(zdd) == clause_count);
-    zdd_refs_popptr(1);
     return SylvanZddCnf(zdd);
 }
 
@@ -581,6 +565,73 @@ void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
         LOG_ERROR << f.what();
         throw;
     }
+}
+
+SylvanZddCnf::LogarithmicBuilder::LogarithmicBuilder() : m_forest({{zdd_false, 0}}) {
+    zdd_refs_pushptr(&std::get<0>(m_forest.front()));
+}
+
+SylvanZddCnf::LogarithmicBuilder::~LogarithmicBuilder() {
+    zdd_refs_popptr(m_forest.size());
+}
+
+void SylvanZddCnf::LogarithmicBuilder::add_clause(const dp::SylvanZddCnf::Clause &c) {
+    check_and_merge();
+
+    ZDD clause = clause_from_vector(c);
+    zdd_refs_push(clause);
+    auto &top = m_forest.front();
+    ZDD &zdd = std::get<0>(top);
+    size_t &size = std::get<1>(top);
+    assert(verify_variable_ordering_impl(clause, 0));
+    assert(verify_variable_ordering_impl(zdd, 0));
+    zdd = zdd_or(zdd, clause);
+    zdd_refs_pop(1);
+    ++size;
+}
+
+ZDD SylvanZddCnf::LogarithmicBuilder::get_result() const {
+    ZDD result = zdd_false;
+    for (const auto &level : m_forest) {
+        result = zdd_or(result, std::get<0>(level));
+    }
+    return result;
+}
+
+size_t SylvanZddCnf::LogarithmicBuilder::get_size() const {
+    size_t result = 0;
+    for (const auto &level : m_forest) {
+        result += std::get<1>(level);
+    }
+    return result;
+}
+
+void SylvanZddCnf::LogarithmicBuilder::check_and_merge() {
+    auto [top_zdd, top_size] = m_forest.front();
+    if (top_size < unit_size) {
+        // top level not saturated, nothing to merge
+        return;
+    }
+    assert(top_size == unit_size);
+    while (m_forest.size() > 1) {
+        auto &prev = m_forest[1];
+        size_t &prev_size = std::get<1>(prev);
+        if (prev_size > top_size) {
+            // previous tree is on a lower level, shift and insert a new top level
+            break;
+        }
+        // top tree and previous tree are neighbouring levels, merge them and continue loop
+        assert(prev_size == top_size);
+        ZDD &prev_zdd = std::get<0>(prev);
+        prev_zdd = zdd_or(prev_zdd, top_zdd);
+        prev_size += top_size;
+        zdd_refs_popptr(1);
+        m_forest.pop_front();
+        top_zdd = prev_zdd;
+        top_size = prev_size;
+    }
+    m_forest.emplace_front(zdd_false, 0);
+    zdd_refs_pushptr(&std::get<0>(m_forest.front()));
 }
 
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
