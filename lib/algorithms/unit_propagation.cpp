@@ -12,27 +12,27 @@ namespace dp {
 namespace unit_propagation {
 
 // Unit propagation on ZDD
-SylvanZddCnf unit_propagation_step(const SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal) {
+void unit_propagation_step(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal) {
     SylvanZddCnf without_l = cnf.subset0(unit_literal);
     SylvanZddCnf with_not_l = cnf.subset1(-unit_literal);
-    return without_l.unify(with_not_l);
+    cnf = without_l.unify(with_not_l);
 }
 
-SylvanZddCnf unit_propagation(SylvanZddCnf cnf, bool count_metrics) {
+std::vector<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool count_metrics) {
     LOG_DEBUG << "Running unit propagation";
+    std::vector<SylvanZddCnf::Literal> removed_literals;
     SylvanZddCnf::Literal l = cnf.get_unit_literal();
-    int removed = 0;
     while (l != 0 && !cnf.contains_empty()) {
-        cnf = unit_propagation_step(cnf, l);
+        unit_propagation_step(cnf, l);
         l = cnf.get_unit_literal();
-        ++removed;
+        removed_literals.push_back(l);
     }
     if (count_metrics) {
-        metrics.increase_counter(MetricsCounters::UnitLiteralsRemoved, removed);
-        metrics.append_to_series(MetricsSeries::UnitLiteralsRemoved, removed);
+        metrics.increase_counter(MetricsCounters::UnitLiteralsRemoved, static_cast<int64_t>(removed_literals.size()));
+        metrics.append_to_series(MetricsSeries::UnitLiteralsRemoved, static_cast<int64_t>(removed_literals.size()));
     }
-    LOG_DEBUG << "Unit propagation complete, removed " << removed << " unit clauses";
-    return cnf;
+    LOG_DEBUG << "Unit propagation complete, removed " << removed_literals.size() << " unit clauses";
+    return removed_literals;
 }
 
 bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &stop_literal) {
@@ -44,7 +44,7 @@ bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Lit
         } else if (l == -stop_literal || cnf.contains_unit_literal(-stop_literal)) {
             return false;
         }
-        cnf = unit_propagation_step(cnf, l);
+        unit_propagation_step(cnf, l);
         l = cnf.get_unit_literal();
     }
     return false;
@@ -71,7 +71,7 @@ bool is_clause_absorbed(const SylvanZddCnf &cnf, const SylvanZddCnf::Clause &cla
             if (l == tested_literal) {
                 continue;
             }
-            curr = unit_propagation_step(curr, -l);
+            unit_propagation_step(curr, -l);
             if (unit_propagation_implies_literal(curr, tested_literal)) {
                 assert(curr.contains_empty() || curr.contains_unit_literal(tested_literal));
                 is_empowered = false;

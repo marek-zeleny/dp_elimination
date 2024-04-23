@@ -17,6 +17,7 @@ using AbsorbedCondition_f = std::function<bool(bool in_main_loop, size_t iterati
         size_t cnf_size)>;
 using ClauseModifier_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
 using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
+using IsAllowedVariable_f = std::function<bool(uint32_t var)>;
 
 [[nodiscard]]
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
@@ -82,6 +83,7 @@ struct EliminationAlgorithmConfig {
     StopCondition_f stop_condition;
     AbsorbedCondition_f remove_absorbed_condition;
     ClauseModifier_f remove_absorbed_clauses;
+    IsAllowedVariable_f is_allowed_variable;
 };
 
 [[nodiscard]]
@@ -111,7 +113,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     };
 
     // start by initial unit propagation and removing absorbed clauses
-    cnf = unit_propagation(cnf, true);
+    std::vector<SylvanZddCnf::Literal> removed_unit_literals = unit_propagation(cnf, true);
     assert(cnf.verify_variable_ordering());
     clauses_count = cnf.count_clauses();
 
@@ -130,7 +132,8 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         assert(cnf.verify_variable_ordering());
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
                                  static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));
-        cnf = unit_propagation(cnf, true);
+        auto removed_literals = unit_propagation(cnf, true);
+        removed_unit_literals.insert(removed_unit_literals.end(), removed_literals.begin(), removed_literals.end());
         assert(cnf.verify_variable_ordering());
         clauses_count = cnf.count_clauses();
 
@@ -153,6 +156,18 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
 
     // clean up by removing absorbed clauses
     conditionally_remove_absorbed(false);
+
+    // re-insert removed unit clauses
+    std::vector<SylvanZddCnf::Clause> returned_clauses;
+    for (const auto &literal : removed_unit_literals) {
+        if (!config.is_allowed_variable(std::abs(literal))) {
+            returned_clauses.push_back({literal});
+        }
+    }
+    if (!returned_clauses.empty()) {
+        auto returned = SylvanZddCnf::from_vector(returned_clauses);
+        cnf = cnf.unify(returned);
+    }
 
     // final metrics collection
     timer.stop();

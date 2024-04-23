@@ -10,11 +10,9 @@ namespace dp {
 
 namespace unit_propagation {
 
-[[nodiscard]]
-SylvanZddCnf unit_propagation_step(const SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal);
+void unit_propagation_step(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal);
 
-[[nodiscard]]
-SylvanZddCnf unit_propagation(SylvanZddCnf cnf, bool count_metrics = false);
+std::vector<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool count_metrics = false);
 
 [[nodiscard]]
 bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &stop_literal);

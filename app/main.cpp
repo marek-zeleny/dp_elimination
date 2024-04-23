@@ -102,10 +102,24 @@ private:
     const float m_max_growth;
 };
 
+class AllowedVariablePredicate {
+public:
+    AllowedVariablePredicate(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
+
+    bool operator()(const size_t &var) {
+        return m_min_var <= var && var <= m_max_var;
+    }
+
+private:
+    const size_t m_min_var;
+    const size_t m_max_var;
+};
+
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
     EliminationAlgorithmConfig config;
     config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_iterations(),
                                           args.get_max_formula_growth(), args.get_max_duration_seconds());
+    config.is_allowed_variable = AllowedVariablePredicate(args.get_min_var(), args.get_max_var());
 
     switch (args.get_heuristic()) {
         case ArgsParser::Heuristic::Simple:
