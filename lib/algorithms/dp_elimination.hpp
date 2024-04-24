@@ -20,7 +20,6 @@ using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
 using IsAllowedVariable_f = std::function<bool(uint32_t var)>;
 
 inline SylvanZddCnf default_union(const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
-    auto timer = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
     return zdd1.unify(zdd2);
 }
 
@@ -50,7 +49,9 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     timer_tautologies.stop();
 
     LOG_DEBUG << "Union";
+    auto timer_unify = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
     SylvanZddCnf result = unify(without_l, no_tautologies);
+    timer_unify.stop();
 
     return result;
 }
@@ -93,21 +94,6 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     metrics.increase_counter(MetricsCounters::InitVars, count_vars(cnf));
     auto timer = metrics.get_timer(MetricsDurations::AlgorithmTotal);
 
-    // helper lambda function for removing absorbed clauses
-    size_t last_absorbed_clauses_count = 0;
-    size_t iter = 0;
-    BinaryOperation_f conditional_union = [&](const SylvanZddCnf &without_literal, const SylvanZddCnf &resolved) {
-        size_t clauses_sum = without_literal.count_clauses() + resolved.count_clauses();
-        if (config.remove_absorbed_condition(iter, last_absorbed_clauses_count, clauses_sum)) {
-            SylvanZddCnf result = config.unify_with_non_absorbed(without_literal, resolved);
-            last_absorbed_clauses_count = result.count_clauses();
-            return result;
-        } else {
-            auto timer = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
-            return without_literal.unify(resolved);
-        }
-    };
-
     log_zdd_stats(cnf.count_clauses(), cnf.count_nodes(), cnf.count_depth());
 
     // start by initial unit propagation
@@ -119,12 +105,13 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
     HeuristicResult result = config.heuristic(cnf);
     timer_heuristic1.stop();
+    size_t iter = 0;
 
     // eliminate variables until a stop condition is met
     while (!config.stop_condition(iter, cnf, clauses_count, result)) {
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
-        cnf = eliminate(cnf, result.literal, conditional_union);
+        cnf = eliminate(cnf, result.literal, config.unify_with_non_absorbed);
         assert(cnf.verify_variable_ordering());
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
                                  static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));
