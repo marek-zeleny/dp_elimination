@@ -158,12 +158,14 @@ bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &cl
             return false;
         }
     }
-    GET_LOG_STREAM_TRACE(log_stream);
-    log_stream << "found absorbed clause: {";
-    for (auto &l: clause) {
-        log_stream << l << ", ";
+    if constexpr (simple_logger::Log<simple_logger::LogLevel::Trace>::isActive) {
+        GET_LOG_STREAM_TRACE(log_stream);
+        log_stream << "found absorbed clause: {";
+        for (auto &l: clause) {
+            log_stream << l << ", ";
+        }
+        log_stream << "}";
     }
-    log_stream << "}";
     return true;
 }
 
@@ -217,16 +219,34 @@ SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf) {
 }
 
 SylvanZddCnf unify_with_non_absorbed_with_conversion(const SylvanZddCnf &stable, const SylvanZddCnf &checked) {
+    if (checked.is_empty()) {
+        return stable;
+    }
+    LOG_DEBUG << "Serializing ZDD into vector of watched literals";
+    auto timer_serialize = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Serialize);
     std::vector<SylvanZddCnf::Clause> clauses = stable.to_vector();
     auto watched = WatchedLiterals::from_vector(clauses);
-    SylvanZddCnf::ClauseFunction func = [&clauses, &watched](const SylvanZddCnf::Clause &c) {
-        if (is_clause_absorbed(watched, c)) {
+    timer_serialize.stop();
+
+    size_t total_count = 0;
+    size_t added_count = 0;
+    SylvanZddCnf::ClauseFunction func = [&clauses, &watched, &total_count, &added_count](const SylvanZddCnf::Clause &c) {
+        ++total_count;
+        if (!is_clause_absorbed(watched, c)) {
+            ++added_count;
             clauses.emplace_back(c);
             watched.add_clause(clauses.back());
         }
         return true;
     };
+
+    LOG_INFO << "Incrementally checking for absorbed clauses";
+    auto timer_search = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Search);
     checked.for_all_clauses(func);
+    timer_search.stop();
+    LOG_INFO << "Unified with " << added_count << "/" << total_count << " clauses, the rest were absorbed";
+
+    LOG_DEBUG << "Building ZDD from vector";
     return SylvanZddCnf::from_vector(clauses);
 }
 

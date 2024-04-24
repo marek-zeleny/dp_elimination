@@ -64,6 +64,14 @@ inline long count_vars(const SylvanZddCnf &cnf) {
     return var_count;
 }
 
+inline void log_zdd_stats(const size_t &num_clauses, const size_t &num_nodes, const size_t &depth) {
+    if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
+        auto stats = SylvanZddCnf::get_sylvan_stats();
+        LOG_DEBUG << "Sylvan table usage: " << stats.table_filled << "/" << stats.table_total;
+    }
+    LOG_INFO << "ZDD size - clauses: " << num_clauses << ", nodes: " << num_nodes << ", depth: " << depth;
+}
+
 struct EliminationAlgorithmConfig {
     Heuristic_f heuristic;
     StopCondition_f stop_condition;
@@ -100,6 +108,8 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         }
     };
 
+    log_zdd_stats(cnf.count_clauses(), cnf.count_nodes(), cnf.count_depth());
+
     // start by initial unit propagation
     std::vector<SylvanZddCnf::Literal> removed_unit_literals = unit_propagation(cnf, true);
     assert(cnf.verify_variable_ordering());
@@ -123,12 +133,8 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         assert(cnf.verify_variable_ordering());
         clauses_count = cnf.count_clauses();
 
-        if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
-            auto stats = SylvanZddCnf::get_sylvan_stats();
-            LOG_DEBUG << "Sylvan table usage: " << stats.table_filled << "/" << stats.table_total;
-        }
-        LOG_INFO << "ZDD size - clauses: " << clauses_count << ", nodes: " << cnf.count_nodes()
-                 << ", depth: " << cnf.count_depth();
+        log_zdd_stats(clauses_count, cnf.count_nodes(), cnf.count_depth());
+
         metrics.append_to_series(MetricsSeries::ClauseCounts, static_cast<int64_t>(clauses_count));
         metrics.append_to_series(MetricsSeries::NodeCounts, static_cast<int64_t>(cnf.count_nodes()));
 
