@@ -110,6 +110,7 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
 
     try {
         app.parse(argc, argv);
+        args.m_config_string = app.config_to_str(true, false);
         if (args.get_min_var() > args.get_max_var()) {
             throw CLI::ValidationError("--var-range",
                                        "Minimum variable to be eliminated (" +
@@ -122,6 +123,5 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
         app.exit(e);
         return std::nullopt;
     }
-    LOG_INFO << "Used configuration:\n" << app.config_to_str(true, false);
     return std::move(args);
 }

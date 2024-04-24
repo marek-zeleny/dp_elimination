@@ -40,6 +40,8 @@ public:
         FormulaGrowth,
     };
 
+    [[nodiscard]] const std::string &get_config_string() const { return m_config_string; }
+
     [[nodiscard]] const std::string &get_input_cnf_file_name() const { return m_input_cnf_file_name; }
     [[nodiscard]] const std::string &get_output_cnf_file_name() const { return m_output_cnf_file_name; }
     [[nodiscard]] const std::string &get_log_file_name() const { return m_log_file_name; }
@@ -73,6 +75,8 @@ public:
 
 private:
     ArgsParser() = default;
+
+    std::string m_config_string;
     // files
     std::string m_input_cnf_file_name{};
     std::string m_output_cnf_file_name{"result.cnf"};

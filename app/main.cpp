@@ -228,6 +228,7 @@ int main(int argc, char *argv[])
     if (!args->get_log_file_name().empty()) {
         simple_logger::Config::logFileName = args->get_log_file_name();
     }
+    LOG_INFO << "Used configuration:\n" << args->get_config_string();
 
     // initialize Lace
     size_t n_workers = args->get_lace_threads();
