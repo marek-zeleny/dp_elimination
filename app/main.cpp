@@ -66,7 +66,7 @@ private:
     }
 };
 
-bool never_absorbed_condition(bool, size_t, size_t, size_t) {
+bool never_absorbed_condition(size_t, size_t, size_t) {
     return false;
 }
 
@@ -74,12 +74,8 @@ class IntervalAbsorbedCondition {
 public:
     explicit IntervalAbsorbedCondition(size_t interval) : m_interval(interval) {}
 
-    bool operator()(bool main_loop, size_t iter, size_t, size_t) const {
-        if (main_loop) {
-            return iter % m_interval == m_interval - 1;
-        } else {
-            return iter % m_interval != m_interval - 1;
-        }
+    bool operator()(size_t iter, size_t, size_t) const {
+        return iter % m_interval == m_interval - 1;
     }
 
 private:
@@ -90,12 +86,8 @@ class GrowthAbsorbedCondition {
 public:
     explicit GrowthAbsorbedCondition(float max_growth) : m_max_growth(max_growth) {}
 
-    bool operator()(bool main_loop, size_t, size_t prev_size, size_t size) const {
-        if (main_loop) {
-            return static_cast<float>(size) > static_cast<float>(prev_size) * m_max_growth;
-        } else {
-            return size > prev_size;
-        }
+    bool operator()(size_t, size_t prev_size, size_t size) const {
+        return static_cast<float>(size) > static_cast<float>(prev_size) * m_max_growth;
     }
 
 private:
@@ -159,10 +151,12 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
 
     switch (args.get_absorbed_removal_algorithm()) {
         case ArgsParser::AbsorbedRemovalAlgorithm::ZBDD:
-            config.remove_absorbed_clauses = absorbed_clause_detection::remove_absorbed_clauses_without_conversion;
-            break;
+            //config.unify_with_non_absorbed = absorbed_clause_detection::remove_absorbed_clauses_without_conversion;
+            //break;
+            throw std::logic_error("Absorbed removal algorithm not implemented");
         case ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals:
-            config.remove_absorbed_clauses = absorbed_clause_detection::remove_absorbed_clauses_with_conversion;
+            config.unify_with_non_absorbed =
+                    absorbed_clause_detection::with_conversion::unify_with_non_absorbed_with_conversion;
             break;
         default:
             throw std::logic_error("Absorbed removal algorithm not implemented");

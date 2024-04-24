@@ -21,11 +21,20 @@ bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Lit
 
 namespace absorbed_clause_detection {
 
-[[nodiscard]]
-bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause);
+namespace without_conversion {
 
 [[nodiscard]]
 bool is_clause_absorbed(const SylvanZddCnf &cnf, const SylvanZddCnf::Clause &clause);
+
+[[nodiscard]]
+SylvanZddCnf remove_absorbed_clauses_without_conversion(const SylvanZddCnf &cnf);
+
+} // namespace without_conversion
+
+namespace with_conversion {
+
+[[nodiscard]]
+bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause);
 
 [[nodiscard]]
 std::vector<SylvanZddCnf::Clause> remove_absorbed_clauses(const std::vector<SylvanZddCnf::Clause> &clauses);
@@ -34,10 +43,9 @@ std::vector<SylvanZddCnf::Clause> remove_absorbed_clauses(const std::vector<Sylv
 SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf);
 
 [[nodiscard]]
-SylvanZddCnf remove_absorbed_clauses_without_conversion(const SylvanZddCnf &cnf);
-
-[[nodiscard]]
 SylvanZddCnf unify_with_non_absorbed_with_conversion(const SylvanZddCnf &stable, const SylvanZddCnf &checked);
+
+} // namespace with_conversion
 
 } // namespace absorbed_clause_detection
 

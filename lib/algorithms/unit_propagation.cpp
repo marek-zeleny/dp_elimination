@@ -9,9 +9,9 @@
 
 namespace dp {
 
+// Unit propagation on ZDD
 namespace unit_propagation {
 
-// Unit propagation on ZDD
 void unit_propagation_step(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal) {
     SylvanZddCnf without_l = cnf.subset0(unit_literal);
     SylvanZddCnf with_not_l = cnf.subset1(-unit_literal);
@@ -56,6 +56,8 @@ bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Lit
 namespace absorbed_clause_detection {
 
 // Absorbed clause detection on ZDD
+namespace without_conversion {
+
 bool is_clause_absorbed(const SylvanZddCnf &cnf, const SylvanZddCnf::Clause &clause) {
     using namespace unit_propagation;
 
@@ -114,7 +116,11 @@ SylvanZddCnf remove_absorbed_clauses_without_conversion(const SylvanZddCnf &cnf)
     return output;
 }
 
+} // namespace without_conversion
+
 // Absorbed clause detection on watched literals
+namespace with_conversion {
+
 bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause) {
     if (formula.contains_empty()) {
         return false;
@@ -223,6 +229,8 @@ SylvanZddCnf unify_with_non_absorbed_with_conversion(const SylvanZddCnf &stable,
     checked.for_all_clauses(func);
     return SylvanZddCnf::from_vector(clauses);
 }
+
+} // namespace with_conversion
 
 } // namespace absorbed_clause_detection
 

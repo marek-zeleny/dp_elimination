@@ -13,14 +13,20 @@ namespace dp {
 
 using StopCondition_f = std::function<bool(size_t iteration, const SylvanZddCnf &cnf, size_t cnf_size,
         const HeuristicResult &result)>;
-using AbsorbedCondition_f = std::function<bool(bool in_main_loop, size_t iteration, size_t prev_cnf_size,
-        size_t cnf_size)>;
-using ClauseModifier_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
+using AbsorbedCondition_f = std::function<bool(size_t iteration, size_t prev_cnf_size, size_t cnf_size)>;
+using UnaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
+using BinaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &op1, const SylvanZddCnf &op2)>;
 using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
 using IsAllowedVariable_f = std::function<bool(uint32_t var)>;
 
+inline SylvanZddCnf default_union(const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
+    auto timer = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
+    return zdd1.unify(zdd2);
+}
+
 [[nodiscard]]
-inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l) {
+inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l,
+                              const BinaryOperation_f &unify = default_union) {
     LOG_INFO << "Eliminating literal " << l;
     metrics.increase_counter(MetricsCounters::EliminatedVars);
     metrics.append_to_series(MetricsSeries::EliminatedLiterals, std::abs(l));
@@ -44,29 +50,9 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
     timer_tautologies.stop();
 
     LOG_DEBUG << "Union";
-    auto timer_unification = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
-    SylvanZddCnf result = no_tautologies.unify(without_l);
-    timer_unification.stop();
+    SylvanZddCnf result = unify(without_l, no_tautologies);
 
     return result;
-}
-
-inline bool is_sat(SylvanZddCnf set, const Heuristic_f &heuristic = heuristics::SimpleHeuristic()) {
-    LOG_INFO << "Starting DP elimination algorithm";
-    while (true) {
-        {
-            GET_LOG_STREAM_DEBUG(log_stream);
-            log_stream << "CNF:\n";
-            set.print_clauses(log_stream);
-        }
-        if (set.is_empty()) {
-            return true;
-        } else if (set.contains_empty()) {
-            return false;
-        }
-        HeuristicResult result = heuristic(set);
-        set = eliminate(set, result.literal);
-    }
 }
 
 inline long count_vars(const SylvanZddCnf &cnf) {
@@ -82,7 +68,7 @@ struct EliminationAlgorithmConfig {
     Heuristic_f heuristic;
     StopCondition_f stop_condition;
     AbsorbedCondition_f remove_absorbed_condition;
-    ClauseModifier_f remove_absorbed_clauses;
+    BinaryOperation_f unify_with_non_absorbed;
     IsAllowedVariable_f is_allowed_variable;
 };
 
@@ -100,24 +86,24 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     auto timer = metrics.get_timer(MetricsDurations::AlgorithmTotal);
 
     // helper lambda function for removing absorbed clauses
-    size_t clauses_count;
     size_t last_absorbed_clauses_count = 0;
     size_t iter = 0;
-    auto conditionally_remove_absorbed = [&](bool main_loop) {
-        if (config.remove_absorbed_condition(main_loop, iter, last_absorbed_clauses_count, clauses_count)) {
-            cnf = config.remove_absorbed_clauses(cnf);
-            assert(cnf.verify_variable_ordering());
-            clauses_count = cnf.count_clauses();
-            last_absorbed_clauses_count = clauses_count;
+    BinaryOperation_f conditional_union = [&](const SylvanZddCnf &without_literal, const SylvanZddCnf &resolved) {
+        size_t clauses_sum = without_literal.count_clauses() + resolved.count_clauses();
+        if (config.remove_absorbed_condition(iter, last_absorbed_clauses_count, clauses_sum)) {
+            SylvanZddCnf result = config.unify_with_non_absorbed(without_literal, resolved);
+            last_absorbed_clauses_count = result.count_clauses();
+            return result;
+        } else {
+            auto timer = metrics.get_timer(MetricsDurations::EliminateVar_Unification);
+            return without_literal.unify(resolved);
         }
     };
 
-    // start by initial unit propagation and removing absorbed clauses
+    // start by initial unit propagation
     std::vector<SylvanZddCnf::Literal> removed_unit_literals = unit_propagation(cnf, true);
     assert(cnf.verify_variable_ordering());
-    clauses_count = cnf.count_clauses();
-
-    conditionally_remove_absorbed(false);
+    size_t clauses_count = cnf.count_clauses();
 
     // prepare for main loop
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
@@ -128,7 +114,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     while (!config.stop_condition(iter, cnf, clauses_count, result)) {
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
-        cnf = eliminate(cnf, result.literal);
+        cnf = eliminate(cnf, result.literal, conditional_union);
         assert(cnf.verify_variable_ordering());
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
                                  static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));
@@ -136,8 +122,6 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         removed_unit_literals.insert(removed_unit_literals.end(), removed_literals.begin(), removed_literals.end());
         assert(cnf.verify_variable_ordering());
         clauses_count = cnf.count_clauses();
-
-        conditionally_remove_absorbed(true);
 
         if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
             auto stats = SylvanZddCnf::get_sylvan_stats();
@@ -153,9 +137,6 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         timer_heuristic2.stop();
         ++iter;
     }
-
-    // clean up by removing absorbed clauses
-    conditionally_remove_absorbed(false);
 
     // re-insert removed unit clauses
     std::vector<SylvanZddCnf::Clause> returned_clauses;

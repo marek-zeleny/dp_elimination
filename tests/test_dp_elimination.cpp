@@ -41,22 +41,3 @@ TEST_CASE("SylvanZddCnf eliminate operation", "[dp elimination]") {
 //        CHECK(result == expected);
 //    }
 }
-
-TEST_CASE("SylvanZddCnf is_sat algorithm", "[dp elimination]") {
-    using namespace dp;
-
-    SECTION("Check satisfiability of unsatisfiable formula") {
-        SylvanZddCnf cnf = SylvanZddCnf::from_vector({
-            {1},
-            {-1},
-        });
-        CHECK_FALSE(is_sat(cnf));
-    }
-
-    SECTION("Check satisfiability of satisfiable formula") {
-        SylvanZddCnf cnf = SylvanZddCnf::from_vector({
-            {1, 2},
-        });
-        CHECK(is_sat(cnf));
-    }
-}
