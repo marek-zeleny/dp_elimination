@@ -201,3 +201,76 @@ TEST_CASE("remove_absorbed_clauses algorithm", "[absorbed clause detection]") {
         CHECK(result.size() == clauses.size());
     }
 }
+
+TEST_CASE("unify_with_non_absorbed algorithm", "[absorbed clause detection]") {
+    namespace without = dp::absorbed_clause_detection::without_conversion;
+    namespace with = dp::absorbed_clause_detection::with_conversion;
+    using namespace dp;
+
+    std::vector<std::vector<int32_t>> clauses_stable = {
+            {1, -2},
+            {-3, 4},
+    };
+    auto cnf_stable = SylvanZddCnf::from_vector(clauses_stable);
+
+    SECTION("No absorbed clauses") {
+        std::vector<std::vector<int32_t>> clauses_checked = {
+                {-1, 2, 3},
+        };
+        auto cnf_checked = SylvanZddCnf::from_vector(clauses_checked);
+        auto result = with::unify_with_non_absorbed(cnf_stable, cnf_checked);
+        auto expected = SylvanZddCnf::from_vector({
+            {1, -2},
+            {-3, 4},
+            {-1, 2, 3},
+        });
+        CHECK(result == expected);
+    }
+
+    SECTION("Single absorbed clause") {
+        std::vector<std::vector<int32_t>> clauses_checked = {
+                {-1, 2, 3},
+                {1, -2, 3}, // absorbed
+        };
+        auto cnf_checked = SylvanZddCnf::from_vector(clauses_checked);
+        auto result = with::unify_with_non_absorbed(cnf_stable, cnf_checked);
+        auto expected = SylvanZddCnf::from_vector({
+            {1, -2},
+            {-3, 4},
+            {-1, 2, 3},
+        });
+        CHECK(result == expected);
+    }
+
+    SECTION("Multiple absorbed clauses") {
+        std::vector<std::vector<int32_t>> clauses_checked = {
+                {1, -2, 3},     // absorbed
+                {-1, 2},
+                {-1, 2, -4},    // absorbed
+        };
+        auto cnf_checked = SylvanZddCnf::from_vector(clauses_checked);
+        auto result = with::unify_with_non_absorbed(cnf_stable, cnf_checked);
+        auto expected = SylvanZddCnf::from_vector({
+            {1, -2},
+            {-3, 4},
+            {-1, 2},
+        });
+        CHECK(result == expected);
+    }
+
+    SECTION("All clauses absorbed") {
+        std::vector<std::vector<int32_t>> clauses_checked = {
+                {1, -2},        // absorbed
+                {1, 2, -3, 4},  // absorbed
+                {1, -2, 3, -4}, // absorbed
+        };
+        auto cnf_checked = SylvanZddCnf::from_vector(clauses_checked);
+        auto result = with::unify_with_non_absorbed(cnf_stable, cnf_checked);
+        auto expected = SylvanZddCnf::from_vector({
+            {1, -2},
+            {-3, 4},
+        });
+        CHECK(result == expected);
+    }
+
+}
