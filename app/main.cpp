@@ -155,8 +155,8 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             //break;
             throw std::logic_error("Absorbed removal algorithm not implemented");
         case ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals:
-            config.unify_with_non_absorbed =
-                    absorbed_clause_detection::with_conversion::unify_with_non_absorbed_with_conversion;
+            config.remove_absorbed_clauses = absorbed_clause_detection::with_conversion::remove_absorbed_clauses;
+            config.unify_with_non_absorbed = absorbed_clause_detection::with_conversion::unify_with_non_absorbed;
             break;
         default:
             throw std::logic_error("Absorbed removal algorithm not implemented");
