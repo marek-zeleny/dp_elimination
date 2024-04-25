@@ -11,7 +11,7 @@ TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
     std::vector<WatchedLiterals::Clause> clauses = {clause1, clause2, clause3};
 
     SECTION("Initialization and basic assignments") {
-        WatchedLiterals wl(clauses, 1, 3);
+        WatchedLiterals wl(clauses, 3);
 
         CHECK(wl.get_assignment_level() == 0);
         CHECK(wl.assign_value(1));
@@ -23,14 +23,14 @@ TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
     SECTION("Handling of unit clauses") {
         WatchedLiterals::Clause unitClause = {4};
         clauses.push_back(unitClause);
-        WatchedLiterals wl(clauses, 1, 4);
+        WatchedLiterals wl(clauses, 4);
 
         CHECK(wl.contains_empty() == false);
         CHECK(wl.get_assignment(4) == Assignment::positive);
     }
 
     SECTION("Conflict detection") {
-        WatchedLiterals wl(clauses, 1, 3);
+        WatchedLiterals wl(clauses, 3);
 
         CHECK(wl.assign_value(2));
         CHECK_FALSE(wl.assign_value(-3));
@@ -38,7 +38,7 @@ TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
     }
 
     SECTION("Proper backtracking") {
-        WatchedLiterals wl(clauses, 1, 3);
+        WatchedLiterals wl(clauses, 3);
         CHECK(wl.assign_value(1));
         CHECK(wl.assign_value(-3));
 
@@ -51,7 +51,7 @@ TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
     }
 
     SECTION("Backtracking to a specific level") {
-        WatchedLiterals wl(clauses, 1, 3);
+        WatchedLiterals wl(clauses, 3);
         CHECK(wl.assign_value(1));
         CHECK(wl.assign_value(-3));
 
@@ -63,7 +63,7 @@ TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
 
     SECTION("Activation and deactivation of clauses") {
         std::unordered_set<size_t> deactivated = {2};
-        WatchedLiterals wl(clauses, 1, 3, deactivated);
+        WatchedLiterals wl(clauses, 3, deactivated);
 
         // Initially, clause3 should not affect the assignments
         CHECK(wl.assign_value(2));
@@ -95,7 +95,7 @@ TEST_CASE("WatchedLiterals operations", "[WatchedLiterals]") {
     SECTION("Empty clause as input") {
         WatchedLiterals::Clause emptyClause = {};
         clauses.push_back(emptyClause);
-        WatchedLiterals wl(clauses, 1, 5);
+        WatchedLiterals wl(clauses, 5);
 
         CHECK(wl.contains_empty());
         // Assigning a value now shouldn't work
