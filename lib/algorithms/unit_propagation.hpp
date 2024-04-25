@@ -27,7 +27,7 @@ namespace without_conversion {
 bool is_clause_absorbed(const SylvanZddCnf &cnf, const SylvanZddCnf::Clause &clause);
 
 [[nodiscard]]
-SylvanZddCnf remove_absorbed_clauses_without_conversion(const SylvanZddCnf &cnf);
+SylvanZddCnf remove_absorbed_clauses(const SylvanZddCnf &cnf);
 
 } // namespace without_conversion
 
@@ -37,13 +37,13 @@ namespace with_conversion {
 bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause);
 
 [[nodiscard]]
-std::vector<SylvanZddCnf::Clause> remove_absorbed_clauses(const std::vector<SylvanZddCnf::Clause> &clauses);
+std::vector<SylvanZddCnf::Clause> remove_absorbed_clauses_impl(const std::vector<SylvanZddCnf::Clause> &clauses);
 
 [[nodiscard]]
-SylvanZddCnf remove_absorbed_clauses_with_conversion(const SylvanZddCnf &cnf);
+SylvanZddCnf remove_absorbed_clauses(const SylvanZddCnf &cnf);
 
 [[nodiscard]]
-SylvanZddCnf unify_with_non_absorbed_with_conversion(const SylvanZddCnf &stable, const SylvanZddCnf &checked);
+SylvanZddCnf unify_with_non_absorbed(const SylvanZddCnf &stable, const SylvanZddCnf &checked);
 
 } // namespace with_conversion
 

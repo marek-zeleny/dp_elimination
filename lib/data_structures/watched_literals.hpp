@@ -16,8 +16,8 @@ public:
         unassigned = 0, negative = -1, positive = 1
     };
 
-    WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var);
-    WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var,
+    WatchedLiterals(const std::vector<Clause> &clauses, size_t max_var);
+    WatchedLiterals(const std::vector<Clause> &clauses, size_t max_var,
                     const std::unordered_set<size_t> &deactivated_clauses);
 
     static WatchedLiterals from_vector(const std::vector<Clause> &clauses);
@@ -56,7 +56,6 @@ private:
         Assignment assignment{Assignment::unassigned};
     };
 
-    const size_t m_min_var;
     const size_t m_max_var;
     std::vector<ClauseData> m_clauses;
     std::vector<VarData> m_variables;
@@ -76,6 +75,8 @@ private:
     void backtrack_impl();
 
     size_t get_var_index(Literal l) const;
+
+    static size_t find_max_var(const std::vector<Clause> &clauses);
 };
 
 } // namespace dp

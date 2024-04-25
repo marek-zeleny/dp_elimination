@@ -1,6 +1,5 @@
 #include "data_structures/watched_literals.hpp"
 
-#include <limits>
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
@@ -8,11 +7,11 @@
 
 namespace dp {
 
-WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var,
+WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t max_var,
                                  const std::unordered_set<size_t> &deactivated_clauses) :
-        m_min_var(min_var), m_max_var(max_var), m_empty_count(0) {
+        m_max_var(max_var), m_empty_count(0) {
     // initialize variables
-    m_variables.resize(m_max_var - m_min_var + 1, {});
+    m_variables.resize(m_max_var, {});
     // initialize clauses
     for (size_t i = 0; i < clauses.size(); ++i) {
         add_clause_impl(clauses[i], !deactivated_clauses.contains(i));
@@ -20,22 +19,13 @@ WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_
     init();
 }
 
-WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t min_var, size_t max_var) :
-        WatchedLiterals(clauses, min_var, max_var, {}) {}
+WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t max_var) :
+        WatchedLiterals(clauses, max_var, {}) {}
 
 WatchedLiterals WatchedLiterals::from_vector(const std::vector<Clause> &clauses,
                                              const std::unordered_set<size_t> &deactivated_clauses) {
-    size_t min_var = std::numeric_limits<size_t>::max();
-    size_t max_var = std::numeric_limits<size_t>::min();
-    for (auto &clause: clauses) {
-        for (auto &literal: clause) {
-            assert(literal != 0);
-            size_t var = std::abs(literal);
-            min_var = std::min(min_var, var);
-            max_var = std::max(max_var, var);
-        }
-    }
-    return {clauses, min_var, max_var, deactivated_clauses};
+    size_t max_var = find_max_var(clauses);
+    return {clauses, max_var, deactivated_clauses};
 }
 
 WatchedLiterals WatchedLiterals::from_vector(const std::vector<Clause> &clauses) {
@@ -56,6 +46,11 @@ void WatchedLiterals::add_clause(const dp::WatchedLiterals::Clause &clause, bool
     backtrack_to(0);
     backtrack_impl();
     assert(m_stack.empty());
+    // add new variables if needed
+    size_t max_var = find_max_var({clause});
+    if (max_var > m_variables.size()) {
+        m_variables.resize(max_var, {});
+    }
     // add clause and (de)activate
     add_clause_impl(clause, active);
     init();
@@ -67,6 +62,11 @@ void WatchedLiterals::add_clauses(const std::vector<Clause> &clauses,
     backtrack_to(0);
     backtrack_impl();
     assert(m_stack.empty());
+    // add new variables if needed
+    size_t max_var = find_max_var(clauses);
+    if (max_var > m_variables.size()) {
+        m_variables.resize(max_var, {});
+    }
     // add clauses and (de)activate
     for (size_t i = 0; i < clauses.size(); ++i) {
         add_clause_impl(clauses[i], !deactivated_clauses.contains(i));
@@ -364,9 +364,21 @@ void WatchedLiterals::backtrack_impl() {
 }
 
 size_t WatchedLiterals::get_var_index(Literal l) const {
-    size_t idx = std::abs(l) - m_min_var;
+    size_t idx = std::abs(l) - 1; // 0 variable doesn't exist
     assert(idx < m_variables.size());
     return idx;
+}
+
+size_t WatchedLiterals::find_max_var(const std::vector<Clause> &clauses) {
+    size_t max_var = 0;
+    for (auto &clause: clauses) {
+        for (auto &literal: clause) {
+            assert(literal != 0);
+            size_t var = std::abs(literal);
+            max_var = std::max(max_var, var);
+        }
+    }
+    return max_var;
 }
 
 } // namespace dp
