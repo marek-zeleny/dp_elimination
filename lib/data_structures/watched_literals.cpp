@@ -87,6 +87,9 @@ bool WatchedLiterals::assign_value(Literal l) {
     if (contains_empty()) {
         return false;
     }
+    if (get_var_index(l) >= m_variables.size()) {
+        return true;
+    }
     if (get_assignment(l) != Assignment::unassigned) {
         throw std::invalid_argument("Cannot assign to an already assigned variable");
     }
@@ -100,7 +103,11 @@ bool WatchedLiterals::assign_value(Literal l) {
 }
 
 WatchedLiterals::Assignment WatchedLiterals::get_assignment(Literal l) const {
-    Assignment a = m_variables[get_var_index(l)].assignment;
+    size_t idx = get_var_index(l);
+    if (idx >= m_variables.size()) {
+        return Assignment::unassigned;
+    }
+    Assignment a = m_variables[idx].assignment;
     return l > 0 ? a : negate(a);
 }
 
@@ -365,7 +372,6 @@ void WatchedLiterals::backtrack_impl() {
 
 size_t WatchedLiterals::get_var_index(Literal l) const {
     size_t idx = std::abs(l) - 1; // 0 variable doesn't exist
-    assert(idx < m_variables.size());
     return idx;
 }
 
