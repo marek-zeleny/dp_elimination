@@ -202,9 +202,35 @@ def create_absorbed_table(metrics: dict) -> pd.DataFrame:
             metrics["series"]["AbsorbedClausesRemoved"],
         ]
         columns = ["Serialize", "Search", "Build", "AbsorbedClausesRemoved"]
+
     table = pd.DataFrame(data).transpose()
     table.columns = columns
-    table.insert(0, "TotalDuration", table.iloc[:, :-1].sum(axis=1))
+    table.insert(0, "TotalDuration", table.iloc[:-1].sum(axis=1))
+    if table.empty:
+        table.loc[0] = -1
+    return table
+
+
+def create_incremental_absorbed_table(metrics: dict) -> pd.DataFrame:
+    if len(metrics["durations"]["IncrementalAbsorbedRemoval_Serialize"]) == 0:
+        assert len(metrics["durations"]["IncrementalAbsorbedRemoval_Build"]) == 0
+        data = [
+            metrics["durations"]["IncrementalAbsorbedRemoval_Search"],
+            metrics["series"]["AbsorbedClausesNotAdded"],
+        ]
+        columns = ["Search", "AbsorbedClausesNotAdded"]
+    else:
+        data = [
+            metrics["durations"]["IncrementalAbsorbedRemoval_Serialize"],
+            metrics["durations"]["IncrementalAbsorbedRemoval_Search"],
+            metrics["durations"]["IncrementalAbsorbedRemoval_Build"],
+            metrics["series"]["AbsorbedClausesNotAdded"],
+        ]
+        columns = ["Serialize", "Search", "Build", "AbsorbedClausesNotAdded"]
+
+    table = pd.DataFrame(data).transpose()
+    table.columns = columns
+    table.insert(0, "TotalDuration", table.iloc[:-1].sum(axis=1))
     if table.empty:
         table.loc[0] = -1
     return table
@@ -310,7 +336,10 @@ def create_tables(metrics: dict) -> list[tuple[str, pd.DataFrame, bool]]:
 
     absorbed = create_absorbed_table(metrics)
     absorbed_summary = absorbed.aggregate(aggregation_functions).astype(int, copy=False)
-    tables.append(("absorbed_clauses", absorbed_summary, True))
+    incremental_absorbed = create_incremental_absorbed_table(metrics)
+    incremental_summary = incremental_absorbed.aggregate(aggregation_functions).astype(int, copy=False)
+    absorbed_and_incremental_absorbed_summary = absorbed_summary.join(incremental_summary, lsuffix="_Removed", rsuffix="_Incremental")
+    tables.append(("absorbed_clauses", absorbed_and_incremental_absorbed_summary, True))
 
     stages_summary = pd.concat([
         elimination_summary[["Total"]].rename(columns={"Total": "Elimination"}),
@@ -464,6 +493,40 @@ def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     return fig, axes
 
 
+def plot_incremental_absorbed(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
+    axes = []
+    absorbed_not_added = metrics["series"]["AbsorbedClausesNotAdded"]
+    durations = metrics["durations"]
+
+    sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
+    fig, ax = sub
+    axes.append(ax)
+    xticklabels = range(len(absorbed_not_added))
+    ax.set_title("Incremental absorbed clause removal")
+    ax.set_xlabel("# invocations")
+    ax.set_ylabel("# absorbed clauses not added")
+    ax.bar(xticklabels, absorbed_not_added, color="coral", width=0.4, label="absorbed clauses")
+    ax.set_ylim(bottom=0)
+
+    ax: plt.Axes = ax.twinx()
+    axes.append(ax)
+    ax.plot(durations["IncrementalAbsorbedRemoval_Search"], "green", label="search")
+    if len(durations["IncrementalAbsorbedRemoval_Serialize"]) > 0:
+        assert len(durations["IncrementalAbsorbedRemoval_Build"]) > 0
+        ax.plot(durations["IncrementalAbsorbedRemoval_Serialize"], "blue", label="serialize")
+        ax.plot(durations["IncrementalAbsorbedRemoval_Build"], "cyan", label="build")
+    factor, unit = get_axes_scaling_factor(ax)
+
+    ax.set_ylabel(f"duration ({unit})")
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_ylim(bottom=0)
+
+    fig.legend(loc="lower left", ncol=2)
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.2)
+    return fig, axes
+
+
 def plot_elimination_duration(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     axes = []
     durations = metrics["durations"]
@@ -548,6 +611,9 @@ def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
 
     fig_absorbed, _ = plot_absorbed_clauses(metrics)
     figures.append(("absorbed", fig_absorbed))
+
+    fig_incremental_absorbed, _ = plot_incremental_absorbed(metrics)
+    figures.append(("incremental_absorbed", fig_incremental_absorbed))
 
     fig_elimination_duration, _ = plot_elimination_duration(metrics)
     figures.append(("duration_elimination", fig_elimination_duration))
