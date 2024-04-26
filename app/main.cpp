@@ -206,11 +206,16 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     return 0;
 }
 
-void set_stack_limit(size_t size) {
+void set_lace_stack_limit(size_t size = 0) {
     rlimit limit{size, size};
-    setrlimit(RLIMIT_STACK, &limit);
+    // if a size is given, set the limit manually
+    if (size > 0) {
+        setrlimit(RLIMIT_STACK, &limit);
+    }
+    // get stack limit and give it to Lace
     if (getrlimit(RLIMIT_STACK, &limit) == 0) {
-        std::cout << "Stack limit: " << limit.rlim_cur << " / " << limit.rlim_max << std::endl;
+        lace_set_stacksize(limit.rlim_cur);
+        LOG_INFO << "Stack limit: " << limit.rlim_cur << " / " << limit.rlim_max;
     } else {
         throw std::runtime_error("Couldn't obtain stack limit");
     }
@@ -231,6 +236,7 @@ int main(int argc, char *argv[])
     LOG_INFO << "Used configuration:\n" << args->get_config_string();
 
     // initialize Lace
+    set_lace_stack_limit();
     size_t n_workers = args->get_lace_threads();
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);
