@@ -14,6 +14,7 @@ enum class MetricsCounters : uint8_t {
     EliminatedVars,
     RemoveAbsorbedClausesCallCount,
     AbsorbedClausesRemoved,
+    AbsorbedClausesNotAdded,
     UnitLiteralsRemoved,
     Last = UnitLiteralsRemoved,
 };
@@ -24,6 +25,7 @@ inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> c
     "EliminatedVars",
     "RemoveAbsorbedClausesCallCount",
     "AbsorbedClausesRemoved",
+    "AbsorbedClausesNotAdded",
     "UnitLiteralsRemoved",
 };
 
@@ -35,6 +37,7 @@ enum class MetricsSeries : uint8_t {
     HeuristicScores,
     ClauseCountDifference,
     AbsorbedClausesRemoved,
+    AbsorbedClausesNotAdded,
     UnitLiteralsRemoved,
     Last = UnitLiteralsRemoved,
 };
@@ -46,6 +49,7 @@ inline const std::array<std::string, to_underlying(MetricsSeries::Last) + 1> ser
         "HeuristicScores",
         "ClauseCountDifference",
         "AbsorbedClausesRemoved",
+        "AbsorbedClausesNotAdded",
         "UnitLiteralsRemoved",
 };
 
@@ -59,6 +63,9 @@ enum class MetricsDurations : uint8_t {
     RemoveAbsorbedClauses_Serialize,
     RemoveAbsorbedClauses_Search,
     RemoveAbsorbedClauses_Build,
+    IncrementalAbsorbedRemoval_Serialize,
+    IncrementalAbsorbedRemoval_Search,
+    IncrementalAbsorbedRemoval_Build,
     VarSelection,
     EliminateVar_Total,
     EliminateVar_SubsetDecomposition,
@@ -77,6 +84,9 @@ inline const std::array<std::string, to_underlying(MetricsDurations::Last) + 1> 
     "RemoveAbsorbedClauses_Serialize",
     "RemoveAbsorbedClauses_Search",
     "RemoveAbsorbedClauses_Build",
+    "IncrementalAbsorbedRemoval_Serialize",
+    "IncrementalAbsorbedRemoval_Search",
+    "IncrementalAbsorbedRemoval_Build",
     "VarSelection",
     "EliminateVar_Total",
     "EliminateVar_SubsetDecomposition",

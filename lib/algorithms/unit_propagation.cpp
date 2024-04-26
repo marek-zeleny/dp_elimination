@@ -226,7 +226,7 @@ SylvanZddCnf unify_with_non_absorbed(const SylvanZddCnf &stable, const SylvanZdd
         return stable.unify(SylvanZddCnf::from_vector({{}}));
     }
     LOG_DEBUG << "Serializing ZDD into vector of watched literals";
-    auto timer_serialize = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Serialize);
+    auto timer_serialize = metrics.get_timer(MetricsDurations::IncrementalAbsorbedRemoval_Serialize);
     std::vector<SylvanZddCnf::Clause> clauses = stable.to_vector();
     auto watched = WatchedLiterals::from_vector(clauses);
     timer_serialize.stop();
@@ -243,13 +243,17 @@ SylvanZddCnf unify_with_non_absorbed(const SylvanZddCnf &stable, const SylvanZdd
     };
 
     LOG_INFO << "Incrementally checking for absorbed clauses";
-    auto timer_search = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Search);
+    auto timer_search = metrics.get_timer(MetricsDurations::IncrementalAbsorbedRemoval_Search);
     checked.for_all_clauses(func);
     timer_search.stop();
     LOG_INFO << "Unified with " << added_clauses.size() << "/" << total_count << " clauses, the rest were absorbed";
 
+    const auto removed_count = static_cast<int64_t>(total_count - added_clauses.size());
+    metrics.increase_counter(MetricsCounters::AbsorbedClausesNotAdded, removed_count);
+    metrics.append_to_series(MetricsSeries::AbsorbedClausesNotAdded, removed_count);
+
     LOG_DEBUG << "Building ZDD from vector";
-    auto timer_build = metrics.get_timer(MetricsDurations::RemoveAbsorbedClauses_Build);
+    auto timer_build = metrics.get_timer(MetricsDurations::IncrementalAbsorbedRemoval_Build);
     clauses.insert(clauses.end(), added_clauses.begin(), added_clauses.end());
     return SylvanZddCnf::from_vector(clauses);
 }
