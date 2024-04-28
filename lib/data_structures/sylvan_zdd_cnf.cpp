@@ -5,6 +5,7 @@
 #include <stack>
 #include <unordered_set>
 #include <unordered_map>
+#include <bit>
 #include <stdexcept>
 #include <cstdlib>
 #include <cstdio>
@@ -591,6 +592,8 @@ void SylvanZddCnf::LogarithmicBuilder::add_clause(const dp::SylvanZddCnf::Clause
 }
 
 ZDD SylvanZddCnf::LogarithmicBuilder::get_result() const {
+    LOG_DEBUG << "Getting result from logarithmic ZDD builder, unifying " << m_forest.size() << " trees at "
+              << std::bit_width(std::get<1>(m_forest.back()) / unit_size) << " levels";
     ZDD result = zdd_false;
     for (const auto &level : m_forest) {
         result = zdd_or(result, std::get<0>(level));
