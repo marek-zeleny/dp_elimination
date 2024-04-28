@@ -98,7 +98,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     log_zdd_stats(cnf.count_clauses(), cnf.count_nodes(), cnf.count_depth());
 
     // start by initial unit propagation
-    std::vector<SylvanZddCnf::Literal> removed_unit_literals = unit_propagation(cnf, true);
+    std::unordered_set<SylvanZddCnf::Literal> removed_unit_literals = unit_propagation(cnf, true);
     assert(cnf.verify_variable_ordering());
     size_t clauses_count = cnf.count_clauses();
 
@@ -128,8 +128,8 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         assert(cnf.verify_variable_ordering());
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
                                  static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));
-        auto removed_literals = unit_propagation(cnf, true);
-        removed_unit_literals.insert(removed_unit_literals.end(), removed_literals.begin(), removed_literals.end());
+        auto implied_literals = unit_propagation(cnf, true);
+        removed_unit_literals.merge(implied_literals);
         assert(cnf.verify_variable_ordering());
         clauses_count = cnf.count_clauses();
 

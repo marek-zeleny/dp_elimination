@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <concepts>
+#include <unordered_set>
 
 #include "data_structures/watched_literals.hpp"
 #include "data_structures/sylvan_zdd_cnf.hpp"
@@ -12,10 +12,7 @@ namespace unit_propagation {
 
 void unit_propagation_step(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal);
 
-std::vector<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool count_metrics = false);
-
-[[nodiscard]]
-bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &stop_literal);
+std::unordered_set<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool count_metrics = false);
 
 } // namespace unit_propagation
 

@@ -15,41 +15,27 @@ namespace unit_propagation {
 
 void unit_propagation_step(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &unit_literal) {
     SylvanZddCnf without_l = cnf.subset0(unit_literal);
-    SylvanZddCnf with_not_l = cnf.subset1(-unit_literal);
-    cnf = without_l.unify(with_not_l);
+    SylvanZddCnf without_l_and_not_l = without_l.subset0(-unit_literal);
+    SylvanZddCnf without_l_with_not_l = without_l.subset1(-unit_literal);
+    cnf = without_l_and_not_l.unify(without_l_with_not_l);
 }
 
-std::vector<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool count_metrics) {
+std::unordered_set<SylvanZddCnf::Literal> unit_propagation(SylvanZddCnf &cnf, bool count_metrics) {
     LOG_DEBUG << "Running unit propagation";
-    std::vector<SylvanZddCnf::Literal> removed_literals;
+    std::unordered_set<SylvanZddCnf::Literal> implied_literals;
     SylvanZddCnf::Literal l = cnf.get_unit_literal();
     while (l != 0 && !cnf.contains_empty()) {
         unit_propagation_step(cnf, l);
-        removed_literals.push_back(l);
+        implied_literals.insert(l);
         l = cnf.get_unit_literal();
     }
     if (count_metrics) {
-        auto count = static_cast<int64_t>(removed_literals.size());
+        auto count = static_cast<int64_t>(implied_literals.size());
         metrics.increase_counter(MetricsCounters::UnitLiteralsRemoved, count);
         metrics.append_to_series(MetricsSeries::UnitLiteralsRemoved, count);
     }
-    LOG_DEBUG << "Unit propagation complete, removed " << removed_literals.size() << " unit clauses";
-    return std::move(removed_literals);
-}
-
-bool unit_propagation_implies_literal(SylvanZddCnf &cnf, const SylvanZddCnf::Literal &stop_literal) {
-    LOG_TRACE << "Checking if literal " << stop_literal << " is implied by unit propagation";
-    SylvanZddCnf::Literal l = cnf.get_unit_literal();
-    while (l != 0) {
-        if (l == stop_literal || cnf.contains_empty() || cnf.contains_unit_literal(stop_literal)) {
-            return true;
-        } else if (l == -stop_literal || cnf.contains_unit_literal(-stop_literal)) {
-            return false;
-        }
-        unit_propagation_step(cnf, l);
-        l = cnf.get_unit_literal();
-    }
-    return false;
+    LOG_DEBUG << "Unit propagation complete, implied " << implied_literals.size() << " unit literals";
+    return std::move(implied_literals);
 }
 
 } // namespace unit_propagation
@@ -60,38 +46,48 @@ namespace absorbed_clause_detection {
 namespace without_conversion {
 
 bool is_clause_absorbed(const SylvanZddCnf &cnf, const SylvanZddCnf::Clause &clause) {
-    using namespace unit_propagation;
+    namespace up = unit_propagation;
 
     if (cnf.contains_empty()) {
-        return false;
+        return true;
     }
+    SylvanZddCnf init_cnf = cnf;
+    const std::unordered_set<SylvanZddCnf::Literal> init_implied_literals = up::unit_propagation(init_cnf);
     for (const auto &tested_literal: clause) {
-        SylvanZddCnf curr = cnf;
-        if (unit_propagation_implies_literal(curr, tested_literal)) {
+        if (init_implied_literals.contains(tested_literal)) {
             continue;
         }
+        SylvanZddCnf curr = init_cnf;
+        std::unordered_set<SylvanZddCnf::Literal> implied_literals = init_implied_literals;
         bool is_empowered = true;
         for (const auto &l: clause) {
-            if (l == tested_literal) {
+            if (l == tested_literal || implied_literals.contains(-l)) {
                 continue;
-            }
-            unit_propagation_step(curr, -l);
-            if (unit_propagation_implies_literal(curr, tested_literal)) {
-                assert(curr.contains_empty() || curr.contains_unit_literal(tested_literal));
+            } else if (implied_literals.contains(l)) {
                 is_empowered = false;
                 break;
             }
+            up::unit_propagation_step(curr, -l);
+            implied_literals.insert(-l);
+            auto curr_implied = up::unit_propagation(curr);
+            if (curr.contains_empty() || curr_implied.contains(tested_literal)) {
+                is_empowered = false;
+                break;
+            }
+            implied_literals.merge(curr_implied);
         }
         if (is_empowered) {
             return false;
         }
     }
-    GET_LOG_STREAM_TRACE(log);
-    log << "found absorbed clause: {";
-    for (const auto &l: clause) {
-        log << l << ", ";
+    if constexpr (simple_logger::Log<simple_logger::LogLevel::Trace>::isActive) {
+        GET_LOG_STREAM_TRACE(log_stream);
+        log_stream << "found absorbed clause: {";
+        for (auto &l: clause) {
+            log_stream << l << ", ";
+        }
+        log_stream << "}";
     }
-    log << "}";
     return true;
 }
 
@@ -124,17 +120,17 @@ namespace with_conversion {
 
 bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause) {
     if (formula.contains_empty()) {
-        return false;
+        return true;
     }
-    for (auto &literal: clause) {
+    for (auto &tested_literal: clause) {
         formula.backtrack_to(0);
         // First we need to check if the potentially empowered literal is already positive
-        if (formula.get_assignment(literal) == WatchedLiterals::Assignment::positive) {
+        if (formula.get_assignment(tested_literal) == WatchedLiterals::Assignment::positive) {
             continue;
         }
         bool is_empowered = true;
         for (auto &l: clause) {
-            if (l == literal) {
+            if (l == tested_literal) {
                 continue;
             }
             WatchedLiterals::Assignment a = formula.get_assignment(-l);
@@ -145,12 +141,7 @@ bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &cl
                 continue;
             }
             bool empty_clause_created = !formula.assign_value(-l);
-            if (empty_clause_created) {
-                assert(formula.contains_empty());
-                is_empowered = false;
-                break;
-            }
-            if (formula.get_assignment(literal) == WatchedLiterals::Assignment::positive) {
+            if (empty_clause_created || formula.get_assignment(tested_literal) == WatchedLiterals::Assignment::positive) {
                 is_empowered = false;
                 break;
             }
