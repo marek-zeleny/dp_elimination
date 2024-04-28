@@ -78,6 +78,7 @@ struct EliminationAlgorithmConfig {
     StopCondition_f stop_condition;
     AbsorbedCondition_f remove_absorbed_condition;
     UnaryOperation_f remove_absorbed_clauses;
+    AbsorbedCondition_f incrementally_remove_absorbed_condition;
     BinaryOperation_f unify_with_non_absorbed;
     IsAllowedVariable_f is_allowed_variable;
 };
@@ -115,6 +116,15 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         }
     };
 
+    // helper lambda function for incrementally removing absorbed clauses (during union)
+    auto conditional_union = [&config, &iter](const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
+        if (config.incrementally_remove_absorbed_condition(iter, zdd1.count_clauses(), zdd2.count_clauses())) {
+            return config.unify_with_non_absorbed(zdd1, zdd2);
+        } else {
+            return zdd1.unify(zdd2);
+        }
+    };
+
     // prepare for main loop
     auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
     HeuristicResult result = config.heuristic(cnf);
@@ -122,9 +132,10 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
 
     // eliminate variables until a stop condition is met
     while (!config.stop_condition(iter, cnf, clauses_count, result)) {
+        LOG_INFO << "Starting iteration #" << iter;
         metrics.append_to_series(MetricsSeries::HeuristicScores, result.score);
 
-        cnf = eliminate(cnf, result.literal, config.unify_with_non_absorbed);
+        cnf = eliminate(cnf, result.literal, conditional_union);
         assert(cnf.verify_variable_ordering());
         metrics.append_to_series(MetricsSeries::ClauseCountDifference,
                                  static_cast<int64_t>(cnf.count_clauses()) - static_cast<int64_t>(clauses_count));

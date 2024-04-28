@@ -82,16 +82,28 @@ private:
     const size_t m_interval;
 };
 
-class GrowthAbsorbedCondition {
+class RelativeSizeAbsorbedCondition {
 public:
-    explicit GrowthAbsorbedCondition(float max_growth) : m_max_growth(max_growth) {}
+    explicit RelativeSizeAbsorbedCondition(float ratio) : m_ratio(ratio) {}
 
-    bool operator()(size_t, size_t prev_size, size_t size) const {
-        return static_cast<float>(size) > static_cast<float>(prev_size) * m_max_growth;
+    bool operator()(size_t, size_t size1, size_t size2) const {
+        return static_cast<float>(size2) > static_cast<float>(size1) * m_ratio;
     }
 
 private:
-    const float m_max_growth;
+    const float m_ratio;
+};
+
+class AbsoluteSizeAbsorbedCondition {
+public:
+    explicit AbsoluteSizeAbsorbedCondition(size_t max_size) : m_max_size(max_size) {}
+
+    bool operator()(size_t, size_t, size_t size) const {
+        return size > m_max_size;
+    }
+
+private:
+    const size_t m_max_size;
 };
 
 class AllowedVariablePredicate {
@@ -143,7 +155,7 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             config.remove_absorbed_condition = IntervalAbsorbedCondition(args.get_absorbed_removal_interval());
             break;
         case ArgsParser::AbsorbedRemovalCondition::FormulaGrowth:
-            config.remove_absorbed_condition = GrowthAbsorbedCondition(args.get_absorbed_removal_growth());
+            config.remove_absorbed_condition = RelativeSizeAbsorbedCondition(args.get_absorbed_removal_growth());
             break;
         default:
             throw std::logic_error("Absorbed removal condition not implemented");
@@ -160,6 +172,26 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             break;
         default:
             throw std::logic_error("Absorbed removal algorithm not implemented");
+    }
+
+    switch (args.get_incremental_absorbed_removal_condition()) {
+        case ArgsParser::IncrementalAbsorbedRemovalCondition::Never:
+            config.incrementally_remove_absorbed_condition = never_absorbed_condition;
+            break;
+        case ArgsParser::IncrementalAbsorbedRemovalCondition::Interval:
+            config.incrementally_remove_absorbed_condition = IntervalAbsorbedCondition(
+                    args.get_incremental_absorbed_removal_interval());
+            break;
+        case ArgsParser::IncrementalAbsorbedRemovalCondition::RelativeSize:
+            config.incrementally_remove_absorbed_condition = RelativeSizeAbsorbedCondition(
+                    args.get_incremental_absorbed_removal_relative_size());
+            break;
+        case ArgsParser::IncrementalAbsorbedRemovalCondition::AbsoluteSize:
+            config.incrementally_remove_absorbed_condition = AbsoluteSizeAbsorbedCondition(
+                    args.get_incremental_absorbed_removal_absolute_size());
+            break;
+        default:
+            throw std::logic_error("Incremental absorbed removal condition not implemented");
     }
 
     return config;

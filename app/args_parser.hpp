@@ -40,6 +40,14 @@ public:
         FormulaGrowth,
     };
 
+    enum class IncrementalAbsorbedRemovalCondition : EnumUnderlyingType {
+        None,
+        Never,
+        Interval,
+        RelativeSize,
+        AbsoluteSize,
+    };
+
     [[nodiscard]] const std::string &get_config_string() const { return m_config_string; }
 
     [[nodiscard]] const std::string &get_input_cnf_file_name() const { return m_input_cnf_file_name; }
@@ -50,8 +58,12 @@ public:
     [[nodiscard]] Heuristic get_heuristic() const { return m_heuristic; }
     [[nodiscard]] AbsorbedRemovalAlgorithm get_absorbed_removal_algorithm() const { return m_absorbed_removal_algorithm; }
     [[nodiscard]] AbsorbedRemovalCondition get_absorbed_removal_condition() const { return m_absorbed_removal_condition; }
+    [[nodiscard]] IncrementalAbsorbedRemovalCondition get_incremental_absorbed_removal_condition() const { return m_incremental_absorbed_condition; }
     [[nodiscard]] size_t get_absorbed_removal_interval() const { return m_absorbed_removal_interval; }
     [[nodiscard]] float get_absorbed_removal_growth() const { return m_absorbed_removal_growth; }
+    [[nodiscard]] size_t get_incremental_absorbed_removal_interval() const { return m_incremental_absorbed_interval; }
+    [[nodiscard]] float get_incremental_absorbed_removal_relative_size() const { return m_incremental_absorbed_relative_size; }
+    [[nodiscard]] size_t get_incremental_absorbed_removal_absolute_size() const { return m_incremental_absorbed_absolute_size; }
 
     [[nodiscard]] const std::optional<size_t> &get_max_iterations() const { return m_max_iterations; }
     [[nodiscard]] const std::optional<size_t> &get_max_duration_seconds() const { return m_max_duration_seconds; }
@@ -86,8 +98,12 @@ private:
     Heuristic m_heuristic{Heuristic::None};
     AbsorbedRemovalAlgorithm m_absorbed_removal_algorithm{AbsorbedRemovalAlgorithm::WatchedLiterals};
     AbsorbedRemovalCondition m_absorbed_removal_condition{AbsorbedRemovalCondition::FormulaGrowth};
+    IncrementalAbsorbedRemovalCondition m_incremental_absorbed_condition{IncrementalAbsorbedRemovalCondition::RelativeSize};
     size_t m_absorbed_removal_interval{0};
     float m_absorbed_removal_growth{1.5};
+    size_t m_incremental_absorbed_interval{0};
+    float m_incremental_absorbed_relative_size{0.1};
+    size_t m_incremental_absorbed_absolute_size{0};
     // stop conditions
     std::optional<size_t> m_max_iterations{};
     std::optional<size_t> m_max_duration_seconds{};

@@ -24,6 +24,13 @@ static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalConditio
         {"never", ArgsParser::AbsorbedRemovalCondition::Never},
 };
 
+static const std::unordered_map<std::string, ArgsParser::IncrementalAbsorbedRemovalCondition> incremental_absorbed_condition_map {
+        {"absolute_size", ArgsParser::IncrementalAbsorbedRemovalCondition::AbsoluteSize},
+        {"relative_size", ArgsParser::IncrementalAbsorbedRemovalCondition::RelativeSize},
+        {"interval", ArgsParser::IncrementalAbsorbedRemovalCondition::Interval},
+        {"never", ArgsParser::IncrementalAbsorbedRemovalCondition::Never},
+};
+
 std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     ArgsParser args;
     CLI::App app("Davis Putnam elimination algorithm for preprocessing CNF formulas");
@@ -74,6 +81,13 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
+    app.add_option("--incremental-absorbed-removal-condition", args.m_incremental_absorbed_condition,
+                   "Condition on when to incrementally remove absorbed clauses")
+                   ->group("Algorithm")
+                   ->transform(CLI::CheckedTransformer(incremental_absorbed_condition_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
     app.add_option("--absorbed-removal-interval", args.m_absorbed_removal_interval,
                    "Number of eliminated variables before absorbed clauses are removed"
                    "\nneeds absorbed-removal-condition=interval")
@@ -84,6 +98,23 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "\nneeds absorbed-removal-condition=formula_growth")
                     ->group("Algorithm")
                     ->check(CLI::Range(1.0f, 1000.0f));
+    app.add_option("--incremental-absorbed-removal-interval", args.m_incremental_absorbed_interval,
+                   "Number of eliminated variables between incremental absorbed clauses removals"
+                   "\nneeds --incremental-absorbed-removal-condition=interval")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
+    app.add_option("--incremental-absorbed-removal-relative-size", args.m_incremental_absorbed_relative_size,
+                   "Relative size of added formula compared to the base formula in order to trigger incremental removal"
+                   "\nof absorbed clauses when computing their union (must be larger than 0)"
+                   "\nneeds --incremental-absorbed-removal-condition=relative_size")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(0.0f, 1000.0f));
+    app.add_option("--incremental-absorbed-removal-absolute_size", args.m_incremental_absorbed_absolute_size,
+                   "Absolute size of added formula in order to trigger incremental removal of absorbed clauses when"
+                   "\ncomputing its union with the base formula"
+                   "\nneeds --incremental-absorbed-removal-condition=absolute_size")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(0ul, std::numeric_limits<size_t>::max()));
 
     app.add_option("-i,--max-iterations", args.m_max_iterations,
                    "Maximum number of iterations before stopping")
