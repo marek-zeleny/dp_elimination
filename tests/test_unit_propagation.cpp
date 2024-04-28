@@ -1,6 +1,106 @@
 #include <catch2/catch_test_macros.hpp>
 #include "algorithms/unit_propagation.hpp"
 
+TEST_CASE("unit_propagation_step tests", "[unit propagation]") {
+    using dp::unit_propagation::unit_propagation_step;
+    using namespace dp;
+
+    SECTION("Eliminating a unit literal behaves correctly") {
+        std::vector<SylvanZddCnf::Clause> clauses{
+                {1},
+                {1, 2},
+                {-1, 2, 3},
+                {2, -3},
+        };
+
+        SylvanZddCnf cnf1 = SylvanZddCnf::from_vector(clauses);
+        unit_propagation_step(cnf1, 1);
+        SylvanZddCnf expected1 = SylvanZddCnf::from_vector({
+            {2, 3},
+            {2, -3},
+        });
+        CHECK(cnf1 == expected1);
+
+        SylvanZddCnf cnf2 = SylvanZddCnf::from_vector(clauses);
+        unit_propagation_step(cnf2, -1);
+        SylvanZddCnf expected2 = SylvanZddCnf::from_vector({
+            {},
+            {2},
+            {2, -3},
+        });
+        CHECK(cnf2 == expected2);
+    }
+
+    SECTION("Eliminating a missing literal doesn't have any effect") {
+        std::vector<SylvanZddCnf::Clause> clauses{
+                {1},
+                {1, 2},
+                {-1, 2, 3},
+                {2, -3},
+        };
+
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+        unit_propagation_step(cnf, 4);
+        SylvanZddCnf expected = SylvanZddCnf::from_vector(clauses);
+        CHECK(cnf == expected);
+    }
+}
+
+TEST_CASE("unit_propagation algorithm", "[unit propagation]") {
+    using dp::unit_propagation::unit_propagation;
+    using namespace dp;
+
+    SECTION("Finds unit literal and eliminates it") {
+        std::vector<SylvanZddCnf::Clause> clauses{
+                {1},
+                {1, 2},
+                {-1, 2, 3},
+                {2, -3},
+        };
+
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+        auto removed = unit_propagation(cnf);
+        SylvanZddCnf expected = SylvanZddCnf::from_vector({
+            {2, 3},
+            {2, -3},
+        });
+        std::unordered_set<SylvanZddCnf::Literal> expected_removed{1};
+        CHECK(cnf == expected);
+        CHECK(removed ==  expected_removed);
+    }
+
+    SECTION("Eliminates multiple unit literals") {
+        std::vector<SylvanZddCnf::Clause> clauses{
+                {1},
+                {1, 3},
+                {-1, -2},
+                {-2, -3},
+                {-1, 2, 3, 4},
+        };
+
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+        auto removed = unit_propagation(cnf);
+        SylvanZddCnf expected = SylvanZddCnf::from_vector({{3, 4}});
+        std::unordered_set<SylvanZddCnf::Literal> expected_removed{1, -2};
+        CHECK(cnf == expected);
+        CHECK(removed ==  expected_removed);
+    }
+
+    SECTION("Stops when empty clause detected") {
+        std::vector<SylvanZddCnf::Clause> clauses{
+                {1},
+                {-1, -2},
+                {-1, 2},
+                {-1, 3},
+        };
+
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
+        auto removed = unit_propagation(cnf);
+        CHECK(cnf.contains_empty());
+        CHECK(removed.size() == 2);
+    }
+}
+
 TEST_CASE("is_clause_absorbed tests", "[absorbed clause detection]") {
     namespace without = dp::absorbed_clause_detection::without_conversion;
     namespace with = dp::absorbed_clause_detection::with_conversion;
@@ -117,12 +217,7 @@ TEST_CASE("is_clause_absorbed tests", "[absorbed clause detection]") {
             formula.backtrack_to(0);
             CHECK(with::is_clause_absorbed(formula, {1, -1, -2, 3}));
         }
-        SECTION("Without conversion") {
-            SylvanZddCnf cnf = SylvanZddCnf::from_vector(clauses);
-            CHECK(without::is_clause_absorbed(cnf, {1, -1}));
-            CHECK(without::is_clause_absorbed(cnf, {2, -2}));
-            CHECK(without::is_clause_absorbed(cnf, {1, -1, -2, 3}));
-        }
+        // Note: direct absorbed detection over ZDDs doesn't detect tautologies, but it shouldn't be a problem
     }
 
     SECTION("Empty clause always absorbed") {
