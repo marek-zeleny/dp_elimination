@@ -2,6 +2,9 @@ heuristic = "minimal_bloat"
 
 absorbed-removal-algorithm = "watched_literals"
 absorbed-removal-condition = "formula_growth"
-absorbed-removal-growth = 1.3
+absorbed-removal-growth = 2.0
+
+incremental-absorbed-removal-condition = "relative_size"
+incremental-absorbed-removal-relative-size = 0.1
 
 timeout = 3600 # seconds (1h)
