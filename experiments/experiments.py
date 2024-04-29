@@ -258,6 +258,19 @@ def get_heuristic_correlation(metrics: dict) -> float:
     return correlation
 
 
+def get_unit_propagations_per_second(metrics: dict) -> float:
+    assignments = metrics["counters"]["WatchedLiterals_Assignments"]
+    duration = metrics["cumulative_durations"]["WatchedLiterals_Propagation"]
+    seconds = duration / 1_000_000
+    return assignments / seconds
+
+
+def get_backtrack_to_propagation_ratio(metrics: dict) -> float:
+    backtrack = metrics["cumulative_durations"]["WatchedLiterals_Backtrack"]
+    propagation = metrics["cumulative_durations"]["WatchedLiterals_Propagation"]
+    return backtrack / propagation
+
+
 def create_overall_summary_table(metrics: dict, stages_summary: pd.DataFrame) -> pd.DataFrame:
     data = {
         "InitVars": metrics["counters"]["InitVars"],
@@ -274,6 +287,8 @@ def create_overall_summary_table(metrics: dict, stages_summary: pd.DataFrame) ->
         "VarSelection": stages_summary["VarSelection"].loc["sum"],
         "Elimination": stages_summary["Elimination"].loc["sum"],
         "AbsorbedRemoval": stages_summary["AbsorbedRemovalDuration"].loc["sum"],
+        "UnitPropagationsPerSecond": get_unit_propagations_per_second(metrics),
+        "BacktrackToPropagationRatio": get_backtrack_to_propagation_ratio(metrics),
     }
     table = pd.DataFrame(data)
     return table
@@ -629,7 +644,11 @@ def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
 
 def export_table(table: pd.DataFrame, path: Path, format: str, include_index: bool):
     if format == "md":
-        output = table.astype(str).to_markdown(index=include_index, tablefmt="pretty")
+        if len(table.columns) > 8:
+            output = table.iloc[:, :8].astype(str).to_markdown(index=include_index, tablefmt="pretty") + "\n" + \
+                     table.iloc[:, 8:].astype(str).to_markdown(index=include_index, tablefmt="pretty")
+        else:
+            output = table.astype(str).to_markdown(index=include_index, tablefmt="pretty")
     elif format == "tex":
         output = table.to_latex(index=include_index)
     else:
