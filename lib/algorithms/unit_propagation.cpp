@@ -213,11 +213,15 @@ SylvanZddCnf remove_absorbed_clauses(const SylvanZddCnf &cnf) {
 }
 
 SylvanZddCnf unify_with_non_absorbed(const SylvanZddCnf &stable, const SylvanZddCnf &checked) {
-    if (checked.is_empty()) {
+    LOG_DEBUG << "Subtracting original ZDD from added one before incremental absorbed removal";
+    SylvanZddCnf checked_diff = checked.subtract(stable);
+
+    if (checked_diff.is_empty()) {
         return stable;
-    } else if (checked.contains_empty()) {
+    } else if (checked_diff.contains_empty()) {
         return stable.unify(SylvanZddCnf::from_vector({{}}));
     }
+
     LOG_DEBUG << "Serializing ZDD into vector of watched literals";
     auto timer_serialize = metrics.get_timer(MetricsDurations::IncrementalAbsorbedRemoval_Serialize);
     std::vector<SylvanZddCnf::Clause> clauses = stable.to_vector();
@@ -237,7 +241,7 @@ SylvanZddCnf unify_with_non_absorbed(const SylvanZddCnf &stable, const SylvanZdd
 
     LOG_INFO << "Incrementally checking for absorbed clauses";
     auto timer_search = metrics.get_timer(MetricsDurations::IncrementalAbsorbedRemoval_Search);
-    checked.for_all_clauses(func);
+    checked_diff.for_all_clauses(func);
     timer_search.stop();
     LOG_INFO << "Unified with " << added_clauses.size() << "/" << total_count << " clauses, the rest were absorbed";
 
