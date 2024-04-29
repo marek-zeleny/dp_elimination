@@ -27,12 +27,14 @@ namespace dp {
 template<typename Enum>
 concept IsEnumWithLast = IsEnum<Enum> && is_valid_value_v<Enum::Last>;
 
-template<IsEnumWithLast CounterEntries, IsEnumWithLast SeriesEntries, IsEnumWithLast DurationEntries>
+template<IsEnumWithLast CounterEntries, IsEnumWithLast SeriesEntries, IsEnumWithLast DurationEntries,
+        IsEnumWithLast CumulativeDurationEntries>
 class MetricsCollector {
 private:
     static constexpr size_t num_counters = to_underlying(CounterEntries::Last) + 1;
     static constexpr size_t num_series = to_underlying(SeriesEntries::Last) + 1;
     static constexpr size_t num_durations = to_underlying(DurationEntries::Last) + 1;
+    static constexpr size_t num_cumulative_durations = to_underlying(CumulativeDurationEntries::Last) + 1;
 
     using counter = int64_t;
     using counter_collection = std::array<counter, num_counters>;
@@ -43,19 +45,24 @@ private:
 
     using clock = std::chrono::steady_clock;
     using duration = clock::duration;
+    using cumulative_duration_collection = std::array<duration, num_cumulative_durations>;
+
     using durations = std::vector<duration>;
     using durations_collection = std::array<durations, num_durations>;
 
     template<size_t Size>
     using name_array = std::array<std::string, Size>;
 
+    template<typename Entry>
     class Timer;
 
 public:
     MetricsCollector(const name_array<num_counters> &counter_names,
                      const name_array<num_series> &series_names,
-                     const name_array<num_durations> &duration_names) :
-        m_counter_names(counter_names), m_series_names(series_names), m_duration_names(duration_names) {}
+                     const name_array<num_durations> &duration_names,
+                     const name_array<num_cumulative_durations> &cumulative_duration_names) :
+        m_counter_names(counter_names), m_series_names(series_names), m_duration_names(duration_names),
+        m_cumulative_duration_names(cumulative_duration_names) {}
 
     MetricsCollector(const MetricsCollector &) = delete;
     MetricsCollector &operator=(const MetricsCollector &) = delete;
@@ -70,8 +77,12 @@ public:
         m_series[to_underlying(entry)].push_back(value);
     }
 
-    [[nodiscard]] Timer get_timer(DurationEntries entry) {
-        return Timer(*this, entry);
+    [[nodiscard]] Timer<DurationEntries> get_timer(DurationEntries entry) {
+        return Timer<DurationEntries>(*this, entry);
+    }
+
+    [[nodiscard]] Timer<CumulativeDurationEntries> get_cumulative_timer(CumulativeDurationEntries entry) {
+        return Timer<CumulativeDurationEntries>(*this, entry);
     }
 
     void export_json(std::ostream &stream) {
@@ -88,17 +99,23 @@ public:
         for (size_t i = 0; i < num_durations; ++i) {
             durations[m_duration_names[i]] = m_durations[i];
         }
+        json cumulative_durations;
+        for (size_t i = 0; i < num_cumulative_durations; ++i) {
+            cumulative_durations[m_cumulative_duration_names[i]] = m_cumulative_durations[i];
+        }
         json j;
         j["counters"] = counters;
         j["series"] = series;
         j["durations"] = durations;
+        j["cumulative_durations"] = cumulative_durations;
         stream << j.dump(2) << std::endl;
     }
 
 private:
+    template<typename Entry>
     class Timer {
     public:
-        Timer(MetricsCollector &metrics, DurationEntries entry) :
+        Timer(MetricsCollector &metrics, Entry entry) :
                 m_collector(metrics), m_entry(entry), m_start_time(clock::now()) {}
 
         ~Timer() {
@@ -117,7 +134,7 @@ private:
 
     private:
         MetricsCollector &m_collector;
-        const DurationEntries m_entry;
+        const Entry m_entry;
         const clock::time_point m_start_time;
         bool m_running{true};
 
@@ -131,12 +148,18 @@ private:
     counter_collection m_counters{};
     series_collection m_series{};
     durations_collection m_durations{};
+    cumulative_duration_collection m_cumulative_durations{};
     const name_array<num_counters> &m_counter_names;
     const name_array<num_series> &m_series_names;
     const name_array<num_durations> &m_duration_names;
+    const name_array<num_cumulative_durations> &m_cumulative_duration_names;
 
     void add_duration(DurationEntries entry, duration duration) {
         m_durations[to_underlying(entry)].push_back(duration);
+    }
+
+    void add_duration(CumulativeDurationEntries entry, duration duration) {
+        m_cumulative_durations[to_underlying(entry)] += duration;
     }
 };
 

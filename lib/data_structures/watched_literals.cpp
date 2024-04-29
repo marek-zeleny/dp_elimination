@@ -4,6 +4,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <iostream>
+#include "metrics/dp_metrics.hpp"
 
 namespace dp {
 
@@ -92,6 +93,7 @@ bool WatchedLiterals::assign_value(Literal l) {
     if (get_assignment(l) != Assignment::unassigned) {
         throw std::invalid_argument("Cannot assign to an already assigned variable");
     }
+    auto timer = metrics.get_cumulative_timer(MetricsCumulativeDurations::WatchedLiterals_Propagation);
     m_stack.emplace_back();
     bool success = assign_value_impl(l);
     if (!success) {
@@ -183,6 +185,7 @@ void WatchedLiterals::init() {
     m_empty_count = m_initial_empty_count;
     m_unit_clauses = m_initial_unit_clauses;
     // propagate
+    auto timer = metrics.get_cumulative_timer(MetricsCumulativeDurations::WatchedLiterals_Propagation);
     m_stack.emplace_back();
     if (!contains_empty()) {
         propagate();
@@ -277,6 +280,7 @@ bool WatchedLiterals::propagate() {
 
 bool WatchedLiterals::assign_value_impl(Literal l) {
     assert(get_assignment(l) == Assignment::unassigned);
+    metrics.increase_counter(MetricsCounters::WatchedLiterals_Assignments);
     size_t var_idx = get_var_index(l);
     VarData &var_data = m_variables[var_idx];
     var_data.assignment = l > 0 ? Assignment::positive : Assignment::negative;
@@ -362,6 +366,7 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
 }
 
 void WatchedLiterals::backtrack_impl() {
+    auto timer = metrics.get_cumulative_timer(MetricsCumulativeDurations::WatchedLiterals_Backtrack);
     StackElement &assignments = m_stack.back();
     for (auto &literal: assignments) {
         m_variables[get_var_index(literal)].assignment = Assignment::unassigned;

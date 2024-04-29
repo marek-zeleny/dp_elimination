@@ -16,7 +16,8 @@ enum class MetricsCounters : uint8_t {
     AbsorbedClausesRemoved,
     AbsorbedClausesNotAdded,
     UnitLiteralsRemoved,
-    Last = UnitLiteralsRemoved,
+    WatchedLiterals_Assignments,
+    Last = WatchedLiterals_Assignments,
 };
 
 inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> counter_names{
@@ -27,6 +28,7 @@ inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> c
     "AbsorbedClausesRemoved",
     "AbsorbedClausesNotAdded",
     "UnitLiteralsRemoved",
+    "WatchedLiterals_Assignments",
 };
 
 // series
@@ -95,8 +97,23 @@ inline const std::array<std::string, to_underlying(MetricsDurations::Last) + 1> 
     "EliminateVar_Unification",
 };
 
-inline MetricsCollector<MetricsCounters, MetricsSeries, MetricsDurations> metrics{counter_names,
-                                                                                  series_names,
-                                                                                  duration_names};
+// cumulative durations
+enum class MetricsCumulativeDurations : uint8_t {
+    WatchedLiterals_Propagation = 0,
+    WatchedLiterals_Backtrack,
+    Last = WatchedLiterals_Backtrack,
+};
+
+inline const std::array<std::string, to_underlying(MetricsCumulativeDurations::Last) + 1> cumulative_duration_names{
+    "WatchedLiterals_Propagation",
+    "WatchedLiterals_Backtrack",
+};
+
+inline MetricsCollector<MetricsCounters, MetricsSeries, MetricsDurations, MetricsCumulativeDurations> metrics{
+    counter_names,
+    series_names,
+    duration_names,
+    cumulative_duration_names
+};
 
 } // namespace dp
