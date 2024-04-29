@@ -205,7 +205,7 @@ def create_absorbed_table(metrics: dict) -> pd.DataFrame:
 
     table = pd.DataFrame(data).transpose()
     table.columns = columns
-    table.insert(0, "TotalDuration", table.iloc[:-1].sum(axis=1))
+    table.insert(0, "TotalDuration", table.iloc[:, :-1].sum(axis=1))
     if table.empty:
         table.loc[0] = -1
     return table
@@ -230,7 +230,7 @@ def create_incremental_absorbed_table(metrics: dict) -> pd.DataFrame:
 
     table = pd.DataFrame(data).transpose()
     table.columns = columns
-    table.insert(0, "TotalDuration", table.iloc[:-1].sum(axis=1))
+    table.insert(0, "TotalDuration", table.iloc[:, :-1].sum(axis=1))
     if table.empty:
         table.loc[0] = -1
     return table
@@ -338,7 +338,7 @@ def create_tables(metrics: dict) -> list[tuple[str, pd.DataFrame, bool]]:
     absorbed_summary = absorbed.aggregate(aggregation_functions).astype(int, copy=False)
     incremental_absorbed = create_incremental_absorbed_table(metrics)
     incremental_summary = incremental_absorbed.aggregate(aggregation_functions).astype(int, copy=False)
-    absorbed_and_incremental_absorbed_summary = absorbed_summary.join(incremental_summary, lsuffix="_Removed", rsuffix="_Incremental")
+    absorbed_and_incremental_absorbed_summary = absorbed_summary.add_prefix("Removed_").join(incremental_summary.add_prefix("Incremental_"))
     tables.append(("absorbed_clauses", absorbed_and_incremental_absorbed_summary, True))
 
     stages_summary = pd.concat([
@@ -467,7 +467,7 @@ def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    xticklabels = range(len(absorbed_removed))
+    xticklabels = range(1, len(absorbed_removed) + 1)
     ax.set_title("Removed absorbed clauses")
     ax.set_xlabel("# invocations")
     ax.set_ylabel("# absorbed clauses removed")
@@ -501,7 +501,7 @@ def plot_incremental_absorbed(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    xticklabels = range(len(absorbed_not_added))
+    xticklabels = range(1, len(absorbed_not_added) + 1)
     ax.set_title("Incremental absorbed clause removal")
     ax.set_xlabel("# invocations")
     ax.set_ylabel("# absorbed clauses not added")
