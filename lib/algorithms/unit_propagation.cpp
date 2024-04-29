@@ -147,6 +147,7 @@ bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &cl
             }
         }
         if (is_empowered) {
+            formula.backtrack_to(0);
             return false;
         }
     }
@@ -158,6 +159,7 @@ bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &cl
         }
         log_stream << "}";
     }
+    formula.backtrack_to(0);
     return true;
 }
 

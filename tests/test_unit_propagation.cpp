@@ -116,11 +116,7 @@ TEST_CASE("is_clause_absorbed tests", "[absorbed clause detection]") {
         SECTION("With conversion") {
             WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
             CHECK(with::is_clause_absorbed(formula, {1, 2}));
-
-            formula.backtrack_to(0);
             CHECK(with::is_clause_absorbed(formula, {-1, 2, 3}));
-
-            formula.backtrack_to(0);
             CHECK(with::is_clause_absorbed(formula, {2, -3}));
         }
         SECTION("Without conversion") {
@@ -171,8 +167,6 @@ TEST_CASE("is_clause_absorbed tests", "[absorbed clause detection]") {
         SECTION("With conversion") {
             WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
             CHECK(with::is_clause_absorbed(formula, {3}));
-
-            formula.backtrack_to(0);
             CHECK_FALSE(with::is_clause_absorbed(formula, {4}));
         }
         SECTION("Without conversion") {
@@ -191,8 +185,6 @@ TEST_CASE("is_clause_absorbed tests", "[absorbed clause detection]") {
         SECTION("With conversion") {
             WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
             CHECK(with::is_clause_absorbed(formula, {1, 2, 3}));
-
-            formula.backtrack_to(0);
             CHECK(with::is_clause_absorbed(formula, {-1, 2, -3}));
         }
         SECTION("Without conversion") {
@@ -210,11 +202,7 @@ TEST_CASE("is_clause_absorbed tests", "[absorbed clause detection]") {
         SECTION("With conversion") {
             WatchedLiterals formula = WatchedLiterals::from_vector(clauses);
             CHECK(with::is_clause_absorbed(formula, {1, -1}));
-
-            formula.backtrack_to(0);
             CHECK(with::is_clause_absorbed(formula, {2, -2}));
-
-            formula.backtrack_to(0);
             CHECK(with::is_clause_absorbed(formula, {1, -1, -2, 3}));
         }
         // Note: direct absorbed detection over ZDDs doesn't detect tautologies, but it shouldn't be a problem

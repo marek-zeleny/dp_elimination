@@ -8,8 +8,7 @@
 namespace dp {
 
 WatchedLiterals::WatchedLiterals(const std::vector<Clause> &clauses, size_t max_var,
-                                 const std::unordered_set<size_t> &deactivated_clauses) :
-        m_max_var(max_var), m_empty_count(0) {
+                                 const std::unordered_set<size_t> &deactivated_clauses) : m_max_var(max_var) {
     // initialize variables
     m_variables.resize(m_max_var, {});
     // initialize clauses
