@@ -246,8 +246,12 @@ void set_lace_stack_limit(size_t size = 0) {
     }
     // get stack limit and give it to Lace
     if (getrlimit(RLIMIT_STACK, &limit) == 0) {
-        lace_set_stacksize(limit.rlim_cur);
         LOG_INFO << "Stack limit: " << limit.rlim_cur << " / " << limit.rlim_max;
+        lace_set_stacksize(limit.rlim_cur);
+        if (lace_get_stacksize() != limit.rlim_cur) {
+            throw std::runtime_error("Couldn't set Lace stack size (" + std::to_string(lace_get_stacksize())
+                                     + " != " + std::to_string(limit.rlim_cur) + ")");
+        }
     } else {
         throw std::runtime_error("Couldn't obtain stack limit");
     }
