@@ -295,6 +295,13 @@ SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {
     return SylvanZddCnf(zdd);
 }
 
+SylvanZddCnf SylvanZddCnf::unify_and_remove_subsumed(const SylvanZddCnf &other) const {
+    assert(verify_variable_ordering());
+    assert(other.verify_variable_ordering());
+    ZDD zdd = zdd_or_no_subsumed(m_zdd, other.m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
 SylvanZddCnf SylvanZddCnf::intersect(const SylvanZddCnf &other) const {
     ZDD zdd = zdd_and(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
@@ -413,68 +420,8 @@ ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
 }
 
 SylvanZddCnf SylvanZddCnf::remove_subsumed_clauses() const {
-    ZDD zdd = remove_subsumed_clauses_impl(m_zdd);
+    ZDD zdd = zdd_no_subsumed(m_zdd);
     return SylvanZddCnf(zdd);
-}
-
-ZDD SylvanZddCnf::remove_subsumed_clauses_impl(const ZDD &zdd) {
-    // resolve ground cases
-    if (zdd == zdd_false || zdd == zdd_true) {
-        return zdd;
-    }
-    // look into the cache
-    std::optional<ZDD> cache_result = try_get_from_unary_cache(s_remove_subsumed_clauses_cache, zdd);
-    if (cache_result.has_value()) {
-        return *cache_result;
-    }
-    // recursive step
-    Var var = zdd_getvar(zdd);
-    ZDD low = remove_subsumed_clauses_impl(zdd_getlow(zdd));
-    zdd_refs_push(low);
-    ZDD high = remove_subsumed_clauses_impl(zdd_gethigh(zdd));
-    zdd_refs_push(high);
-    ZDD high_without_supersets = remove_supersets(high, low);
-    zdd_refs_push(high_without_supersets);
-    ZDD result = zdd_makenode(var, low, high_without_supersets);
-    zdd_refs_pop(3);
-    store_in_unary_cache(s_remove_subsumed_clauses_cache, zdd, result);
-    return result;
-}
-
-ZDD SylvanZddCnf::remove_supersets(const ZDD &p, const ZDD &q) {
-    // resolve ground cases
-    if (p == zdd_false || contains_empty_set(q) || p == q) {
-        return zdd_false;
-    }
-    if (p == zdd_true || q == zdd_false) {
-        return p;
-    }
-    // look into the cache
-    std::optional<ZDD> cache_result = try_get_from_binary_cache(s_remove_supersets_cache, p, q);
-    if (cache_result.has_value()) {
-        return *cache_result;
-    }
-    // recursive step
-    Var p_var = zdd_getvar(p);
-    Var q_var = zdd_getvar(q);
-    Var top_var = std::min(p_var, q_var);
-    ZDD p0 = zdd_eval(p, top_var, 0);
-    ZDD p1 = zdd_eval(p, top_var, 1);
-    ZDD q0 = zdd_eval(q, top_var, 0);
-    ZDD q1 = zdd_eval(q, top_var, 1);
-    // NOTE: p0, p1, q0, q1 are protected from GC recursively -> no need to push references
-    ZDD tmp1 = remove_supersets(p1, q0);
-    zdd_refs_push(tmp1);
-    ZDD tmp2 = remove_supersets(p1, q1);
-    zdd_refs_push(tmp2);
-    ZDD low = remove_supersets(p0, q0);
-    zdd_refs_push(low);
-    ZDD high = zdd_and(tmp1, tmp2);
-    zdd_refs_push(high);
-    ZDD result = zdd_makenode(top_var, low, high);
-    zdd_refs_pop(4);
-    store_in_binary_cache(s_remove_supersets_cache, p, q, result);
-    return result;
 }
 
 void SylvanZddCnf::for_all_clauses(ClauseFunction &func) const {

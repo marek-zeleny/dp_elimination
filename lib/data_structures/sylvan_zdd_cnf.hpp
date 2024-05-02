@@ -66,6 +66,7 @@ public:
     [[nodiscard]] SylvanZddCnf subset0(Literal l) const;
     [[nodiscard]] SylvanZddCnf subset1(Literal l) const;
     [[nodiscard]] SylvanZddCnf unify(const SylvanZddCnf &other) const;
+    [[nodiscard]] SylvanZddCnf unify_and_remove_subsumed(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf intersect(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf subtract(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf multiply(const SylvanZddCnf &other) const;
@@ -118,8 +119,6 @@ private:
     // implementations of recursive algorithms
     static ZDD multiply_impl(const ZDD &p, const ZDD &q);
     static ZDD remove_tautologies_impl(const ZDD &zdd);
-    static ZDD remove_subsumed_clauses_impl(const ZDD &zdd);
-    static ZDD remove_supersets(const ZDD &p, const ZDD &q);
     static bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack);
 
     // caching of operation results
@@ -152,8 +151,6 @@ private:
 
     inline static BinaryCache s_multiply_cache;
     inline static UnaryCache s_remove_tautologies_cache;
-    inline static UnaryCache s_remove_subsumed_clauses_cache;
-    inline static BinaryCache s_remove_supersets_cache;
 };
 
 } // namespace dp

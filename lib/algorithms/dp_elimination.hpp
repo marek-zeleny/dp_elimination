@@ -20,7 +20,7 @@ using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
 using IsAllowedVariable_f = std::function<bool(uint32_t var)>;
 
 inline SylvanZddCnf default_union(const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
-    return zdd1.unify(zdd2);
+    return zdd1.unify_and_remove_subsumed(zdd2);
 }
 
 [[nodiscard]]
@@ -121,7 +121,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         if (config.incrementally_remove_absorbed_condition(iter, zdd1.count_clauses(), zdd2.count_clauses())) {
             return config.unify_with_non_absorbed(zdd1, zdd2);
         } else {
-            return zdd1.unify(zdd2);
+            return zdd1.unify_and_remove_subsumed(zdd2);
         }
     };
 
