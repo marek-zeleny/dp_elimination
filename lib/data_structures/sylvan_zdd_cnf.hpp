@@ -117,7 +117,6 @@ private:
     static bool contains_empty_set(const ZDD &zdd);
 
     // implementations of recursive algorithms
-    static ZDD multiply_impl(const ZDD &p, const ZDD &q);
     static ZDD remove_tautologies_impl(const ZDD &zdd);
     static bool for_all_clauses_impl(ClauseFunction &func, const ZDD &node, Clause &stack);
 
@@ -149,7 +148,6 @@ private:
     static std::optional<ZDD> try_get_from_unary_cache(UnaryCache &cache, const ZDD &key);
     static std::optional<ZDD> try_get_from_binary_cache(BinaryCache &cache, const ZDD &key1, const ZDD &key2);
 
-    inline static BinaryCache s_multiply_cache;
     inline static UnaryCache s_remove_tautologies_cache;
 };
 

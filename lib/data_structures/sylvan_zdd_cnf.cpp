@@ -313,70 +313,8 @@ SylvanZddCnf SylvanZddCnf::subtract(const SylvanZddCnf &other) const {
 }
 
 SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
-    ZDD zdd = multiply_impl(m_zdd, other.m_zdd);
+    ZDD zdd = zdd_product(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
-}
-
-ZDD SylvanZddCnf::multiply_impl(const ZDD &p, const ZDD &q) {
-    // TODO: maybe later implement this as a Lace task and compute it in parallel
-    // resolve ground cases
-    if (p == zdd_false) {
-        return zdd_false;
-    }
-    if (p == zdd_true) {
-        return q;
-    }
-    if (q == zdd_false) {
-        return zdd_false;
-    }
-    if (q == zdd_true) {
-        return p;
-    }
-    // break symmetry
-    Var p_var = zdd_getvar(p);
-    Var q_var = zdd_getvar(q);
-    if (p_var > q_var) {
-        return multiply_impl(q, p);
-    }
-    // look into the cache
-    std::optional<ZDD> cache_result = try_get_from_binary_cache(s_multiply_cache, p, q);
-    if (cache_result.has_value()) {
-        return *cache_result;
-    }
-    // general case (recursion)
-    Var x = p_var;
-    ZDD p0 = zdd_getlow(p);
-    ZDD p1 = zdd_gethigh(p);
-    ZDD q0;
-    ZDD q1;
-    if (q_var == p_var) {
-        q0 = zdd_getlow(q);
-        q1 = zdd_gethigh(q);
-    } else {
-        q0 = q;
-        q1 = zdd_false;
-    }
-    // NOTE: p0, p1, q0, q1 are protected from GC recursively -> no need to push references
-    ZDD p0q0 = multiply_impl(p0, q0);
-    zdd_refs_push(p0q0);
-    ZDD p0q1 = multiply_impl(p0, q1);
-    zdd_refs_push(p0q1);
-    ZDD p1q0 = multiply_impl(p1, q0);
-    zdd_refs_push(p1q0);
-    ZDD p1q1 = multiply_impl(p1, q1);
-    zdd_refs_push(p1q1);
-    assert(verify_variable_ordering_impl(p1q1, 0));
-    assert(verify_variable_ordering_impl(p1q0, 0));
-    ZDD tmp1 = zdd_or(p1q1, p1q0);
-    zdd_refs_pop(2);
-    zdd_refs_push(tmp1);
-    assert(verify_variable_ordering_impl(tmp1, 0));
-    assert(verify_variable_ordering_impl(p0q1, 0));
-    ZDD tmp2 = zdd_or(tmp1, p0q1);
-    zdd_refs_pop(3);
-    ZDD result = zdd_makenode(x, p0q0, tmp2);
-    store_in_binary_cache(s_multiply_cache, p, q, result);
-    return result;
 }
 
 SylvanZddCnf SylvanZddCnf::remove_tautologies() const {
