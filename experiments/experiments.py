@@ -261,6 +261,8 @@ def get_heuristic_correlation(metrics: dict) -> float:
 def get_unit_propagations_per_second(metrics: dict) -> float:
     assignments = metrics["counters"]["WatchedLiterals_Assignments"]
     duration = metrics["cumulative_durations"]["WatchedLiterals_Propagation"]
+    if duration == 0:
+        return -1
     seconds = duration / 1_000_000
     return assignments / seconds
 
@@ -268,6 +270,8 @@ def get_unit_propagations_per_second(metrics: dict) -> float:
 def get_backtrack_to_propagation_ratio(metrics: dict) -> float:
     backtrack = metrics["cumulative_durations"]["WatchedLiterals_Backtrack"]
     propagation = metrics["cumulative_durations"]["WatchedLiterals_Propagation"]
+    if propagation == 0:
+        return -1
     return backtrack / propagation
 
 
@@ -482,7 +486,7 @@ def plot_absorbed_clauses(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]]:
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    xticklabels = range(1, len(absorbed_removed) + 1)
+    xticklabels = range(len(absorbed_removed))
     ax.set_title("Removed absorbed clauses")
     ax.set_xlabel("# invocations")
     ax.set_ylabel("# absorbed clauses removed")
@@ -516,7 +520,7 @@ def plot_incremental_absorbed(metrics: dict) -> tuple[plt.Figure, list[plt.Axes]
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
     fig, ax = sub
     axes.append(ax)
-    xticklabels = range(1, len(absorbed_not_added) + 1)
+    xticklabels = range(len(absorbed_not_added))
     ax.set_title("Incremental absorbed clause removal")
     ax.set_xlabel("# invocations")
     ax.set_ylabel("# absorbed clauses not added")
@@ -644,9 +648,10 @@ def create_plots(metrics: dict) -> list[tuple[str, plt.Figure]]:
 
 def export_table(table: pd.DataFrame, path: Path, format: str, include_index: bool):
     if format == "md":
-        if len(table.columns) > 8:
-            output = table.iloc[:, :8].astype(str).to_markdown(index=include_index, tablefmt="pretty") + "\n" + \
-                     table.iloc[:, 8:].astype(str).to_markdown(index=include_index, tablefmt="pretty")
+        if len(table.columns) > 6:
+            split = (len(table.columns) + 1) // 2
+            output = table.iloc[:, :split].astype(str).to_markdown(index=include_index, tablefmt="pretty") + "\n" + \
+                     table.iloc[:, split:].astype(str).to_markdown(index=include_index, tablefmt="pretty")
         else:
             output = table.astype(str).to_markdown(index=include_index, tablefmt="pretty")
     elif format == "tex":
