@@ -118,35 +118,76 @@ SylvanZddCnf remove_absorbed_clauses(const SylvanZddCnf &cnf) {
 // Absorbed clause detection on watched literals
 namespace with_conversion {
 
-bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause) {
-    if (formula.contains_empty()) {
-        return true;
+static bool assign_range(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause,
+                         const size_t &start, const size_t &end) {
+    using A = WatchedLiterals::Assignment;
+    for (size_t i = start; i < end; ++i) {
+        SylvanZddCnf::Literal l = clause[i];
+        WatchedLiterals::Assignment a = formula.get_assignment(-l);
+        if (a == A::positive) {
+            continue;
+        } else if (a == A::negative) {
+            return false;
+        }
+        bool empty_clause_created = !formula.assign_value(-l);
+        if (empty_clause_created) {
+            return false;
+        }
     }
-    for (auto &tested_literal: clause) {
-        formula.backtrack_to(0);
-        // First we need to check if the potentially empowered literal is already positive
-        if (formula.get_assignment(tested_literal) == WatchedLiterals::Assignment::positive) {
+    return true;
+}
+
+static bool find_empowered_literal_in_range(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause,
+                       const size_t &start, const size_t &end) {
+    using A = WatchedLiterals::Assignment;
+    size_t backtrack_level = formula.get_assignment_level();
+    for (size_t i = start; i < end; ++i) {
+        formula.backtrack_to(backtrack_level);
+        const SylvanZddCnf::Literal tested_literal = clause[i];
+        if (formula.get_assignment(tested_literal) == A::positive) {
             continue;
         }
         bool is_empowered = true;
-        for (auto &l: clause) {
-            if (l == tested_literal) {
+        for (size_t j = start; j < end; ++j) {
+            if (j == i) {
+                backtrack_level = formula.get_assignment_level();
                 continue;
             }
-            WatchedLiterals::Assignment a = formula.get_assignment(-l);
-            if (a == WatchedLiterals::Assignment::negative) {
+            const SylvanZddCnf::Literal l = clause[j];
+            const WatchedLiterals::Assignment a = formula.get_assignment(-l);
+            if (a == A::positive) {
+                continue;
+            } else if (a == A::negative) {
                 is_empowered = false;
                 break;
-            } else if (a == WatchedLiterals::Assignment::positive) {
-                continue;
             }
             bool empty_clause_created = !formula.assign_value(-l);
-            if (empty_clause_created || formula.get_assignment(tested_literal) == WatchedLiterals::Assignment::positive) {
+            if (empty_clause_created || formula.get_assignment(tested_literal) == A::positive) {
                 is_empowered = false;
                 break;
             }
         }
         if (is_empowered) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool is_clause_absorbed(WatchedLiterals &formula, const SylvanZddCnf::Clause &clause) {
+    if (formula.contains_empty()) {
+        return true;
+    }
+    const size_t split = clause.size() / 2;
+    if (assign_range(formula, clause, 0, split)) {
+        if (find_empowered_literal_in_range(formula, clause, split, clause.size())) {
+            formula.backtrack_to(0);
+            return false;
+        }
+    }
+    formula.backtrack_to(0);
+    if (assign_range(formula, clause, split, clause.size())) {
+        if (find_empowered_literal_in_range(formula, clause, 0, split)) {
             formula.backtrack_to(0);
             return false;
         }
