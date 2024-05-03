@@ -318,43 +318,8 @@ SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
 }
 
 SylvanZddCnf SylvanZddCnf::remove_tautologies() const {
-    ZDD zdd = remove_tautologies_impl(m_zdd);
+    ZDD zdd = zdd_remove_tautologies(m_zdd);
     return SylvanZddCnf(zdd);
-}
-
-ZDD SylvanZddCnf::remove_tautologies_impl(const ZDD &zdd) {
-    // NOTE: this algorithm assumes that complementary literals are consecutive in the variable order,
-    //       i.e. for x > 0: var(x) = 2x, var(-x) = 2x + 1
-    // TODO: consider caching and/or parallel implementation using Lace
-    // resolve ground cases
-    if (zdd == zdd_false || zdd == zdd_true) {
-        return zdd;
-    }
-    // look into the cache
-    std::optional<ZDD> cache_result = try_get_from_unary_cache(s_remove_tautologies_cache, zdd);
-    if (cache_result.has_value()) {
-        return *cache_result;
-    }
-    // recursive step
-    Var var = zdd_getvar(zdd);
-    ZDD low = remove_tautologies_impl(zdd_getlow(zdd));
-    zdd_refs_push(low);
-    ZDD high = remove_tautologies_impl(zdd_gethigh(zdd));
-    zdd_refs_pop(1);
-    ZDD result;
-    if (high == zdd_false || high == zdd_true) {
-        // high child doesn't have a variable (is a leaf), do nothing
-        result = zdd_makenode(var, low, high);
-    } else if (var / 2 == zdd_getvar(high) / 2) {
-        // otherwise compare variables in <zdd> and <high>
-        // complements, remove high child of <high>
-        result = zdd_makenode(var, low, zdd_getlow(high));
-    } else {
-        // not complements, do nothing
-        result = zdd_makenode(var, low, high);
-    }
-    store_in_unary_cache(s_remove_tautologies_cache, zdd, result);
-    return result;
 }
 
 SylvanZddCnf SylvanZddCnf::remove_subsumed_clauses() const {
