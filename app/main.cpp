@@ -193,8 +193,6 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
         default:
             throw std::logic_error("Incremental absorbed removal condition not implemented");
     }
-    // TODO: temporarily overriding incremental absorbed removal condition to Never (use subsumed union instead)
-    config.incrementally_remove_absorbed_condition = never_absorbed_condition;
 
     return config;
 }

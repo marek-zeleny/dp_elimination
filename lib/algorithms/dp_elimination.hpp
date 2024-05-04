@@ -118,10 +118,17 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
 
     // helper lambda function for incrementally removing absorbed clauses (during union)
     auto conditional_union = [&config, &iter](const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
-        if (config.incrementally_remove_absorbed_condition(iter, zdd1.count_clauses(), zdd2.count_clauses())) {
-            return config.unify_with_non_absorbed(zdd1, zdd2);
+        const size_t size1 = zdd1.count_clauses();
+        if (config.incrementally_remove_absorbed_condition(iter, size1, zdd2.count_clauses())) {
+            LOG_DEBUG << "Unification too large, removing subsumed clauses";
+            SylvanZddCnf no_subsumed = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
+            if (config.incrementally_remove_absorbed_condition(iter, size1, no_subsumed.count_clauses())) {
+                return config.unify_with_non_absorbed(zdd1, no_subsumed);
+            } else {
+                return zdd1.unify(no_subsumed);
+            }
         } else {
-            return zdd1.unify_and_remove_subsumed(zdd2);
+            return zdd1.unify(zdd2);
         }
     };
 

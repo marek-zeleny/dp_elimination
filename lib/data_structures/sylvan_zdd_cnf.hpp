@@ -69,6 +69,7 @@ public:
     [[nodiscard]] SylvanZddCnf unify_and_remove_subsumed(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf intersect(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf subtract(const SylvanZddCnf &other) const;
+    [[nodiscard]] SylvanZddCnf subtract_subsumed(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf multiply(const SylvanZddCnf &other) const;
     [[nodiscard]] SylvanZddCnf remove_tautologies() const;
     [[nodiscard]] SylvanZddCnf remove_subsumed_clauses() const;

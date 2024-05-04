@@ -312,6 +312,11 @@ SylvanZddCnf SylvanZddCnf::subtract(const SylvanZddCnf &other) const {
     return SylvanZddCnf(zdd);
 }
 
+SylvanZddCnf SylvanZddCnf::subtract_subsumed(const dp::SylvanZddCnf &other) const {
+    ZDD zdd = zdd_subsumed_diff(m_zdd, other.m_zdd);
+    return SylvanZddCnf(zdd);
+}
+
 SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
     ZDD zdd = zdd_product(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
