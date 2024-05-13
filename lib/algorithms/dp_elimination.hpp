@@ -15,7 +15,12 @@ using StopCondition_f = std::function<bool(size_t iteration, const SylvanZddCnf 
         const HeuristicResult &result)>;
 using AbsorbedCondition_f = std::function<bool(size_t iteration, size_t prev_cnf_size, size_t cnf_size)>;
 using UnaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
+using UnaryOperationWithStopCondition_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf,
+                                                                     const std::function<bool()> &stop_condition)>;
 using BinaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &op1, const SylvanZddCnf &op2)>;
+using BinaryOperationwithStopCondition_f = std::function<SylvanZddCnf(const SylvanZddCnf &op1,
+                                                                      const SylvanZddCnf &op2,
+                                                                      const std::function<bool()> &stop_condition)>;
 using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
 using IsAllowedVariable_f = std::function<bool(uint32_t var)>;
 
@@ -77,9 +82,9 @@ struct EliminationAlgorithmConfig {
     Heuristic_f heuristic;
     StopCondition_f stop_condition;
     AbsorbedCondition_f remove_absorbed_condition;
-    UnaryOperation_f remove_absorbed_clauses;
+    UnaryOperationWithStopCondition_f remove_absorbed_clauses;
     AbsorbedCondition_f incrementally_remove_absorbed_condition;
-    BinaryOperation_f unify_with_non_absorbed;
+    BinaryOperationwithStopCondition_f unify_with_non_absorbed;
     IsAllowedVariable_f is_allowed_variable;
 };
 
@@ -103,13 +108,27 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     assert(cnf.verify_variable_ordering());
     size_t clauses_count = cnf.count_clauses();
 
-    // helper lambda function for removing absorbed clauses
+    // prepare for main loop
     size_t iter = 0;
+    auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
+    HeuristicResult result = config.heuristic(cnf);
+    timer_heuristic1.stop();
+
+    // stop condition for absorbed removal
+    auto absorbed_stop_condition = [&config, &iter, &cnf, &clauses_count, &result]() {
+        return config.stop_condition(iter, cnf, clauses_count, result);
+    };
+
+    // helper lambda function for removing absorbed clauses
     size_t last_absorbed_clauses_count = clauses_count;
-    auto conditionally_remove_absorbed = [&config, &iter, &last_absorbed_clauses_count, &clauses_count](
+    auto conditionally_remove_absorbed = [&config, &iter, &last_absorbed_clauses_count, &clauses_count,
+                                          &absorbed_stop_condition](
             SylvanZddCnf &cnf) {
+        if (absorbed_stop_condition()) {
+            return;
+        }
         if (config.remove_absorbed_condition(iter, last_absorbed_clauses_count, clauses_count)) {
-            cnf = config.remove_absorbed_clauses(cnf);
+            cnf = config.remove_absorbed_clauses(cnf, absorbed_stop_condition);
             assert(cnf.verify_variable_ordering());
             clauses_count = cnf.count_clauses();
             last_absorbed_clauses_count = clauses_count;
@@ -117,13 +136,14 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     };
 
     // helper lambda function for incrementally removing absorbed clauses (during union)
-    auto conditional_union = [&config, &iter](const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
+    auto conditional_union = [&config, &iter, &absorbed_stop_condition](
+            const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
         const size_t size1 = zdd1.count_clauses();
         if (config.incrementally_remove_absorbed_condition(iter, size1, zdd2.count_clauses())) {
             LOG_DEBUG << "Unification too large, removing subsumed clauses";
             SylvanZddCnf no_subsumed = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
             if (config.incrementally_remove_absorbed_condition(iter, size1, no_subsumed.count_clauses())) {
-                return config.unify_with_non_absorbed(zdd1, no_subsumed);
+                return config.unify_with_non_absorbed(zdd1, no_subsumed, absorbed_stop_condition);
             } else {
                 return zdd1.unify(no_subsumed);
             }
@@ -131,11 +151,6 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
             return zdd1.unify(zdd2);
         }
     };
-
-    // prepare for main loop
-    auto timer_heuristic1 = metrics.get_timer(MetricsDurations::VarSelection);
-    HeuristicResult result = config.heuristic(cnf);
-    timer_heuristic1.stop();
 
     // eliminate variables until a stop condition is met
     while (!config.stop_condition(iter, cnf, clauses_count, result)) {
