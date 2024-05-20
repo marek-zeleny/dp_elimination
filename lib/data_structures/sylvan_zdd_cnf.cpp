@@ -450,9 +450,11 @@ ZDD SylvanZddCnf::LogarithmicBuilder::get_result() const {
     LOG_DEBUG << "Getting result from logarithmic ZDD builder, unifying " << m_forest.size() << " trees at "
               << std::bit_width(std::get<1>(m_forest.back()) / unit_size) << " levels";
     ZDD result = zdd_false;
+    zdd_refs_pushptr(&result);
     for (const auto &level : m_forest) {
         result = zdd_or(result, std::get<0>(level));
     }
+    zdd_refs_popptr(1);
     return result;
 }
 
