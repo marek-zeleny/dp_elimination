@@ -113,7 +113,6 @@ private:
     // helper functions
     static Var literal_to_var(Literal l);
     static Literal var_to_literal(Var v);
-    static ZDD set_from_vector(const Clause &clause);
     static ZDD clause_from_vector(const Clause &clause);
     static bool contains_empty_set(const ZDD &zdd);
 

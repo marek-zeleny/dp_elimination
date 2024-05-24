@@ -514,24 +514,15 @@ SylvanZddCnf::Literal SylvanZddCnf::var_to_literal(Var v) {
     }
 }
 
-ZDD SylvanZddCnf::set_from_vector(const Clause &clause) {
+ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
     std::vector<Var> vars;
-    for (auto &l: clause) {
+    vars.reserve(clause.size());
+    for (auto &l : clause) {
         Var v = literal_to_var(l);
         vars.push_back(v);
     }
     std::sort(vars.begin(), vars.end());
-    ZDD set = zdd_set_from_array(vars.data(), vars.size());
-    return set;
-}
-
-ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
-    std::vector<uint8_t> signs(clause.size(), 1);
-    ZDD domain = set_from_vector(clause);
-    zdd_refs_push(domain);
-    ZDD zdd_clause = zdd_cube(domain, signs.data(), zdd_true);
-    zdd_refs_pop(1);
-    return zdd_clause;
+    return zdd_combination_from_array(vars.data(), vars.size());
 }
 
 bool SylvanZddCnf::contains_empty_set(const ZDD &zdd) {
