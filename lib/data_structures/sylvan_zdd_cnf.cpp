@@ -424,11 +424,13 @@ void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
 }
 
 SylvanZddCnf::LogarithmicBuilder::LogarithmicBuilder() : m_forest({{zdd_false, 0}}) {
-    zdd_refs_pushptr(&std::get<0>(m_forest.front()));
+    zdd_protect(&std::get<0>(m_forest.front()));
 }
 
 SylvanZddCnf::LogarithmicBuilder::~LogarithmicBuilder() {
-    zdd_refs_popptr(m_forest.size());
+    for (auto &level : m_forest) {
+        zdd_unprotect(&std::get<0>(level));
+    }
 }
 
 void SylvanZddCnf::LogarithmicBuilder::add_clause(const dp::SylvanZddCnf::Clause &c) {
@@ -485,13 +487,13 @@ void SylvanZddCnf::LogarithmicBuilder::check_and_merge() {
         ZDD &prev_zdd = std::get<0>(prev);
         prev_zdd = zdd_or(prev_zdd, top_zdd);
         prev_size += top_size;
-        zdd_refs_popptr(1);
+        zdd_unprotect(&std::get<0>(m_forest.front()));
         m_forest.pop_front();
         top_zdd = prev_zdd;
         top_size = prev_size;
     }
     m_forest.emplace_front(zdd_false, 0);
-    zdd_refs_pushptr(&std::get<0>(m_forest.front()));
+    zdd_protect(&std::get<0>(m_forest.front()));
 }
 
 SylvanZddCnf::Var SylvanZddCnf::literal_to_var(Literal l) {
