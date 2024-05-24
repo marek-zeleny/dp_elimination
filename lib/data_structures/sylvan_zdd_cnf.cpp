@@ -25,12 +25,14 @@ namespace dp {
 
 SylvanZddCnf::SylvanStats SylvanZddCnf::get_sylvan_stats() {
     SylvanStats stats{};
+    LaceActivator lace;
     sylvan_table_usage(&stats.table_filled, &stats.table_total);
     return stats;
 }
 
 void SylvanZddCnf::call_sylvan_gc() {
     LOG_DEBUG << "Calling Sylvan GC manually";
+    LaceActivator lace;
     sylvan_clear_cache();
     sylvan_clear_and_mark();
     sylvan_rehash_all();
@@ -129,6 +131,7 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
 }
 
 size_t SylvanZddCnf::count_clauses() const {
+    LaceActivator lace;
     return zdd_satcount(m_zdd);
 }
 
@@ -278,12 +281,14 @@ SylvanZddCnf::FormulaStats SylvanZddCnf::get_formula_statistics() const {
 
 SylvanZddCnf SylvanZddCnf::subset0(Literal l) const {
     Var v = literal_to_var(l);
+    LaceActivator lace;
     ZDD zdd = zdd_eval(m_zdd, v, 0);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
     Var v = literal_to_var(l);
+    LaceActivator lace;
     ZDD zdd = zdd_eval(m_zdd, v, 1);
     return SylvanZddCnf(zdd);
 }
@@ -291,6 +296,7 @@ SylvanZddCnf SylvanZddCnf::subset1(Literal l) const {
 SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {
     assert(verify_variable_ordering());
     assert(other.verify_variable_ordering());
+    LaceActivator lace;
     ZDD zdd = zdd_or(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
@@ -298,36 +304,43 @@ SylvanZddCnf SylvanZddCnf::unify(const SylvanZddCnf &other) const {
 SylvanZddCnf SylvanZddCnf::unify_and_remove_subsumed(const SylvanZddCnf &other) const {
     assert(verify_variable_ordering());
     assert(other.verify_variable_ordering());
+    LaceActivator lace;
     ZDD zdd = zdd_or_no_subsumed(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::intersect(const SylvanZddCnf &other) const {
+    LaceActivator lace;
     ZDD zdd = zdd_and(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::subtract(const SylvanZddCnf &other) const {
+    LaceActivator lace;
     ZDD zdd = zdd_diff(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::subtract_subsumed(const dp::SylvanZddCnf &other) const {
+    LaceActivator lace;
     ZDD zdd = zdd_subsumed_diff(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::multiply(const SylvanZddCnf &other) const {
+    LaceActivator lace;
     ZDD zdd = zdd_product(m_zdd, other.m_zdd);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::remove_tautologies() const {
+    LaceActivator lace;
     ZDD zdd = zdd_remove_tautologies(m_zdd);
     return SylvanZddCnf(zdd);
 }
 
 SylvanZddCnf SylvanZddCnf::remove_subsumed_clauses() const {
+    LaceActivator lace;
     ZDD zdd = zdd_no_subsumed(m_zdd);
     return SylvanZddCnf(zdd);
 }
@@ -423,6 +436,14 @@ void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
     }
 }
 
+SylvanZddCnf::LaceActivator::LaceActivator() {
+    lace_resume();
+}
+
+SylvanZddCnf::LaceActivator::~LaceActivator() {
+    lace_suspend();
+}
+
 SylvanZddCnf::LogarithmicBuilder::LogarithmicBuilder() : m_forest({{zdd_false, 0}}) {
     zdd_protect(&std::get<0>(m_forest.front()));
 }
@@ -437,14 +458,15 @@ void SylvanZddCnf::LogarithmicBuilder::add_clause(const dp::SylvanZddCnf::Clause
     check_and_merge();
 
     ZDD clause = clause_from_vector(c);
-    zdd_refs_push(clause);
+    zdd_protect(&clause);
     auto &top = m_forest.front();
     ZDD &zdd = std::get<0>(top);
     size_t &size = std::get<1>(top);
     assert(verify_variable_ordering_impl(clause, 0));
     assert(verify_variable_ordering_impl(zdd, 0));
+    LaceActivator lace;
     zdd = zdd_or(zdd, clause);
-    zdd_refs_pop(1);
+    zdd_unprotect(&clause);
     ++size;
 }
 
@@ -452,11 +474,12 @@ ZDD SylvanZddCnf::LogarithmicBuilder::get_result() const {
     LOG_DEBUG << "Getting result from logarithmic ZDD builder, unifying " << m_forest.size() << " trees at "
               << std::bit_width(std::get<1>(m_forest.back()) / unit_size) << " levels";
     ZDD result = zdd_false;
-    zdd_refs_pushptr(&result);
+    zdd_protect(&result);
+    LaceActivator lace;
     for (const auto &level : m_forest) {
         result = zdd_or(result, std::get<0>(level));
     }
-    zdd_refs_popptr(1);
+    zdd_unprotect(&result);
     return result;
 }
 
@@ -475,6 +498,7 @@ void SylvanZddCnf::LogarithmicBuilder::check_and_merge() {
         return;
     }
     assert(top_size == unit_size);
+    LaceActivator lace;
     while (m_forest.size() > 1) {
         auto &prev = m_forest[1];
         size_t &prev_size = std::get<1>(prev);

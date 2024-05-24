@@ -197,17 +197,15 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
     return config;
 }
 
-TASK_1(int, impl, const ArgsParser *, args_ptr)
-{
-    // Lace is a C framework, can't pass C++ arguments...
-    const ArgsParser &args = *args_ptr;
-
+int impl(const ArgsParser &args) {
     // initialize Sylvan
+    lace_resume();
     sylvan::Sylvan::initPackage(args.get_sylvan_table_size(),
-                        args.get_sylvan_table_max_size(),
-                        args.get_sylvan_cache_size(),
-                        args.get_sylvan_cache_max_size());
+                                args.get_sylvan_table_max_size(),
+                                args.get_sylvan_cache_size(),
+                                args.get_sylvan_cache_max_size());
     sylvan::sylvan_init_zdd();
+    lace_suspend();
     SylvanZddCnf::hook_sylvan_gc_log();
 
     // load input file
@@ -234,7 +232,9 @@ TASK_1(int, impl, const ArgsParser *, args_ptr)
     metrics.export_json(metrics_file);
 
     // quit sylvan, free memory
+    lace_resume();
     sylvan::Sylvan::quitPackage();
+    lace_suspend();
     return 0;
 }
 
@@ -257,8 +257,7 @@ void set_lace_stack_limit(size_t size = 0) {
     }
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     // parse args
     std::optional<ArgsParser> args = ArgsParser::parse(argc, argv);
     if (!args.has_value()) {
@@ -277,9 +276,10 @@ int main(int argc, char *argv[])
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);
     LOG_INFO << "Lace started with " << lace_workers() << " threads";
+    lace_suspend();
 
-    // run main Lace thread
-    return RUN(impl, &args.value());
+    // run implementation
+    return impl(args.value());
 
     // The lace_start command also exits Lace after _main is completed.
 }
