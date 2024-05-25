@@ -93,9 +93,13 @@ private:
     explicit SylvanZddCnf(ZDD zdd);
 
     // lace framework RAII activator
-    struct LaceActivator {
+    class LaceActivator {
+    public:
         LaceActivator();
         ~LaceActivator();
+
+    private:
+        static inline size_t s_depth{0};
     };
 
     // logarithmic building

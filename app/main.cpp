@@ -1,5 +1,5 @@
-#include <vector>
 #include <chrono>
+#include <thread>
 #include <stdexcept>
 #include <sys/resource.h>
 #include <sylvan_obj.hpp>
@@ -199,6 +199,7 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
 
 int impl(const ArgsParser &args) {
     // initialize Sylvan
+    LOG_INFO << "Initializing Sylvan";
     lace_resume();
     sylvan::Sylvan::initPackage(args.get_sylvan_table_size(),
                                 args.get_sylvan_table_max_size(),
@@ -206,6 +207,7 @@ int impl(const ArgsParser &args) {
                                 args.get_sylvan_cache_max_size());
     sylvan::sylvan_init_zdd();
     lace_suspend();
+    LOG_DEBUG << "Sylvan initialized";
     SylvanZddCnf::hook_sylvan_gc_log();
 
     // load input file
@@ -232,9 +234,11 @@ int impl(const ArgsParser &args) {
     metrics.export_json(metrics_file);
 
     // quit sylvan, free memory
+    LOG_INFO << "Quitting Sylvan";
     lace_resume();
     sylvan::Sylvan::quitPackage();
     lace_suspend();
+    LOG_DEBUG << "Sylvan successfully exited";
     return 0;
 }
 
@@ -275,11 +279,17 @@ int main(int argc, char *argv[]) {
     size_t n_workers = args->get_lace_threads();
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);
+    // Lace has a race condition when suspend() is called right after start() or resume(); avoid it by waiting for a bit
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     LOG_INFO << "Lace started with " << lace_workers() << " threads";
     lace_suspend();
 
     // run implementation
-    return impl(args.value());
+    int ret_val = impl(args.value());
 
-    // The lace_start command also exits Lace after _main is completed.
+    // again avoid Lace's race condition
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    lace_resume();
+    lace_stop();
+    return ret_val;
 }

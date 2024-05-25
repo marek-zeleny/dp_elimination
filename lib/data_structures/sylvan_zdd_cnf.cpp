@@ -54,8 +54,8 @@ VOID_TASK_0(sylvan_log_after_gc) {
 
 void SylvanZddCnf::hook_sylvan_gc_log() {
     if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
-        sylvan_gc_hook_pregc(sylvan_log_before_gc_CALL);
-        sylvan_gc_hook_postgc(sylvan_log_after_gc_CALL);
+        sylvan_gc_hook_pregc(TASK(sylvan_log_before_gc));
+        sylvan_gc_hook_postgc(TASK(sylvan_log_after_gc));
     }
 }
 
@@ -102,6 +102,7 @@ bool SylvanZddCnf::verify_variable_ordering() const {
 
 SylvanZddCnf SylvanZddCnf::from_vector(const std::vector<Clause> &clauses) {
     LogarithmicBuilder builder;
+    LaceActivator lace;
     for (const auto &c : clauses) {
         builder.add_clause(c);
     }
@@ -118,6 +119,8 @@ SylvanZddCnf SylvanZddCnf::from_file(const std::string &file_name) {
         auto timer = metrics.get_timer(MetricsDurations::ReadFormula_AddClause);
         builder.add_clause(c);
     };
+
+    LaceActivator lace;
     try {
         CnfReader::read_from_file(file_name, func);
     } catch (const CnfReader::failure &f) {
@@ -437,11 +440,15 @@ void SylvanZddCnf::write_dimacs_to_file(const std::string &file_name) const {
 }
 
 SylvanZddCnf::LaceActivator::LaceActivator() {
-    lace_resume();
+    if (s_depth++ == 0) {
+        lace_resume();
+    }
 }
 
 SylvanZddCnf::LaceActivator::~LaceActivator() {
-    lace_suspend();
+    if (--s_depth == 0) {
+        lace_suspend();
+    }
 }
 
 SylvanZddCnf::LogarithmicBuilder::LogarithmicBuilder() : m_forest({{zdd_false, 0}}) {
