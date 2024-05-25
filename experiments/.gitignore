@@ -3,3 +3,8 @@
 
 # ignore results directory
 results*/
+
+# SLURM scripts and output
+*.slurm
+out_*/
+
