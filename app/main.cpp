@@ -280,7 +280,7 @@ int main(int argc, char *argv[]) {
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);
     // Lace has a race condition when suspend() is called right after start() or resume(); avoid it by waiting for a bit
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     LOG_INFO << "Lace started with " << lace_workers() << " threads";
     lace_suspend();
 
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
     int ret_val = impl(args.value());
 
     // again avoid Lace's race condition
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     lace_resume();
     lace_stop();
     return ret_val;
