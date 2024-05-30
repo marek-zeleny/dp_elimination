@@ -553,6 +553,7 @@ ZDD SylvanZddCnf::clause_from_vector(const Clause &clause) {
         vars.push_back(v);
     }
     std::sort(vars.begin(), vars.end());
+    LaceActivator lace;
     return zdd_combination_from_array(vars.data(), vars.size());
 }
 
