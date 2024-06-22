@@ -42,6 +42,7 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    ->multi_option_policy(CLI::MultiOptionPolicy::Reverse);
     app.allow_config_extras(CLI::config_extras_mode::error);
 
+    // files
     app.add_option("input-file", args.m_input_cnf_file_name,
                    "File containing the input formula in DIMACS format")
                    ->group("Files")
@@ -56,6 +57,7 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "File for writing logs")
                    ->group("Files");
 
+    // algorithm
     app.option_defaults()->always_capture_default(false);
     app.add_option("--heuristic", args.m_heuristic,
                    "Heuristic for selecting eliminated literals")
@@ -73,72 +75,79 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
+
+    // complete minimization
     app.add_option("--complete-minimization-condition", args.m_complete_minimization_condition,
                    "Condition on when to fully minimize the formula")
-                   ->group("Algorithm")
+                   ->group("Complete minimization")
                    ->transform(CLI::CheckedTransformer(condition_partial_map,
-                                                       CLI::ignore_case,
-                                                       CLI::ignore_space,
-                                                       CLI::ignore_underscore));
-    app.add_option("--incremental-minimization-condition", args.m_incremental_minimization_condition,
-                   "Condition on when to incrementally (partially) minimize the formula")
-                   ->group("Algorithm")
-                   ->transform(CLI::CheckedTransformer(condition_full_map,
-                                                       CLI::ignore_case,
-                                                       CLI::ignore_space,
-                                                       CLI::ignore_underscore));
-    app.add_option("--subsumed-removal-condition", args.m_subsumed_removal_condition,
-                   "Condition on when to remove subsumed clauses from the formula")
-                   ->group("Algorithm")
-                   ->transform(CLI::CheckedTransformer(condition_full_map,
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
     app.add_option("--complete-minimization-interval", args.m_complete_minimization_interval,
                    "Number of eliminated variables before complete minimization of the formula"
                    "\nneeds --complete-minimization-condition=interval")
-                   ->group("Algorithm")
+                   ->group("Complete minimization")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
     app.add_option("--complete-minimization-relative-size", args.m_complete_minimization_relative_size,
                    "Relative growth of formula before complete minimization (must be larger than 1)"
                    "\nneeds --complete-minimization-condition=relative_size")
-                    ->group("Algorithm")
-                    ->check(CLI::Range(1.0f, 1000.0f));
+                   ->group("Complete minimization")
+                   ->check(CLI::Range(1.0f, 1000.0f));
+
+    // incremental minimization
+    app.add_option("--incremental-minimization-condition", args.m_incremental_minimization_condition,
+                   "Condition on when to incrementally (partially) minimize the formula")
+                   ->group("Incremental minimization")
+                   ->transform(CLI::CheckedTransformer(condition_full_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
     app.add_option("--incremental-minimization-interval", args.m_incremental_minimization_interval,
                    "Number of eliminated variables before incremental minimization of the formula"
                    "\nneeds --incremental-minimization-condition=interval")
-                   ->group("Algorithm")
+                   ->group("Incremental minimization")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
     app.add_option("--incremental-minimization-relative-size", args.m_incremental_minimization_relative_size,
                    "Relative size of added formula compared to the base formula in order to trigger incremental"
                    "\nminimization when computing their union (must be larger than 0)"
                    "\nneeds --incremental-minimization-condition=relative_size")
-                   ->group("Algorithm")
+                   ->group("Incremental minimization")
                    ->check(CLI::Range(0.0f, 1000.0f));
     app.add_option("--incremental-minimization-absolute_size", args.m_incremental_minimization_absolute_size,
                    "Absolute size of added formula in order to trigger incremental minimization when computing its"
                    "\nunion with the base formula"
                    "\nneeds --incremental-minimization-condition=absolute_size")
-                   ->group("Algorithm")
+                   ->group("Incremental minimization")
                    ->check(CLI::Range(0ul, std::numeric_limits<size_t>::max()));
+
+    // subsumed removal
+    app.add_option("--subsumed-removal-condition", args.m_subsumed_removal_condition,
+                   "Condition on when to remove subsumed clauses from the formula")
+                   ->group("Subsumed removal")
+                   ->transform(CLI::CheckedTransformer(condition_full_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
     app.add_option("--subsumed-removal-interval", args.m_subsumed_removal_interval,
                    "Number of eliminated variables before removing subsumed clauses"
                    "\nneeds --subsumed-removal-condition=interval")
-                   ->group("Algorithm")
+                   ->group("Subsumed removal")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
     app.add_option("--subsumed-removal-relative-size", args.m_subsumed_removal_relative_size,
                    "Relative size of added formula compared to the base formula in order to trigger subsumed clause"
                    "\nremoval (must be larger than 0)"
                    "\nneeds --subsumed-removal-condition=relative_size")
-                   ->group("Algorithm")
+                   ->group("Subsumed removal")
                    ->check(CLI::Range(0.0f, 1000.0f));
     app.add_option("--subsumed-removal-absolute_size", args.m_subsumed_removal_absolute_size,
                    "Absolute size of added formula in order to trigger subsumed clause removal when computing its"
                    "\nunion with the base formula"
                    "\nneeds --subsumed-removal-condition=absolute_size")
-                   ->group("Algorithm")
+                   ->group("Subsumed removal")
                    ->check(CLI::Range(0ul, std::numeric_limits<size_t>::max()));
 
+    // stop conditions
     app.add_option("-i,--max-iterations", args.m_max_iterations,
                    "Maximum number of iterations before stopping")
                    ->group("Stop conditions");
@@ -152,6 +161,7 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    "Range of variables that are allowed to be eliminated")
                    ->group("Stop conditions");
 
+    // sylvan
     app.add_option("--sylvan-table-size", args.m_sylvan_table_size_pow,
                    "Sylvan table size (default and max) as a base-2 logarithm (20 -> 24 MB)")
                    ->group("Sylvan");
