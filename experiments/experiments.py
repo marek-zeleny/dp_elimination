@@ -135,7 +135,8 @@ input_formulas: list[str] = [
 ]
 
 experiment_setups: list[str] = [
-    "minimal_bloat",
+    "default",
+    "no_absorbed_removal",
 ]
 
 

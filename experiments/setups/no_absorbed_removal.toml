@@ -1,0 +1,12 @@
+heuristic = "minimal_bloat"
+
+absorbed-removal-algorithm = "watched_literals"
+
+complete-minimization-condition = "never"
+
+incremental-minimization-condition = "never"
+
+subsumed-removal-condition = "relative_size"
+subsumed-removal-relative-size = 0.1
+
+timeout = 3600 # seconds (1h)
