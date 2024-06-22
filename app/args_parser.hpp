@@ -33,14 +33,7 @@ public:
         WatchedLiterals,
     };
 
-    enum class AbsorbedRemovalCondition : EnumUnderlyingType {
-        None,
-        Never,
-        Interval,
-        FormulaGrowth,
-    };
-
-    enum class IncrementalAbsorbedRemovalCondition : EnumUnderlyingType {
+    enum class Condition : EnumUnderlyingType {
         None,
         Never,
         Interval,
@@ -57,13 +50,17 @@ public:
 
     [[nodiscard]] Heuristic get_heuristic() const { return m_heuristic; }
     [[nodiscard]] AbsorbedRemovalAlgorithm get_absorbed_removal_algorithm() const { return m_absorbed_removal_algorithm; }
-    [[nodiscard]] AbsorbedRemovalCondition get_absorbed_removal_condition() const { return m_absorbed_removal_condition; }
-    [[nodiscard]] IncrementalAbsorbedRemovalCondition get_incremental_absorbed_removal_condition() const { return m_incremental_absorbed_condition; }
-    [[nodiscard]] size_t get_absorbed_removal_interval() const { return m_absorbed_removal_interval; }
-    [[nodiscard]] float get_absorbed_removal_growth() const { return m_absorbed_removal_growth; }
-    [[nodiscard]] size_t get_incremental_absorbed_removal_interval() const { return m_incremental_absorbed_interval; }
-    [[nodiscard]] float get_incremental_absorbed_removal_relative_size() const { return m_incremental_absorbed_relative_size; }
-    [[nodiscard]] size_t get_incremental_absorbed_removal_absolute_size() const { return m_incremental_absorbed_absolute_size; }
+    [[nodiscard]] Condition get_complete_minimization_condition() const { return m_complete_minimization_condition; }
+    [[nodiscard]] size_t get_complete_minimization_interval() const { return m_complete_minimization_interval; }
+    [[nodiscard]] float get_complete_minimization_relative_size() const { return m_complete_minimization_relative_size; }
+    [[nodiscard]] Condition get_incremental_minimization_condition() const { return m_incremental_minimization_condition; }
+    [[nodiscard]] size_t get_incremental_minimization_interval() const { return m_incremental_minimization_interval; }
+    [[nodiscard]] float get_incremental_minimization_relative_size() const { return m_incremental_minimization_relative_size; }
+    [[nodiscard]] size_t get_incremental_minimization_absolute_size() const { return m_incremental_minimization_absolute_size; }
+    [[nodiscard]] Condition get_subsumed_removal_condition() const { return m_subsumed_removal_condition; }
+    [[nodiscard]] size_t get_subsumed_removal_interval() const { return m_subsumed_removal_interval; }
+    [[nodiscard]] float get_subsumed_removal_relative_size() const { return m_subsumed_removal_relative_size; }
+    [[nodiscard]] size_t get_subsumed_removal_absolute_size() const { return m_subsumed_removal_absolute_size; }
 
     [[nodiscard]] const std::optional<size_t> &get_max_iterations() const { return m_max_iterations; }
     [[nodiscard]] const std::optional<size_t> &get_max_duration_seconds() const { return m_max_duration_seconds; }
@@ -97,13 +94,17 @@ private:
     // algorithm
     Heuristic m_heuristic{Heuristic::None};
     AbsorbedRemovalAlgorithm m_absorbed_removal_algorithm{AbsorbedRemovalAlgorithm::WatchedLiterals};
-    AbsorbedRemovalCondition m_absorbed_removal_condition{AbsorbedRemovalCondition::FormulaGrowth};
-    IncrementalAbsorbedRemovalCondition m_incremental_absorbed_condition{IncrementalAbsorbedRemovalCondition::RelativeSize};
-    size_t m_absorbed_removal_interval{0};
-    float m_absorbed_removal_growth{1.5};
-    size_t m_incremental_absorbed_interval{0};
-    float m_incremental_absorbed_relative_size{0.1};
-    size_t m_incremental_absorbed_absolute_size{0};
+    Condition m_complete_minimization_condition{Condition::RelativeSize};
+    size_t m_complete_minimization_interval{0};
+    float m_complete_minimization_relative_size{1.5};
+    Condition m_incremental_minimization_condition{Condition::RelativeSize};
+    size_t m_incremental_minimization_interval{0};
+    float m_incremental_minimization_relative_size{0.1};
+    size_t m_incremental_minimization_absolute_size{0};
+    Condition m_subsumed_removal_condition{Condition::RelativeSize};
+    size_t m_subsumed_removal_interval{0};
+    float m_subsumed_removal_relative_size{0.1};
+    size_t m_subsumed_removal_absolute_size{0};
     // stop conditions
     std::optional<size_t> m_max_iterations{};
     std::optional<size_t> m_max_duration_seconds{};

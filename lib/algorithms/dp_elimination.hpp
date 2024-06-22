@@ -13,7 +13,7 @@ namespace dp {
 
 using StopCondition_f = std::function<bool(size_t iteration, const SylvanZddCnf &cnf, size_t cnf_size,
         const HeuristicResult &result)>;
-using AbsorbedCondition_f = std::function<bool(size_t iteration, size_t prev_cnf_size, size_t cnf_size)>;
+using SizeBasedCondition_f = std::function<bool(size_t iteration, size_t prev_cnf_size, size_t cnf_size)>;
 using UnaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
 using UnaryOperationWithStopCondition_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf,
                                                                      const std::function<bool()> &stop_condition)>;
@@ -81,10 +81,11 @@ inline void log_zdd_stats(const size_t &num_clauses, const size_t &num_nodes, co
 struct EliminationAlgorithmConfig {
     Heuristic_f heuristic;
     StopCondition_f stop_condition;
-    AbsorbedCondition_f remove_absorbed_condition;
-    UnaryOperationWithStopCondition_f remove_absorbed_clauses;
-    AbsorbedCondition_f incrementally_remove_absorbed_condition;
-    BinaryOperationwithStopCondition_f unify_with_non_absorbed;
+    SizeBasedCondition_f complete_minimization_condition;
+    UnaryOperationWithStopCondition_f complete_minimization;
+    SizeBasedCondition_f incremental_minimization_condition;
+    BinaryOperationwithStopCondition_f unify_and_minimize;
+    SizeBasedCondition_f remove_subsumed_condition;
     IsAllowedVariable_f is_allowed_variable;
 };
 
@@ -114,41 +115,44 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     HeuristicResult result = config.heuristic(cnf);
     timer_heuristic1.stop();
 
-    // stop condition for absorbed removal
-    auto absorbed_stop_condition = [&config, &iter, &cnf, &clauses_count, &result]() {
+    // stop condition for minimization
+    auto minimization_stop_condition = [&config, &iter, &cnf, &clauses_count, &result]() {
         return config.stop_condition(iter, cnf, clauses_count, result);
     };
 
-    // helper lambda function for removing absorbed clauses
-    size_t last_absorbed_clauses_count = clauses_count;
-    auto conditionally_remove_absorbed = [&config, &iter, &last_absorbed_clauses_count, &clauses_count,
-                                          &absorbed_stop_condition](
+    // helper lambda function for complete minimization
+    size_t last_minimization_clauses_count = clauses_count;
+    auto conditionally_minimize = [&config, &iter, &last_minimization_clauses_count, &clauses_count,
+                                          &minimization_stop_condition](
             SylvanZddCnf &cnf) {
-        if (absorbed_stop_condition()) {
+        if (minimization_stop_condition()) {
             return;
         }
-        if (config.remove_absorbed_condition(iter, last_absorbed_clauses_count, clauses_count)) {
-            cnf = config.remove_absorbed_clauses(cnf, absorbed_stop_condition);
+        if (config.complete_minimization_condition(iter, last_minimization_clauses_count, clauses_count)) {
+            cnf = config.complete_minimization(cnf, minimization_stop_condition);
             assert(cnf.verify_variable_ordering());
             clauses_count = cnf.count_clauses();
-            last_absorbed_clauses_count = clauses_count;
+            last_minimization_clauses_count = clauses_count;
         }
     };
 
-    // helper lambda function for incrementally removing absorbed clauses (during union)
-    auto conditional_union = [&config, &iter, &absorbed_stop_condition](
+    // helper lambda function for subsumption removal and incremental minimization (during union)
+    auto conditional_union = [&config, &iter, &minimization_stop_condition](
             const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
         const size_t size1 = zdd1.count_clauses();
-        if (config.incrementally_remove_absorbed_condition(iter, size1, zdd2.count_clauses())) {
-            LOG_DEBUG << "Unification too large, removing subsumed clauses";
-            SylvanZddCnf no_subsumed = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
-            if (config.incrementally_remove_absorbed_condition(iter, size1, no_subsumed.count_clauses())) {
-                return config.unify_with_non_absorbed(zdd1, no_subsumed, absorbed_stop_condition);
-            } else {
-                return zdd1.unify(no_subsumed);
-            }
+        size_t size2 = zdd2.count_clauses();
+        SylvanZddCnf zdd2_copy;
+        if (config.remove_subsumed_condition(iter, size1, size2)) {
+            LOG_DEBUG << "Removing subsumed clauses";
+            zdd2_copy = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
+            size2 = zdd2_copy.count_clauses();
         } else {
-            return zdd1.unify(zdd2);
+            zdd2_copy = zdd2;
+        }
+        if (config.incremental_minimization_condition(iter, size1, size2)) {
+            return config.unify_and_minimize(zdd1, zdd2_copy, minimization_stop_condition);
+        } else {
+            return zdd1.unify(zdd2_copy);
         }
     };
 
@@ -166,7 +170,7 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         assert(cnf.verify_variable_ordering());
         clauses_count = cnf.count_clauses();
 
-        conditionally_remove_absorbed(cnf);
+        conditionally_minimize(cnf);
 
         log_zdd_stats(clauses_count, cnf.count_nodes(), cnf.count_depth());
 

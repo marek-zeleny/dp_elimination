@@ -3,7 +3,6 @@
 #include <utility>
 #include <unordered_map>
 #include <CLI/CLI.hpp>
-#include <simple_logger.h>
 
 // Help message prints them in reversed order
 static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_map {
@@ -18,17 +17,17 @@ static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalAlgorith
         {"zbdd", ArgsParser::AbsorbedRemovalAlgorithm::ZBDD},
 };
 
-static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalCondition> absorbed_removal_condition_map {
-        {"formula_growth", ArgsParser::AbsorbedRemovalCondition::FormulaGrowth},
-        {"interval", ArgsParser::AbsorbedRemovalCondition::Interval},
-        {"never", ArgsParser::AbsorbedRemovalCondition::Never},
+static const std::unordered_map<std::string, ArgsParser::Condition> condition_full_map {
+        {"absolute_size", ArgsParser::Condition::AbsoluteSize},
+        {"relative_size", ArgsParser::Condition::RelativeSize},
+        {"interval", ArgsParser::Condition::Interval},
+        {"never", ArgsParser::Condition::Never},
 };
 
-static const std::unordered_map<std::string, ArgsParser::IncrementalAbsorbedRemovalCondition> incremental_absorbed_condition_map {
-        {"absolute_size", ArgsParser::IncrementalAbsorbedRemovalCondition::AbsoluteSize},
-        {"relative_size", ArgsParser::IncrementalAbsorbedRemovalCondition::RelativeSize},
-        {"interval", ArgsParser::IncrementalAbsorbedRemovalCondition::Interval},
-        {"never", ArgsParser::IncrementalAbsorbedRemovalCondition::Never},
+static const std::unordered_map<std::string, ArgsParser::Condition> condition_partial_map {
+        {"relative_size", ArgsParser::Condition::RelativeSize},
+        {"interval", ArgsParser::Condition::Interval},
+        {"never", ArgsParser::Condition::Never},
 };
 
 std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
@@ -74,45 +73,69 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
-    app.add_option("--absorbed-removal-condition", args.m_absorbed_removal_condition,
-                   "Condition on when to remove absorbed clauses")
+    app.add_option("--complete-minimization-condition", args.m_complete_minimization_condition,
+                   "Condition on when to fully minimize the formula")
                    ->group("Algorithm")
-                   ->transform(CLI::CheckedTransformer(absorbed_removal_condition_map,
+                   ->transform(CLI::CheckedTransformer(condition_partial_map,
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
-    app.add_option("--incremental-absorbed-removal-condition", args.m_incremental_absorbed_condition,
-                   "Condition on when to incrementally remove absorbed clauses")
+    app.add_option("--incremental-minimization-condition", args.m_incremental_minimization_condition,
+                   "Condition on when to incrementally (partially) minimize the formula")
                    ->group("Algorithm")
-                   ->transform(CLI::CheckedTransformer(incremental_absorbed_condition_map,
+                   ->transform(CLI::CheckedTransformer(condition_full_map,
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
-    app.add_option("--absorbed-removal-interval", args.m_absorbed_removal_interval,
-                   "Number of eliminated variables before absorbed clauses are removed"
-                   "\nneeds absorbed-removal-condition=interval")
+    app.add_option("--subsumed-removal-condition", args.m_subsumed_removal_condition,
+                   "Condition on when to remove subsumed clauses from the formula")
+                   ->group("Algorithm")
+                   ->transform(CLI::CheckedTransformer(condition_full_map,
+                                                       CLI::ignore_case,
+                                                       CLI::ignore_space,
+                                                       CLI::ignore_underscore));
+    app.add_option("--complete-minimization-interval", args.m_complete_minimization_interval,
+                   "Number of eliminated variables before complete minimization of the formula"
+                   "\nneeds --complete-minimization-condition=interval")
                    ->group("Algorithm")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
-    app.add_option("--absorbed-removal-growth", args.m_absorbed_removal_growth,
-                   "Relative growth of formula before absorbed clauses are removed (must be larger than 1)"
-                   "\nneeds absorbed-removal-condition=formula_growth")
+    app.add_option("--complete-minimization-relative-size", args.m_complete_minimization_relative_size,
+                   "Relative growth of formula before complete minimization (must be larger than 1)"
+                   "\nneeds --complete-minimization-condition=relative_size")
                     ->group("Algorithm")
                     ->check(CLI::Range(1.0f, 1000.0f));
-    app.add_option("--incremental-absorbed-removal-interval", args.m_incremental_absorbed_interval,
-                   "Number of eliminated variables between incremental absorbed clauses removals"
-                   "\nneeds --incremental-absorbed-removal-condition=interval")
+    app.add_option("--incremental-minimization-interval", args.m_incremental_minimization_interval,
+                   "Number of eliminated variables before incremental minimization of the formula"
+                   "\nneeds --incremental-minimization-condition=interval")
                    ->group("Algorithm")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
-    app.add_option("--incremental-absorbed-removal-relative-size", args.m_incremental_absorbed_relative_size,
-                   "Relative size of added formula compared to the base formula in order to trigger incremental removal"
-                   "\nof absorbed clauses when computing their union (must be larger than 0)"
-                   "\nneeds --incremental-absorbed-removal-condition=relative_size")
+    app.add_option("--incremental-minimization-relative-size", args.m_incremental_minimization_relative_size,
+                   "Relative size of added formula compared to the base formula in order to trigger incremental"
+                   "\nminimization when computing their union (must be larger than 0)"
+                   "\nneeds --incremental-minimization-condition=relative_size")
                    ->group("Algorithm")
                    ->check(CLI::Range(0.0f, 1000.0f));
-    app.add_option("--incremental-absorbed-removal-absolute_size", args.m_incremental_absorbed_absolute_size,
-                   "Absolute size of added formula in order to trigger incremental removal of absorbed clauses when"
-                   "\ncomputing its union with the base formula"
-                   "\nneeds --incremental-absorbed-removal-condition=absolute_size")
+    app.add_option("--incremental-minimization-absolute_size", args.m_incremental_minimization_absolute_size,
+                   "Absolute size of added formula in order to trigger incremental minimization when computing its"
+                   "\nunion with the base formula"
+                   "\nneeds --incremental-minimization-condition=absolute_size")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(0ul, std::numeric_limits<size_t>::max()));
+    app.add_option("--subsumed-removal-interval", args.m_subsumed_removal_interval,
+                   "Number of eliminated variables before removing subsumed clauses"
+                   "\nneeds --subsumed-removal-condition=interval")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
+    app.add_option("--subsumed-removal-relative-size", args.m_subsumed_removal_relative_size,
+                   "Relative size of added formula compared to the base formula in order to trigger subsumed clause"
+                   "\nremoval (must be larger than 0)"
+                   "\nneeds --subsumed-removal-condition=relative_size")
+                   ->group("Algorithm")
+                   ->check(CLI::Range(0.0f, 1000.0f));
+    app.add_option("--subsumed-removal-absolute_size", args.m_subsumed_removal_absolute_size,
+                   "Absolute size of added formula in order to trigger subsumed clause removal when computing its"
+                   "\nunion with the base formula"
+                   "\nneeds --subsumed-removal-condition=absolute_size")
                    ->group("Algorithm")
                    ->check(CLI::Range(0ul, std::numeric_limits<size_t>::max()));
 
