@@ -3,8 +3,8 @@ log-file = "junk/dp.log"
 metrics-file = "junk/metrics.json"
 
 heuristic = "minimal_bloat"
-absorbed-removal-condition = "interval"
-absorbed-removal-interval = 10
+complete-minimization-condition = "interval"
+complete-minimization-interval = 10
 
 max-formula-growth = 1.8
 
