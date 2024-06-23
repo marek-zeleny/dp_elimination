@@ -1,6 +1,7 @@
 output-file = "result.cnf"
 log-file = "dp.log"
 metrics-file = "metrics.json"
+output-max-size = 20_000_000
 
 sylvan-table-size = [20, 25] # 24 MB, 768 MB
 sylvan-cache-size = [20, 25] # 36 MB, 1152 MB
