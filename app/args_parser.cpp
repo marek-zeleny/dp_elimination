@@ -56,6 +56,9 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
     app.add_option("-l,--log-file", args.m_log_file_name,
                    "File for writing logs")
                    ->group("Files");
+    app.add_option("--output-max-size", args.m_output_cnf_file_max_size,
+                   "Maximum size of output formula (# clauses); if larger, no output is written")
+                   ->group("Files");
 
     // algorithm
     app.option_defaults()->always_capture_default(false);

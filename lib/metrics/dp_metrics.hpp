@@ -9,7 +9,9 @@ namespace dp {
 
 // counters
 enum class MetricsCounters : uint8_t {
-    InitVars = 0,
+    MinVar = 0,
+    MaxVar,
+    InitVars,
     FinalVars,
     EliminatedVars,
     RemoveAbsorbedClausesCallCount,
@@ -21,6 +23,8 @@ enum class MetricsCounters : uint8_t {
 };
 
 inline const std::array<std::string, to_underlying(MetricsCounters::Last) + 1> counter_names{
+    "MinVar",
+    "MaxVar",
     "InitVars",
     "FinalVars",
     "EliminatedVars",

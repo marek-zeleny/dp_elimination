@@ -14,6 +14,11 @@
 
 namespace dp {
 
+class SylvanFullTableException : public std::runtime_error {
+public:
+    SylvanFullTableException(const std::string &what) : std::runtime_error(what) {}
+};
+
 class SylvanZddCnf {
 public:
     using Literal = int32_t;

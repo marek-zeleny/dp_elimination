@@ -47,6 +47,7 @@ public:
     [[nodiscard]] const std::string &get_output_cnf_file_name() const { return m_output_cnf_file_name; }
     [[nodiscard]] const std::string &get_log_file_name() const { return m_log_file_name; }
     [[nodiscard]] const std::string &get_metrics_file_name() const { return m_metrics_file_name; }
+    [[nodiscard]] const size_t &get_output_cnf_file_max_size() const { return m_output_cnf_file_max_size; }
 
     [[nodiscard]] Heuristic get_heuristic() const { return m_heuristic; }
     [[nodiscard]] AbsorbedRemovalAlgorithm get_absorbed_removal_algorithm() const { return m_absorbed_removal_algorithm; }
@@ -91,6 +92,7 @@ private:
     std::string m_output_cnf_file_name{"result.cnf"};
     std::string m_log_file_name{"dp.log"};
     std::string m_metrics_file_name{"metrics.json"};
+    size_t m_output_cnf_file_max_size{std::numeric_limits<size_t>::max()};
     // algorithm
     Heuristic m_heuristic{Heuristic::None};
     AbsorbedRemovalAlgorithm m_absorbed_removal_algorithm{AbsorbedRemovalAlgorithm::WatchedLiterals};

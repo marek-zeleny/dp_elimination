@@ -48,6 +48,9 @@ VOID_TASK_0(sylvan_log_before_gc) {
 VOID_TASK_0(sylvan_log_after_gc) {
     auto stats = SylvanZddCnf::get_sylvan_stats();
     LOG_DEBUG << "Sylvan: GC complete, table usage " << stats.table_filled << "/" << stats.table_total;
+    if (stats.table_filled > stats.table_total * 9 / 10) {
+        throw SylvanFullTableException("Sylvan table is more than 90 % full");
+    }
 }
 
 } // namespace
@@ -55,8 +58,8 @@ VOID_TASK_0(sylvan_log_after_gc) {
 void SylvanZddCnf::hook_sylvan_gc_log() {
     if constexpr (simple_logger::Log<simple_logger::LogLevel::Debug>::isActive) {
         sylvan_gc_hook_pregc(TASK(sylvan_log_before_gc));
-        sylvan_gc_hook_postgc(TASK(sylvan_log_after_gc));
     }
+    sylvan_gc_hook_postgc(TASK(sylvan_log_after_gc));
 }
 
 SylvanZddCnf::SylvanZddCnf() : m_zdd(zdd_false) {

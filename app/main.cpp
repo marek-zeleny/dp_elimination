@@ -124,6 +124,8 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
     config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_iterations(),
                                           args.get_max_formula_growth(), args.get_max_duration_seconds());
     config.is_allowed_variable = AllowedVariablePredicate(args.get_min_var(), args.get_max_var());
+    metrics.increase_counter(MetricsCounters::MinVar, static_cast<long>(args.get_min_var()));
+    metrics.increase_counter(MetricsCounters::MaxVar, static_cast<long>(args.get_max_var()));
 
     switch (args.get_heuristic()) {
         case ArgsParser::Heuristic::Simple:
@@ -236,13 +238,27 @@ int impl(const ArgsParser &args) {
     // perform the algorithm
     std::cout << "Eliminating variables..." << std::endl;
     EliminationAlgorithmConfig config = create_config_from_args(cnf, args);
-    SylvanZddCnf result = eliminate_vars(cnf, config);
+    bool success = false;
+    SylvanZddCnf result;
+    try {
+        result = eliminate_vars(cnf, config);
+        success = true;
+    } catch (const SylvanFullTableException &e) {
+        LOG_ERROR << e.what();
+    }
 
     // write result to file
-    std::string output_file_name = args.get_output_cnf_file_name();
-    result.write_dimacs_to_file(output_file_name);
-    std::cout << "Formula with " << result.count_clauses() << " clauses written to file " << output_file_name
-              << std::endl;
+    if (!success) {
+        std::cout << "Elimination failed, see log for more information" << std::endl;
+    } else if (result.count_clauses() > args.get_output_cnf_file_max_size()) {
+        LOG_INFO << "Result is too large (" << result.count_clauses() << " > " << args.get_output_cnf_file_max_size()
+                 << "), skipping writing it to an output file";
+    } else {
+        std::string output_file_name = args.get_output_cnf_file_name();
+        result.write_dimacs_to_file(output_file_name);
+        std::cout << "Formula with " << result.count_clauses() << " clauses written to file " << output_file_name
+                  << std::endl;
+    }
 
     // export metrics
     std::string metrics_file_name = args.get_metrics_file_name();
