@@ -8,10 +8,8 @@ def get_duration(metrics):
 
 
 def get_remaining_vars_ratio(metrics):
-    total = metrics["counters"]["MaxVar"] - metrics["counters"]["MinVar"] + 1
-    eliminated = metrics["counters"]["InitVars"] - metrics["counters"]["FinalVars"]
+    total = metrics["counters"]["InitVars"] - metrics["counters"]["MinVar"] + 1
     remaining = metrics["counters"]["FinalVars"] - metrics["counters"]["MinVar"] + 1
-    assert remaining + eliminated == total
     return remaining / total
 
 
