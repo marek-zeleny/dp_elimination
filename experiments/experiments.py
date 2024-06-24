@@ -26,9 +26,8 @@ setups_dir: Path = script_root_dir / "setups"
 # experiments
 input_formulas: list[str] = None
 experiment_setups: list[str] = [
-    #"default",
-    #"no_absorbed_removal",
-    "minimal_bloat",
+    "default",
+    "no_absorbed_removal",
 ]
 
 
