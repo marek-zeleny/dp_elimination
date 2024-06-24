@@ -132,9 +132,10 @@ def run_dp_experiments(args):
     with ThreadPoolExecutor(max_workers=num_processes) as exec:
         exit_codes = exec.map(run_experiment, commands, working_dirs, in_parallel)
     # print results summary
-    print()
-    for dir, code in zip(working_dirs, exit_codes):
-        print(f"Experiment {dir.name} exited with code {code}")
+    if num_processes > 1:
+        print()
+        for dir, code in zip(working_dirs, exit_codes):
+            print(f"Experiment {dir.name} exited with code {code}")
 
 
 # data processing template
