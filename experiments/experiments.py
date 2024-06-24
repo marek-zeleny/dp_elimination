@@ -18,7 +18,7 @@ from summary_plots import extract_setup_summary_data, create_setup_summary_plots
 
 # path constants
 script_root_dir: Path = Path(os.path.realpath(__file__)).parent.absolute()
-input_formulas_list_path: Path = script_root_dir / "old_input_formulas.txt"
+input_formulas_list_path: Path = script_root_dir / "input_formulas.txt"
 default_config_path: Path = script_root_dir / "default_config.toml"
 inputs_dir: Path = script_root_dir / "inputs"
 setups_dir: Path = script_root_dir / "setups"
