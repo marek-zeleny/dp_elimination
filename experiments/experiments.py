@@ -196,6 +196,7 @@ def visualize_metrics(args):
 
 def visualize_setup_summaries(args):
     results_dir = args.results_dir
+    results_dir_path = Path(results_dir).absolute()
     format = args.format
     dpi = args.dpi
 
@@ -205,7 +206,7 @@ def visualize_setup_summaries(args):
     process_metrics(results_dir, process)
     plots = create_setup_summary_plots(data)
     for name, fig in plots:
-        fig.savefig(results_dir / f"{name}.{format}", format=format, dpi=dpi)
+        fig.savefig(results_dir_path / f"{name}.{format}", format=format, dpi=dpi)
         plt.close(fig)
 
 

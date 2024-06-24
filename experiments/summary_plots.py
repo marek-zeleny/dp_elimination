@@ -86,7 +86,8 @@ def plot_growth(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Ax
 
 
 # interface
-def extract_setup_summary_data(metrics: dict, data: dict, setup_key, input_key):
+def extract_setup_summary_data(metrics: dict, data: dict[str, dict[str, tuple[float, float, float]]],
+                               setup_key: str, input_key: str):
     if input_key not in data:
         data[input_key] = dict()
     data[input_key][setup_key] = (
@@ -96,24 +97,24 @@ def extract_setup_summary_data(metrics: dict, data: dict, setup_key, input_key):
     )
 
 
-def prepare_setup_summary_data(data: dict) -> tuple[list, dict[dict[list]]]:
-    inputs = sorted(data.keys)
+def prepare_setup_summary_data(data: dict[str, dict[str, tuple[float, float, float]]]) -> tuple[list, dict[dict[list]]]:
+    inputs = sorted(data.keys())
     setups = {s_key for i_data in data.values() for s_key in i_data.keys()}
     complete_data = {
         "duration": {s: [] for s in setups},
         "vars": {s: [] for s in setups},
         "growth": {s: [] for s in setups},
     }
-    for i_data in sorted(data.values()):
+    for _, i_data in sorted(data.items()):
         for s in setups:
-            duration, vars, growth = i_data.get(s, default=(float("nan"), float("nan"), float("nan")))
+            duration, vars, growth = i_data.get(s, (float("nan"), float("nan"), float("nan")))
             complete_data["duration"][s] = duration
             complete_data["vars"][s] = vars
             complete_data["growth"][s] = growth
     return inputs, complete_data
 
 
-def create_setup_summary_plots(data: dict) -> list[tuple[str, plt.Figure]]:
+def create_setup_summary_plots(data: dict[str, dict[str, tuple[float, float, float]]]) -> list[tuple[str, plt.Figure]]:
     inputs, complete_data = prepare_setup_summary_data(data)
     figures = []
 
