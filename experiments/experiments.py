@@ -14,10 +14,11 @@ from datetime import timedelta
 from typing import Callable, Generator
 from tables import create_tables
 from plots import create_plots
+from summary_plots import extract_setup_summary_data, create_setup_summary_plots
 
 # path constants
 script_root_dir: Path = Path(os.path.realpath(__file__)).parent.absolute()
-input_formulas_list_path: Path = script_root_dir / "input_formulas.txt"
+input_formulas_list_path: Path = script_root_dir / "old_input_formulas.txt"
 default_config_path: Path = script_root_dir / "default_config.toml"
 inputs_dir: Path = script_root_dir / "inputs"
 setups_dir: Path = script_root_dir / "setups"
@@ -25,8 +26,9 @@ setups_dir: Path = script_root_dir / "setups"
 # experiments
 input_formulas: list[str] = None
 experiment_setups: list[str] = [
-    "default",
-    "no_absorbed_removal",
+    #"default",
+    #"no_absorbed_removal",
+    "minimal_bloat",
 ]
 
 
@@ -44,8 +46,8 @@ def generate_setups(results_dir: Path) -> Generator[tuple[Path, Path, Path, Path
             setup_config_path = setups_dir / f"{setup}.toml"
             input_config_path = inputs_dir / f"{formula}.toml"
             input_formula_path = inputs_dir / f"{formula}.cnf"
-            output_dir_path = results_dir / f"{setup}__{formula}"
-            yield setup_config_path, input_config_path, input_formula_path, output_dir_path
+            output_dir_path = results_dir / f"{setup}/{formula}"
+            yield setup, formula, setup_config_path, input_config_path, input_formula_path, output_dir_path
 
 
 def count_setups(args):
@@ -101,7 +103,8 @@ def run_dp_experiments(args):
     setup_index = args.setup_index
     commands: list[list[str]] = []
     working_dirs: list[Path] = []
-    for i, (setup_config_path,
+    for i, (_, _,
+            setup_config_path,
             input_config_path,
             input_formula_path,
             output_dir_path) in enumerate(generate_setups(results_dir)):
@@ -141,13 +144,13 @@ def process_metrics(results_dir_path: str, func: Callable[[Path, dict], None]):
     if not results_dir.exists() or not results_dir.is_dir():
         print(f"Invalid path to results: {results_dir}", file=sys.stderr)
         sys.exit(1)
-    for _, _, _, output_dir_path in generate_setups(results_dir):
+    for setup, formula, _, _, _, output_dir_path in generate_setups(results_dir):
         metrics_path = output_dir_path / "metrics.json"
         if metrics_path.exists() and metrics_path.is_file():
             print(f"Processing metrics file {metrics_path}", flush=True)
             with open(metrics_path, "r") as file:
                 metrics: dict = json.load(file)
-                func(output_dir_path, metrics)
+                func(output_dir_path, metrics, setup, formula)
         else:
             print(f"Metrics file {metrics_path} doesn't exist", file=sys.stderr, flush=True)
 
@@ -155,7 +158,7 @@ def process_metrics(results_dir_path: str, func: Callable[[Path, dict], None]):
 def summarize_metrics(args):
     results_dir = args.results_dir
     format = args.format
-    def process(output_dir_path: Path, metrics: dict):
+    def process(output_dir_path: Path, metrics: dict, *_):
         tables = create_tables(metrics)
         for name, table, include_index in tables:
             export_table(table, output_dir_path / f"{name}.{format}", format, include_index)
@@ -183,12 +186,27 @@ def visualize_metrics(args):
     results_dir = args.results_dir
     format = args.format
     dpi = args.dpi
-    def process(output_dir_path: Path, metrics: dict):
+    def process(output_dir_path: Path, metrics: dict, *_):
         plots = create_plots(metrics)
         for name, fig in plots:
             fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=dpi)
             plt.close(fig)
     process_metrics(results_dir, process)
+
+
+def visualize_setup_summaries(args):
+    results_dir = args.results_dir
+    format = args.format
+    dpi = args.dpi
+
+    data = dict()
+    def process(_, metrics: dict, setup: str, formula: str):
+        extract_setup_summary_data(metrics, data, setup, formula)
+    process_metrics(results_dir, process)
+    plots = create_setup_summary_plots(data)
+    for name, fig in plots:
+        fig.savefig(results_dir / f"{name}.{format}", format=format, dpi=dpi)
+        plt.close(fig)
 
 
 # CLI
@@ -231,6 +249,17 @@ parser_visualize.add_argument("results_dir",
                               help="Directory with results (given as '--results-dir' when running experiments)")
 parser_visualize.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
 parser_visualize.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
+
+parser_setup_summary = subparsers.add_parser("setup-summary",
+                                             description="Process metrics from experiments and generate plots comparing"
+                                                         " experiment setups",
+                                             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser_setup_summary.set_defaults(func=visualize_setup_summaries)
+parser_setup_summary.add_argument("results_dir",
+                              type=str,
+                              help="Directory with results (given as '--results-dir' when running experiments)")
+parser_setup_summary.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
+parser_setup_summary.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
 
 if __name__ == '__main__':
     args = parser.parse_args()
