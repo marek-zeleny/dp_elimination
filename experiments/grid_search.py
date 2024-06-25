@@ -23,7 +23,7 @@ input_formulas: list[str] = [
     "instancesCompilation/random/uf250-1065/uf250-036.dc.min",
 ]
 experiment_setups: list[str] = [
-    "default",
+    "grid_search",
 ]
 grid: dict[str, np.ndarray] = {
     "complete-minimization-relative-size": get_distribution(1, 3, 5, -0.7),
@@ -130,7 +130,7 @@ parser_run = subparsers.add_parser("run",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_run.set_defaults(func=run_search)
 parser_run.add_argument("dp_executable", type=str, help="Path to the compiled DP executable")
-parser_run.add_argument("-r", "--results-dir", type=str, default="grid_search", help="Directory for storing results")
+parser_run.add_argument("-r", "--results-dir", type=str, default="results_grid_search", help="Directory for storing results")
 parser_run.add_argument("-i", "--setup-index",
                         type=int,
                         default=-1,
