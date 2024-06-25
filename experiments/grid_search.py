@@ -45,7 +45,7 @@ def generate_setups(results_dir: Path) -> Generator[tuple[tuple[str, np.float64]
                 setup_config_path = setups_dir / f"{setup}.toml"
                 input_config_path = inputs_dir / f"{formula}.toml"
                 input_formula_path = inputs_dir / f"{formula}.cnf"
-                config_name = "_".join([f"{o[:3]}={v}" for o, v in config])
+                config_name = "_".join([f"{o[:3]}={v:.2f}" for o, v in config])
                 output_dir_path = results_dir / f"{setup}/{formula}/{config_name}"
                 extra_options = [(f"--{o}", f"{v:.2f}") for o, v in config]
                 extra_options = [item for pair in extra_options for item in pair]
@@ -81,7 +81,9 @@ def run_grid_search(dp_path: Path, results_dir: Path, setup_index: int):
         working_dirs.append(output_dir_path)
     # execute
     in_parallel = [False for _ in range(len(commands))]
-    map(run_experiment, commands, working_dirs, in_parallel)
+    iter = map(run_experiment, commands, working_dirs, in_parallel)
+    for _ in iter:
+        pass
 
 
 def extract_results(results_dir: Path):
