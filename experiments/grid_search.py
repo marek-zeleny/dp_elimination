@@ -80,7 +80,8 @@ def run_grid_search(dp_path: Path, results_dir: Path, setup_index: int):
         commands.append(command_with_args)
         working_dirs.append(output_dir_path)
     # execute
-    map(run_experiment, commands, working_dirs, False)
+    in_parallel = [False for _ in range(len(commands))]
+    map(run_experiment, commands, working_dirs, in_parallel)
 
 
 def extract_results(results_dir: Path):
