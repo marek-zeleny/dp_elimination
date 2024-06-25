@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import os
 import itertools
@@ -126,7 +128,6 @@ parser_run = subparsers.add_parser("run",
 parser_run.set_defaults(func=run_search)
 parser_run.add_argument("dp_executable", type=str, help="Path to the compiled DP executable")
 parser_run.add_argument("-r", "--results-dir", type=str, default="grid_search", help="Directory for storing results")
-parser_run.add_argument("-p", "--processes", type=int, default=1, help="Number of processes spawned concurrently")
 parser_run.add_argument("-i", "--setup-index",
                         type=int,
                         default=-1,
