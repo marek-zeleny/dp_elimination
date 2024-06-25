@@ -27,11 +27,11 @@ def get_relative_growth(metrics):
 def _plot_bar_group(ax: plt.Axes, data: list[tuple[list, str]]):
     bars = len(data)
     w = bar_width / bars
-    first_pos = bar_width / 2 + w / 2
+    first_pos = -bar_width / 2 + w / 2
     positions = list(range(len(data[0][0])))
     for i, collection in enumerate(data):
         points, label = collection
-        pos = [x - first_pos + w * i for x in positions]
+        pos = [x + first_pos + w * i for x in positions]
         ax.bar(pos, points, w, label=label)
 
 
@@ -47,8 +47,9 @@ def plot_durations(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt
     ax.set_title("Duration")
     ax.set_xlabel("input formulas")
     ax.set_ylabel(f"duration ({unit})")
-    ax.xaxis.set_ticks(range(len(labels)), labels, rotation=70)
+    ax.xaxis.set_ticks(range(len(labels)), labels, rotation=90)
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(get_divider(factor)))
+    ax.set_xlim(left=-bar_width, right=len(labels) + bar_width)
     ax.set_ylim(bottom=0)
 
     fig.set_size_inches(figure_width, figure_height)
@@ -68,7 +69,8 @@ def plot_vars(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Axes
     ax.set_title("Remaining variables to eliminate")
     ax.set_xlabel("input formulas")
     ax.set_ylabel(f"% remaining variables")
-    ax.xaxis.set_ticks(range(len(labels)), labels, rotation=70)
+    ax.xaxis.set_ticks(range(len(labels)), labels, rotation=90)
+    ax.set_xlim(left=-bar_width, right=len(labels) + bar_width)
     ax.set_ylim(bottom=0, top=1)
 
     fig.set_size_inches(figure_width, figure_height)
@@ -88,7 +90,8 @@ def plot_growth(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Ax
     ax.set_title("Formula growth")
     ax.set_xlabel("input formulas")
     ax.set_ylabel("relative growth of # clauses")
-    ax.xaxis.set_ticks(range(len(labels)), labels, rotation=70)
+    ax.xaxis.set_ticks(range(len(labels)), labels, rotation=90)
+    ax.set_xlim(left=-bar_width, right=len(labels) + bar_width)
     ax.set_yscale("log")
     ax.set_ylim(bottom=0.4)
 
