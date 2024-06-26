@@ -225,6 +225,8 @@ int impl(const ArgsParser &args) {
                                 args.get_sylvan_cache_size(),
                                 args.get_sylvan_cache_max_size());
     sylvan::sylvan_init_zdd();
+    // avoid Lace's race condition
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     lace_suspend();
     LOG_DEBUG << "Sylvan initialized";
     SylvanZddCnf::hook_sylvan_gc_log();
@@ -270,6 +272,8 @@ int impl(const ArgsParser &args) {
     LOG_INFO << "Quitting Sylvan";
     lace_resume();
     sylvan::Sylvan::quitPackage();
+    // avoid Lace's race condition
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     lace_suspend();
     LOG_DEBUG << "Sylvan successfully exited";
     return 0;
