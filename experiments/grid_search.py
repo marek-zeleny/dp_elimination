@@ -35,7 +35,7 @@ grid: dict[str, np.ndarray] = {
 def generate_configs() -> Generator[tuple[str, np.float64], None, None]:
     value_combinations = itertools.product(*grid.values())
     for values in value_combinations:
-        yield [(o, v) for o, v in zip(grid.keys(), values)]
+        yield [(o, round(v, 2)) for o, v in zip(grid.keys(), values)]
 
 
 def generate_setups(results_dir: Path) -> Generator[tuple[tuple[str, np.float64], str, Path, Path, Path, Path, list[str]], None, None]:
@@ -101,7 +101,7 @@ def extract_results(results_dir: Path):
                 df.loc[(formula, *config_vals), "remaining_vars"] = remaining_vars
         else:
             print(f"Metrics file {metrics_path} doesn't exist", file=sys.stderr, flush=True)
-    df.to_csf(results_dir / "results.csv")
+    df.to_csv(results_dir / "results.csv")
 
 
 def count_setups(args):
