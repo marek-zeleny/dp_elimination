@@ -26,16 +26,16 @@ experiment_setups: list[str] = [
     "grid_search",
 ]
 grid: dict[str, np.ndarray] = {
-    "complete-minimization-relative-size": get_distribution(1, 3, 5, -0.7),
-    "incremental-minimization-relative-size": get_distribution(0, 2, 5, 0.1),
-    "subsumed-removal-relative-size": get_distribution(0, 2, 5, 0.1),
+    "complete-minimization-relative-size": get_distribution(1, 3, 5, -0.7).round(2),
+    "incremental-minimization-relative-size": get_distribution(0, 2, 5, 0.1).round(2),
+    "subsumed-removal-relative-size": get_distribution(0, 2, 5, 0.1).round(2),
 }
 
 
 def generate_configs() -> Generator[tuple[str, np.float64], None, None]:
     value_combinations = itertools.product(*grid.values())
     for values in value_combinations:
-        yield [(o, round(v, 2)) for o, v in zip(grid.keys(), values)]
+        yield [(o, v) for o, v in zip(grid.keys(), values)]
 
 
 def generate_setups(results_dir: Path) -> Generator[tuple[tuple[str, np.float64], str, Path, Path, Path, Path, list[str]], None, None]:
