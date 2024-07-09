@@ -140,19 +140,18 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
     auto conditional_union = [&config, &iter, &minimization_stop_condition](
             const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
         const size_t size1 = zdd1.count_clauses();
-        size_t size2 = zdd2.count_clauses();
-        SylvanZddCnf zdd2_copy;
+        const size_t size2 = zdd2.count_clauses();
         if (config.remove_subsumed_condition(iter, size1, size2)) {
-            LOG_DEBUG << "Removing subsumed clauses";
-            zdd2_copy = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
-            size2 = zdd2_copy.count_clauses();
+            if (config.incremental_minimization_condition(iter, size1, size2)) {
+                LOG_DEBUG << "Removing subsumed clauses from resolvents";
+                SylvanZddCnf zdd2_reduced = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
+                return config.unify_and_minimize(zdd1, zdd2_reduced, minimization_stop_condition);
+            } else {
+                LOG_DEBUG << "Computing subsumption-free union";
+                return zdd1.unify_and_remove_subsumed(zdd2);
+            }
         } else {
-            zdd2_copy = zdd2;
-        }
-        if (config.incremental_minimization_condition(iter, size1, size2)) {
-            return config.unify_and_minimize(zdd1, zdd2_copy, minimization_stop_condition);
-        } else {
-            return zdd1.unify(zdd2_copy);
+            return zdd1.unify(zdd2);
         }
     };
 
