@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
     LOG_INFO << "Used configuration:\n" << args->get_config_string();
 
     // initialize Lace
-    set_lace_stack_limit();
+    //set_lace_stack_limit();
     size_t n_workers = args->get_lace_threads();
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);
