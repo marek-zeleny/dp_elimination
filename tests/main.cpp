@@ -4,7 +4,7 @@
 
 int main( int argc, char* argv[] ) {
     simple_logger::Config::logFileName = "tests.log";
-    lace_start(0, 0);
+    lace_start(3, 0);
     sylvan::Sylvan::initPackage(1LL<<22, 1LL<<26, 1LL<<22, 1LL<<26);
     sylvan::sylvan_init_zdd();
     lace_suspend();
