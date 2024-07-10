@@ -180,26 +180,15 @@ SylvanZddCnf::Literal SylvanZddCnf::get_smallest_variable() const {
     return std::abs(get_root_literal());
 }
 
-namespace {
-
-uint32_t get_largest_variable_impl(const ZDD &zdd) {
-    if (zdd == zdd_true || zdd == zdd_false) {
-        return 0;
-    }
-    uint32_t var = zdd_getvar(zdd);
-    uint32_t low = get_largest_variable_impl(zdd_getlow(zdd));
-    uint32_t high = get_largest_variable_impl(zdd_gethigh(zdd));
-    return std::max({var, low, high});
-}
-
-} // namespace
-
 SylvanZddCnf::Literal SylvanZddCnf::get_largest_variable() const {
-    if (m_zdd == zdd_true || m_zdd == zdd_false) {
-        return 0;
-    }
-    Var v = get_largest_variable_impl(m_zdd);
-    return std::abs(var_to_literal(v));
+    Literal max = 0;
+    NodeFunction func = [&](const ZDD &node) {
+        Literal l = var_to_literal(zdd_getvar(node));
+        max = std::max(max, std::abs(l));
+        return true;
+    };
+    for_all_nodes(func);
+    return max;
 }
 
 SylvanZddCnf::Literal SylvanZddCnf::get_root_literal() const {
@@ -230,20 +219,9 @@ SylvanZddCnf::Literal SylvanZddCnf::get_clear_literal() const {
     using Occurrence = uint8_t;
     constexpr Occurrence POSITIVE = 1 << 0;
     constexpr Occurrence NEGATIVE = 1 << 1;
-    std::stack<ZDD> stack;
-    stack.push(m_zdd);
-    std::unordered_set<ZDD> visited;
     std::unordered_map<Literal, Occurrence> occurrences;
-    while (!stack.empty()) {
-        ZDD zdd = stack.top();
-        stack.pop();
-        if (zdd == zdd_false || zdd == zdd_true || visited.contains(zdd)) {
-            continue;
-        }
-        visited.insert(zdd);
-        stack.push(zdd_getlow(zdd));
-        stack.push(zdd_gethigh(zdd));
-        Literal l = var_to_literal(zdd_getvar(zdd));
+    NodeFunction func = [&](const ZDD &node) {
+        Literal l = var_to_literal(zdd_getvar(node));
         Occurrence occ = l > 0 ? POSITIVE : NEGATIVE;
         Literal var = std::abs(l);
         if (occurrences.contains(var)) {
@@ -251,7 +229,9 @@ SylvanZddCnf::Literal SylvanZddCnf::get_clear_literal() const {
         } else {
             occurrences[var] = occ;
         }
-    }
+        return true;
+    };
+    for_all_nodes(func);
     for (auto &[var, occ] : occurrences) {
         if (occ != (POSITIVE | NEGATIVE)) {
             if (occ == POSITIVE) {
@@ -372,6 +352,25 @@ bool SylvanZddCnf::for_all_clauses_impl(ClauseFunction &func, const ZDD &node, C
     }
     stack.pop_back();
     return true;
+}
+
+void SylvanZddCnf::for_all_nodes(NodeFunction &func) const {
+    std::stack<ZDD> stack;
+    stack.push(m_zdd);
+    std::unordered_set<ZDD> visited;
+    bool stop = false;
+    while (!stop && !stack.empty()) {
+        ZDD node = stack.top();
+        ZDD unique_node = node & ~zdd_complement;
+        stack.pop();
+        if (node == zdd_false || node == zdd_true || visited.contains(unique_node)) {
+            continue;
+        }
+        visited.insert(unique_node);
+        stack.push(zdd_getlow(node));
+        stack.push(zdd_gethigh(node));
+        stop = !func(node);
+    }
 }
 
 auto SylvanZddCnf::to_vector() const -> std::vector<Clause> {

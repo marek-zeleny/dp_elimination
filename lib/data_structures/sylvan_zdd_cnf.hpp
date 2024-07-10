@@ -92,6 +92,7 @@ public:
 private:
     using ZDD = uint64_t;
     using Var = uint32_t;
+    using NodeFunction = std::function<bool(const ZDD &)>;
 
     ZDD m_zdd;
 
@@ -126,6 +127,7 @@ private:
     };
 
     // helper functions
+    void for_all_nodes(NodeFunction &func) const;
     static Var literal_to_var(Literal l);
     static Literal var_to_literal(Var v);
     static ZDD clause_from_vector(const Clause &clause);
