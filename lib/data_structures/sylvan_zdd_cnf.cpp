@@ -245,7 +245,26 @@ SylvanZddCnf::Literal SylvanZddCnf::get_clear_literal() const {
     return 0;
 }
 
-SylvanZddCnf::FormulaStats SylvanZddCnf::get_formula_statistics() const {
+SylvanZddCnf::FormulaStats SylvanZddCnf::find_all_literals() const {
+    FormulaStats stats;
+    stats.index_shift = get_smallest_variable();
+    stats.vars.resize(get_largest_variable() - stats.index_shift + 1);
+    NodeFunction func = [&](const ZDD &node) {
+        Literal l = var_to_literal(zdd_getvar(node));
+        size_t idx = std::abs(l) - stats.index_shift;
+        VariableStats &var_stats = stats.vars[idx];
+        if (l > 0) {
+            var_stats.positive_clause_count = 1;
+        } else {
+            var_stats.negative_clause_count = 1;
+        }
+        return true;
+    };
+    for_all_nodes(func);
+    return stats;
+}
+
+SylvanZddCnf::FormulaStats SylvanZddCnf::count_all_literals() const {
     FormulaStats stats;
     stats.index_shift = get_smallest_variable();
     stats.vars.resize(get_largest_variable() - stats.index_shift + 1);

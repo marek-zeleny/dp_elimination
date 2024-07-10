@@ -67,7 +67,8 @@ public:
     [[nodiscard]] Literal get_root_literal() const;
     [[nodiscard]] Literal get_unit_literal() const;
     [[nodiscard]] Literal get_clear_literal() const;
-    [[nodiscard]] FormulaStats get_formula_statistics() const;
+    [[nodiscard]] FormulaStats find_all_literals() const;
+    [[nodiscard]] FormulaStats count_all_literals() const;
     [[nodiscard]] SylvanZddCnf subset0(Literal l) const;
     [[nodiscard]] SylvanZddCnf subset1(Literal l) const;
     [[nodiscard]] SylvanZddCnf unify(const SylvanZddCnf &other) const;

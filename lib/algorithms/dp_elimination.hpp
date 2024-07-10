@@ -62,7 +62,7 @@ inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Liter
 }
 
 inline long count_vars(const SylvanZddCnf &cnf) {
-    const auto stats = cnf.get_formula_statistics();
+    const auto stats = cnf.count_all_literals();
     long var_count = std::count_if(stats.vars.cbegin(), stats.vars.cend(),
                                      [](const SylvanZddCnf::VariableStats &var) {
         return var.positive_clause_count > 0 || var.negative_clause_count > 0;
