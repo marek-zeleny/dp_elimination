@@ -139,6 +139,156 @@ TEST_CASE("ClearLiteralHeuristic functionality", "[heuristics]") {
     }
 }
 
+TEST_CASE("OrderHeuristic functionality", "[heuristics]") {
+    using namespace dp;
+
+    SECTION("Correctly finds first variable") {
+        SylvanZddCnf cnf1 = SylvanZddCnf::from_vector({
+            {-1, -2},
+            {2, 3, 4},
+            {3, -4},
+            {-3, -4},
+            {4},
+        });
+        SylvanZddCnf cnf2 = SylvanZddCnf::from_vector({
+            {-3, -4},
+            {1, 2, 3},
+            {-1, 2},
+            {-1, -2},
+            {1},
+        });
+
+        SECTION("Ascending") {
+            heuristics::OrderHeuristic<true> heuristic{0, 1000};
+
+            HeuristicResult result = heuristic(cnf1);
+            CHECK(result.success);
+            CHECK(result.literal == 1);
+
+            result = heuristic(cnf2);
+            CHECK(result.success);
+            CHECK(result.literal == 1);
+        }
+
+        SECTION("Descending") {
+            heuristics::OrderHeuristic<false> heuristic{0, 1000};
+
+            HeuristicResult result = heuristic(cnf1);
+            CHECK(result.success);
+            CHECK(result.literal == 4);
+
+            result = heuristic(cnf2);
+            CHECK(result.success);
+            CHECK(result.literal == 4);
+        }
+    }
+
+    SECTION("Correctly skips missing variable") {
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector({
+            {2, 3},
+            {-2, -4},
+            {2, -4},
+        });
+
+        SECTION("Ascending") {
+            heuristics::OrderHeuristic<true> heuristic{0, 1000};
+
+            HeuristicResult result = heuristic(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 2);
+        }
+
+        SECTION("Descending") {
+            heuristics::OrderHeuristic<false> heuristic{0, 1000};
+
+            HeuristicResult result = heuristic(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 4);
+        }
+    }
+
+    SECTION("Fails for empty and zero formulas") {
+        SylvanZddCnf empty;
+        SylvanZddCnf contains_empty = SylvanZddCnf::from_vector({{}});
+
+        SECTION("Ascending") {
+            heuristics::OrderHeuristic<true> heuristic{0, 1000};
+
+            HeuristicResult result = heuristic(empty);
+            CHECK_FALSE(result.success);
+        }
+
+        SECTION("Descending") {
+            heuristics::OrderHeuristic<false> heuristic{0, 1000};
+
+            HeuristicResult result = heuristic(contains_empty);
+            CHECK_FALSE(result.success);
+        }
+    }
+
+    SECTION("Correctly handles variable range") {
+        SylvanZddCnf cnf = SylvanZddCnf::from_vector({
+            {-1, -2},
+            {2, 3, 4},
+            {3, -4},
+            {-3, -4},
+            {3},
+        });
+
+        SECTION("Ascending") {
+            heuristics::OrderHeuristic<true> heuristic1{1, 4};
+            HeuristicResult result = heuristic1(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 1);
+
+            heuristics::OrderHeuristic<true> heuristic2{2, 4};
+            result = heuristic2(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 2);
+
+            heuristics::OrderHeuristic<true> heuristic3{3, 4};
+            result = heuristic3(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 3);
+
+            heuristics::OrderHeuristic<true> heuristic4{4, 4};
+            result = heuristic4(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 4);
+
+            heuristics::OrderHeuristic<true> heuristic5{5, 1000};
+            result = heuristic5(cnf);
+            CHECK_FALSE(result.success);
+        }
+
+        SECTION("Descending") {
+            heuristics::OrderHeuristic<false> heuristic1{1, 4};
+            HeuristicResult result = heuristic1(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 4);
+
+            heuristics::OrderHeuristic<false> heuristic2{1, 3};
+            result = heuristic2(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 3);
+
+            heuristics::OrderHeuristic<false> heuristic3{1, 2};
+            result = heuristic3(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 2);
+
+            heuristics::OrderHeuristic<false> heuristic4{1, 1};
+            result = heuristic4(cnf);
+            CHECK(result.success);
+            CHECK(result.literal == 1);
+
+            heuristics::OrderHeuristic<false> heuristic5{5, 1000};
+            result = heuristic5(cnf);
+            CHECK_FALSE(result.success);
+        }
+    }
+}
+
 TEST_CASE("MinimalScoreHeuristic functionality", "[heuristics]") {
     using namespace dp;
 

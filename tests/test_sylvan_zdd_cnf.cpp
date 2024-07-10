@@ -187,40 +187,70 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
     }
 
     SECTION("Formula statistics collection") {
-        SECTION("Simple case") {
-            SylvanZddCnf cnf = SylvanZddCnf::from_vector({
-                {},
-                {1},
-                {-1, 2},
-            });
-            SylvanZddCnf::FormulaStats stats = cnf.get_formula_statistics();
-            CHECK(stats.index_shift == 1);
-            REQUIRE(stats.vars.size() == 2);
-            CHECK(stats.vars[0].positive_clause_count == 1);
-            CHECK(stats.vars[0].negative_clause_count == 1);
-            CHECK(stats.vars[1].positive_clause_count == 1);
-            CHECK(stats.vars[1].negative_clause_count == 0);
+        SylvanZddCnf cnf1 = SylvanZddCnf::from_vector({
+            {},
+            {1},
+            {-1, 2},
+        });
+
+        SylvanZddCnf cnf2 = SylvanZddCnf::from_vector({
+            {-11, 12, 14},
+            {11,  12},
+            {12,  -14},
+            {11},
+            {14},
+        });
+
+        SECTION("Find literals") {
+            SECTION("Simple case") {
+                SylvanZddCnf::FormulaStats stats = cnf1.find_all_literals();
+                CHECK(stats.index_shift == 1);
+                REQUIRE(stats.vars.size() == 2);
+                CHECK(stats.vars[0].positive_clause_count > 0);
+                CHECK(stats.vars[0].negative_clause_count > 0);
+                CHECK(stats.vars[1].positive_clause_count > 0);
+                CHECK(stats.vars[1].negative_clause_count == 0);
+            }
+
+            SECTION("Complex case") {
+                SylvanZddCnf::FormulaStats stats = cnf2.find_all_literals();
+                CHECK(stats.index_shift == 11);
+                REQUIRE(stats.vars.size() == 4);
+                CHECK(stats.vars[0].positive_clause_count > 0);
+                CHECK(stats.vars[0].negative_clause_count > 0);
+                CHECK(stats.vars[1].positive_clause_count > 0);
+                CHECK(stats.vars[1].negative_clause_count == 0);
+                CHECK(stats.vars[2].positive_clause_count == 0);
+                CHECK(stats.vars[2].negative_clause_count == 0);
+                CHECK(stats.vars[3].positive_clause_count > 0);
+                CHECK(stats.vars[3].negative_clause_count > 0);
+            }
         }
 
-        SECTION("Complex case") {
-            SylvanZddCnf cnf = SylvanZddCnf::from_vector({
-                {-11, 12, 14},
-                {11,  12},
-                {12,  -14},
-                {11},
-                {14},
-            });
-            SylvanZddCnf::FormulaStats stats = cnf.get_formula_statistics();
-            CHECK(stats.index_shift == 11);
-            REQUIRE(stats.vars.size() == 4);
-            CHECK(stats.vars[0].positive_clause_count == 2);
-            CHECK(stats.vars[0].negative_clause_count == 1);
-            CHECK(stats.vars[1].positive_clause_count == 3);
-            CHECK(stats.vars[1].negative_clause_count == 0);
-            CHECK(stats.vars[2].positive_clause_count == 0);
-            CHECK(stats.vars[2].negative_clause_count == 0);
-            CHECK(stats.vars[3].positive_clause_count == 2);
-            CHECK(stats.vars[3].negative_clause_count == 1);
+        SECTION("Count literals") {
+            SECTION("Simple case") {
+                SylvanZddCnf::FormulaStats stats = cnf1.count_all_literals();
+                CHECK(stats.index_shift == 1);
+                REQUIRE(stats.vars.size() == 2);
+                CHECK(stats.vars[0].positive_clause_count == 1);
+                CHECK(stats.vars[0].negative_clause_count == 1);
+                CHECK(stats.vars[1].positive_clause_count == 1);
+                CHECK(stats.vars[1].negative_clause_count == 0);
+            }
+
+            SECTION("Complex case") {
+                SylvanZddCnf::FormulaStats stats = cnf2.count_all_literals();
+                CHECK(stats.index_shift == 11);
+                REQUIRE(stats.vars.size() == 4);
+                CHECK(stats.vars[0].positive_clause_count == 2);
+                CHECK(stats.vars[0].negative_clause_count == 1);
+                CHECK(stats.vars[1].positive_clause_count == 3);
+                CHECK(stats.vars[1].negative_clause_count == 0);
+                CHECK(stats.vars[2].positive_clause_count == 0);
+                CHECK(stats.vars[2].negative_clause_count == 0);
+                CHECK(stats.vars[3].positive_clause_count == 2);
+                CHECK(stats.vars[3].negative_clause_count == 1);
+            }
         }
     }
 
