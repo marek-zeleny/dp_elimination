@@ -21,9 +21,8 @@ public:
 
     enum class Heuristic : EnumUnderlyingType {
         None,
-        Simple,
-        UnitLiteral,
-        ClearLiteral,
+        Ascending,
+        Descending,
         MinimalBloat,
     };
 

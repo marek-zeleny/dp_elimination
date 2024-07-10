@@ -6,10 +6,9 @@
 
 // Help message prints them in reversed order
 static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_map {
+        {"ascending", ArgsParser::Heuristic::Ascending},
+        {"descending", ArgsParser::Heuristic::Descending},
         {"minimal_bloat", ArgsParser::Heuristic::MinimalBloat},
-        {"clear_literal", ArgsParser::Heuristic::ClearLiteral},
-        {"unit_literal", ArgsParser::Heuristic::UnitLiteral},
-        {"simple", ArgsParser::Heuristic::Simple},
 };
 
 static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalAlgorithm> absorbed_removal_algorithm_map {

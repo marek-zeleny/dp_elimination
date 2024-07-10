@@ -128,17 +128,13 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
     metrics.increase_counter(MetricsCounters::MaxVar, static_cast<long>(args.get_max_var()));
 
     switch (args.get_heuristic()) {
-        case ArgsParser::Heuristic::Simple:
-            LOG_INFO << "Using the Simple heuristic";
-            config.heuristic = heuristics::SimpleHeuristic();
+        case ArgsParser::Heuristic::Ascending:
+            LOG_INFO << "Using the Ascending order heuristic";
+            config.heuristic = heuristics::OrderHeuristic<true>(args.get_min_var(), args.get_max_var());
             break;
-        case ArgsParser::Heuristic::UnitLiteral:
-            LOG_INFO << "Using the UnitLiteral heuristic";
-            config.heuristic = heuristics::UnitLiteralHeuristic();
-            break;
-        case ArgsParser::Heuristic::ClearLiteral:
-            LOG_INFO << "Using the ClearLiteral heuristic";
-            config.heuristic = heuristics::ClearLiteralHeuristic();
+        case ArgsParser::Heuristic::Descending:
+            LOG_INFO << "Using the Descending order heuristic";
+            config.heuristic = heuristics::OrderHeuristic<false>(args.get_min_var(), args.get_max_var());
             break;
         case ArgsParser::Heuristic::MinimalBloat:
             LOG_INFO << "Using the MinimalBloat heuristic";
