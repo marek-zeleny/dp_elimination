@@ -114,5 +114,5 @@ private:
     // sylvan
     std::tuple<uint8_t, uint8_t> m_sylvan_table_size_pow{20, 25};
     std::tuple<uint8_t, uint8_t> m_sylvan_cache_size_pow{20, 25};
-    size_t m_lace_threads{0};
+    size_t m_lace_threads{1};
 };
