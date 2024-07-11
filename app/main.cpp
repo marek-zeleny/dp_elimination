@@ -110,7 +110,7 @@ class AllowedVariablePredicate {
 public:
     AllowedVariablePredicate(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
 
-    bool operator()(const size_t &var) {
+    bool operator()(const size_t &var) const {
         return m_min_var <= var && var <= m_max_var;
     }
 
