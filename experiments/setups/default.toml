@@ -5,10 +5,10 @@ absorbed-removal-algorithm = "watched_literals"
 complete-minimization-condition = "relative_size"
 complete-minimization-relative-size = 1.6
 
-incremental-minimization-condition = "relative_size"
-incremental-minimization-relative-size = 0.4
+partial-minimization-condition = "relative_size"
+partial-minimization-relative-size = 0.1
 
-subsumed-removal-condition = "relative_size"
-subsumed-removal-relative-size = 0.1
+incremental-subsumption-removal-condition = "relative_size"
+incremental-subsumption-removal-relative-size = 0.4
 
 timeout = 3600 # seconds (1h)

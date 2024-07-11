@@ -3,7 +3,7 @@ heuristic = "minimal_bloat"
 absorbed-removal-algorithm = "watched_literals"
 
 complete-minimization-condition = "relative_size"
-incremental-minimization-condition = "relative_size"
-subsumed-removal-condition = "relative_size"
+partial-minimization-condition = "relative_size"
+incremental-subsumption-removal-condition = "relative_size"
 
 timeout = 600 # seconds (10m)
