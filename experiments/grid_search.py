@@ -28,7 +28,7 @@ experiment_setups: list[str] = [
 grid: dict[str, np.ndarray] = {
     "complete-minimization-relative-size": get_distribution(1, 3, 5, -0.7).round(2),
     "partial-minimization-relative-size": get_distribution(0, 2, 5, 0.1).round(2),
-    "incremental-subsumption-removal-relative-size": get_distribution(0, 2, 5, 0.1).round(2),
+    "incremental-absorption-removal-relative-size": get_distribution(0, 2, 5, 0.1).round(2),
 }
 
 
