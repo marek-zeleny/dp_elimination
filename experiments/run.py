@@ -5,7 +5,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from pathlib import Path
-from experiments import generate_setups, default_config_path
 
 
 def run_experiment(command: list[str], cwd: Path, is_run_in_parallel: bool = True) -> int:
@@ -48,6 +47,8 @@ def run_experiment(command: list[str], cwd: Path, is_run_in_parallel: bool = Tru
 
 
 def run_dp_experiments(dp_path: Path, results_dir: Path, num_processes: int, setup_index: int):
+    from experiments import generate_setups, default_config_path
+
     if not dp_path.exists():
         print(f"Invalid path to dp executable: {dp_path}", file=sys.stderr)
         sys.exit(1)
