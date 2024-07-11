@@ -8,7 +8,7 @@ complete-minimization-relative-size = 1.6
 partial-minimization-condition = "relative_size"
 partial-minimization-relative-size = 0.1
 
-incremental-subsumption-removal-condition = "relative_size"
-incremental-subsumption-removal-relative-size = 0.4
+incremental-absorption-removal-condition = "relative_size"
+incremental-absorption-removal-relative-size = 0.4
 
 timeout = 3600 # seconds (1h)

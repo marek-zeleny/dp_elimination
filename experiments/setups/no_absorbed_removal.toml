@@ -7,6 +7,6 @@ complete-minimization-condition = "never"
 partial-minimization-condition = "relative_size"
 partial-minimization-relative-size = 0.1
 
-incremental-subsumption-removal-condition = "never"
+incremental-absorption-removal-condition = "never"
 
 timeout = 3600 # seconds (1h)
