@@ -152,7 +152,7 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             throw std::logic_error("Absorbed removal algorithm not implemented");
         case ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals:
             config.complete_minimization = absorbed_clause_detection::with_conversion::remove_absorbed_clauses;
-            config.unify_and_minimize = absorbed_clause_detection::with_conversion::unify_with_non_absorbed;
+            config.unify_and_remove_absorbed = absorbed_clause_detection::with_conversion::unify_with_non_absorbed;
             break;
         default:
             throw std::logic_error("Absorbed removal algorithm not implemented");
@@ -173,40 +173,41 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             throw std::logic_error("Complete minimization condition not implemented");
     }
 
-    switch (args.get_incremental_minimization_condition()) {
+    switch (args.get_partial_minimization_condition()) {
         case ArgsParser::Condition::Never:
-            config.incremental_minimization_condition = never_condition;
+            config.partial_minimization_condition = never_condition;
             break;
         case ArgsParser::Condition::Interval:
-            config.incremental_minimization_condition = IntervalCondition(args.get_incremental_minimization_interval());
+            config.partial_minimization_condition = IntervalCondition(args.get_partial_minimization_interval());
             break;
         case ArgsParser::Condition::RelativeSize:
-            config.incremental_minimization_condition = RelativeSizeCondition(
-                    args.get_incremental_minimization_relative_size());
+            config.partial_minimization_condition = RelativeSizeCondition(args.get_partial_minimization_relative_size());
             break;
         case ArgsParser::Condition::AbsoluteSize:
-            config.incremental_minimization_condition = AbsoluteSizeCondition(
-                    args.get_incremental_minimization_absolute_size());
+            config.partial_minimization_condition = AbsoluteSizeCondition(args.get_partial_minimization_absolute_size());
             break;
         default:
-            throw std::logic_error("Incremental minimization condition not implemented");
+            throw std::logic_error("Partial minimization condition not implemented");
     }
 
-    switch (args.get_subsumed_removal_condition()) {
+    switch (args.get_incremental_absorption_removal_condition()) {
         case ArgsParser::Condition::Never:
-            config.remove_subsumed_condition = never_condition;
+            config.incremental_absorption_removal_condition = never_condition;
             break;
         case ArgsParser::Condition::Interval:
-            config.remove_subsumed_condition = IntervalCondition(args.get_subsumed_removal_interval());
+            config.incremental_absorption_removal_condition = IntervalCondition(
+                    args.get_incremental_absorption_removal_interval());
             break;
         case ArgsParser::Condition::RelativeSize:
-            config.remove_subsumed_condition = RelativeSizeCondition(args.get_subsumed_removal_relative_size());
+            config.incremental_absorption_removal_condition = RelativeSizeCondition(
+                    args.get_incremental_absorption_removal_relative_size());
             break;
         case ArgsParser::Condition::AbsoluteSize:
-            config.remove_subsumed_condition = AbsoluteSizeCondition(args.get_subsumed_removal_absolute_size());
+            config.incremental_absorption_removal_condition = AbsoluteSizeCondition(
+                    args.get_incremental_absorption_removal_absolute_size());
             break;
         default:
-            throw std::logic_error("Incremental minimization condition not implemented");
+            throw std::logic_error("Incremental absorption removal condition not implemented");
     }
 
     return config;

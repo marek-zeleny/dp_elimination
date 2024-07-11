@@ -53,14 +53,14 @@ public:
     [[nodiscard]] Condition get_complete_minimization_condition() const { return m_complete_minimization_condition; }
     [[nodiscard]] size_t get_complete_minimization_interval() const { return m_complete_minimization_interval; }
     [[nodiscard]] float get_complete_minimization_relative_size() const { return m_complete_minimization_relative_size; }
-    [[nodiscard]] Condition get_incremental_minimization_condition() const { return m_incremental_minimization_condition; }
-    [[nodiscard]] size_t get_incremental_minimization_interval() const { return m_incremental_minimization_interval; }
-    [[nodiscard]] float get_incremental_minimization_relative_size() const { return m_incremental_minimization_relative_size; }
-    [[nodiscard]] size_t get_incremental_minimization_absolute_size() const { return m_incremental_minimization_absolute_size; }
-    [[nodiscard]] Condition get_subsumed_removal_condition() const { return m_subsumed_removal_condition; }
-    [[nodiscard]] size_t get_subsumed_removal_interval() const { return m_subsumed_removal_interval; }
-    [[nodiscard]] float get_subsumed_removal_relative_size() const { return m_subsumed_removal_relative_size; }
-    [[nodiscard]] size_t get_subsumed_removal_absolute_size() const { return m_subsumed_removal_absolute_size; }
+    [[nodiscard]] Condition get_partial_minimization_condition() const { return m_partial_minimization_condition; }
+    [[nodiscard]] size_t get_partial_minimization_interval() const { return m_partial_minimization_interval; }
+    [[nodiscard]] float get_partial_minimization_relative_size() const { return m_partial_minimization_relative_size; }
+    [[nodiscard]] size_t get_partial_minimization_absolute_size() const { return m_partial_minimization_absolute_size; }
+    [[nodiscard]] Condition get_incremental_absorption_removal_condition() const { return m_incremental_absorption_removal_condition; }
+    [[nodiscard]] size_t get_incremental_absorption_removal_interval() const { return m_incremental_absorption_removal_interval; }
+    [[nodiscard]] float get_incremental_absorption_removal_relative_size() const { return m_incremental_absorption_removal_relative_size; }
+    [[nodiscard]] size_t get_incremental_absorption_removal_absolute_size() const { return m_incremental_absorption_removal_absolute_size; }
 
     [[nodiscard]] const std::optional<size_t> &get_max_iterations() const { return m_max_iterations; }
     [[nodiscard]] const std::optional<size_t> &get_max_duration_seconds() const { return m_max_duration_seconds; }
@@ -98,14 +98,14 @@ private:
     Condition m_complete_minimization_condition{Condition::RelativeSize};
     size_t m_complete_minimization_interval{0};
     float m_complete_minimization_relative_size{1.5};
-    Condition m_incremental_minimization_condition{Condition::RelativeSize};
-    size_t m_incremental_minimization_interval{0};
-    float m_incremental_minimization_relative_size{0.1};
-    size_t m_incremental_minimization_absolute_size{0};
-    Condition m_subsumed_removal_condition{Condition::RelativeSize};
-    size_t m_subsumed_removal_interval{0};
-    float m_subsumed_removal_relative_size{0.1};
-    size_t m_subsumed_removal_absolute_size{0};
+    Condition m_partial_minimization_condition{Condition::RelativeSize};
+    size_t m_partial_minimization_interval{0};
+    float m_partial_minimization_relative_size{0.1};
+    size_t m_partial_minimization_absolute_size{0};
+    Condition m_incremental_absorption_removal_condition{Condition::RelativeSize};
+    size_t m_incremental_absorption_removal_interval{0};
+    float m_incremental_absorption_removal_relative_size{0.1};
+    size_t m_incremental_absorption_removal_absolute_size{0};
     // stop conditions
     std::optional<size_t> m_max_iterations{};
     std::optional<size_t> m_max_duration_seconds{};

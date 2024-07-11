@@ -98,25 +98,25 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    ->check(CLI::Range(1.0f, 1000.0f));
 
     // partial minimization
-    app.add_option("--partial-minimization-condition", args.m_subsumed_removal_condition,
+    app.add_option("--partial-minimization-condition", args.m_partial_minimization_condition,
                    "Condition on when to partially minimize the formula")
                    ->group("Partial minimization")
                    ->transform(CLI::CheckedTransformer(condition_full_map,
                                                 CLI::ignore_case,
                                                 CLI::ignore_space,
                                                 CLI::ignore_underscore));
-    app.add_option("--partial-minimization-interval", args.m_subsumed_removal_interval,
+    app.add_option("--partial-minimization-interval", args.m_partial_minimization_interval,
                    "Number of eliminated variables before partial minimization of the formula"
                    "\nneeds --partial-minimization-condition=interval")
                    ->group("Partial minimization")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
-    app.add_option("--partial-minimization-relative-size", args.m_subsumed_removal_relative_size,
+    app.add_option("--partial-minimization-relative-size", args.m_partial_minimization_relative_size,
                    "Relative size of added formula compared to the base formula in order to trigger partial"
                    "\nminimization (must be larger than 0)"
                    "\nneeds --partial-minimization-condition=relative_size")
                    ->group("Partial minimization")
                    ->check(CLI::Range(0.0f, 1000.0f));
-    app.add_option("--partial-minimization-absolute_size", args.m_subsumed_removal_absolute_size,
+    app.add_option("--partial-minimization-absolute_size", args.m_partial_minimization_absolute_size,
                    "Absolute size of added formula in order to trigger partial minimization when computing its union"
                    "\nwith the base formula"
                    "\nneeds --partial-minimization-condition=absolute_size")
@@ -124,25 +124,25 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                    ->check(CLI::Range(0ul, std::numeric_limits<size_t>::max()));
 
     // incremental absorption removal
-    app.add_option("--incremental-absorption-removal-condition", args.m_incremental_minimization_condition,
+    app.add_option("--incremental-absorption-removal-condition", args.m_incremental_absorption_removal_condition,
                    "Condition on when to incrementally remove absorbed clauses from added formula")
                    ->group("Incremental absorption removal")
                    ->transform(CLI::CheckedTransformer(condition_full_map,
                                                        CLI::ignore_case,
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
-    app.add_option("--incremental-absorption-removal-interval", args.m_incremental_minimization_interval,
+    app.add_option("--incremental-absorption-removal-interval", args.m_incremental_absorption_removal_interval,
                    "Number of eliminated variables before incremental absorption removal"
                    "\nneeds --incremental-absorption-removal-condition=interval")
                    ->group("Incremental absorption removal")
                    ->check(CLI::Range(1ul, std::numeric_limits<size_t>::max()));
-    app.add_option("--incremental-absorption-removal-relative-size", args.m_incremental_minimization_relative_size,
+    app.add_option("--incremental-absorption-removal-relative-size", args.m_incremental_absorption_removal_relative_size,
                    "Relative size of added formula compared to the base formula in order to trigger incremental"
                    "\nabsorption removal when computing their union (must be larger than 0)"
                    "\nneeds --incremental-absorption-removal-condition=relative_size")
                    ->group("Incremental absorption removal")
                    ->check(CLI::Range(0.0f, 1000.0f));
-    app.add_option("--incremental-absorption-removal-absolute_size", args.m_incremental_minimization_absolute_size,
+    app.add_option("--incremental-absorption-removal-absolute_size", args.m_incremental_absorption_removal_absolute_size,
                    "Absolute size of added formula in order to trigger incremental absorption removal when computing"
                    "\nits union with the base formula"
                    "\nneeds --incremental-absorption-removal-condition=absolute_size")

@@ -83,9 +83,9 @@ struct EliminationAlgorithmConfig {
     StopCondition_f stop_condition;
     SizeBasedCondition_f complete_minimization_condition;
     UnaryOperationWithStopCondition_f complete_minimization;
-    SizeBasedCondition_f incremental_minimization_condition;
-    BinaryOperationwithStopCondition_f unify_and_minimize;
-    SizeBasedCondition_f remove_subsumed_condition;
+    SizeBasedCondition_f partial_minimization_condition;
+    SizeBasedCondition_f incremental_absorption_removal_condition;
+    BinaryOperationwithStopCondition_f unify_and_remove_absorbed;
     IsAllowedVariable_f is_allowed_variable;
 };
 
@@ -136,16 +136,16 @@ inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmC
         }
     };
 
-    // helper lambda function for subsumption removal and incremental minimization (during union)
+    // helper lambda function for subsumption removal and incremental absorption removal (during union)
     auto conditional_union = [&config, &iter, &minimization_stop_condition](
             const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
         const size_t size1 = zdd1.count_clauses();
         const size_t size2 = zdd2.count_clauses();
-        if (config.remove_subsumed_condition(iter, size1, size2)) {
-            if (config.incremental_minimization_condition(iter, size1, size2)) {
+        if (config.partial_minimization_condition(iter, size1, size2)) {
+            if (config.incremental_absorption_removal_condition(iter, size1, size2)) {
                 LOG_DEBUG << "Removing subsumed clauses from resolvents";
                 SylvanZddCnf zdd2_reduced = zdd2.subtract_subsumed(zdd1).remove_subsumed_clauses();
-                return config.unify_and_minimize(zdd1, zdd2_reduced, minimization_stop_condition);
+                return config.unify_and_remove_absorbed(zdd1, zdd2_reduced, minimization_stop_condition);
             } else {
                 LOG_DEBUG << "Computing subsumption-free union";
                 return zdd1.unify_and_remove_subsumed(zdd2);
