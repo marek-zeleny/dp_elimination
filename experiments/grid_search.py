@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from typing import Generator
 from pathlib import Path
-from experiments import setups_dir, inputs_dir, default_config_path, run_experiment
+from experiments import setups_dir, inputs_dir, default_config_path
+from run import run_experiment
 from summary_plots import get_duration, get_remaining_vars_ratio
 
 
