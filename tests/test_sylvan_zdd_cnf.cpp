@@ -493,18 +493,96 @@ TEST_CASE("SylvanZddCnf operations", "[SylvanZddCnf]") {
     }
 
     SECTION("Removing subsumed clauses") {
-        SylvanZddCnf cnf = SylvanZddCnf::from_vector({
-            {1, -2, 3},
-            {-1},
-            {-2, 3},
-            {-1, -2, -3},
-        });
-        auto no_subsumed = cnf.remove_subsumed_clauses();
-        auto expected = SylvanZddCnf::from_vector({
-            {-1},
-            {-2, 3},
-        });
-        CHECK(no_subsumed == expected);
+        Clauses input = {
+                {1, -2, 3},
+                {-1},
+                {-2, 3},
+                {-1, -2, -3},
+                {1, 2, -3},
+                {1, 4},
+        };
+        Clauses operand_input = {
+                {1, 2},
+                {1, 2, -4},
+                {-1, -3},
+        };
+        Clauses with_empty_input = {
+                {},
+                {-1},
+                {1, 2},
+                {1, 2, -4},
+                {-1, -3},
+        };
+        auto cnf = SylvanZddCnf::from_vector(input);
+        auto operand = SylvanZddCnf::from_vector(operand_input);
+        auto with_empty = SylvanZddCnf::from_vector(with_empty_input);
+        SylvanZddCnf empty_formula;
+        auto empty_clause = SylvanZddCnf::from_vector({{}});
+
+        SECTION("Subsumed difference") {
+            auto diff = cnf.subtract_subsumed(operand);
+            auto expected = SylvanZddCnf::from_vector({
+                {1, -2, 3},
+                {-1},
+                {-2, 3},
+                {1, 4},
+            });
+            CHECK(diff == expected);
+
+            diff = cnf.subtract_subsumed(empty_formula);
+            CHECK(diff == cnf);
+
+            diff = cnf.subtract_subsumed(empty_clause);
+            CHECK(diff.is_empty());
+
+            diff = cnf.subtract_subsumed(with_empty);
+            CHECK(diff.is_empty());
+
+            diff = empty_formula.subtract_subsumed(cnf);
+            CHECK(diff.is_empty());
+        }
+        SECTION("Subsumption removal") {
+            auto no_subsumed = cnf.remove_subsumed_clauses();
+            auto expected = SylvanZddCnf::from_vector({
+                {-1},
+                {-2, 3},
+                {1, 2, -3},
+                {1, 4},
+            });
+            CHECK(no_subsumed == expected);
+
+            no_subsumed = with_empty.remove_subsumed_clauses();
+            CHECK(no_subsumed == empty_clause);
+        }
+
+        SECTION("Subsumption-free union") {
+            auto no_sub_union = cnf.unify_and_remove_subsumed(operand);
+            auto expected = SylvanZddCnf::from_vector({
+                {-1},
+                {-2, 3},
+                {1, 4},
+                {1, 2},
+            });
+            CHECK(no_sub_union == expected);
+
+            expected = SylvanZddCnf::from_vector({
+                {-1},
+                {-2, 3},
+                {1, 2, -3},
+                {1, 4},
+            });
+            no_sub_union = cnf.unify_and_remove_subsumed(empty_formula);
+            CHECK(no_sub_union == expected);
+
+            no_sub_union = cnf.unify_and_remove_subsumed(empty_clause);
+            CHECK(no_sub_union == empty_clause);
+
+            no_sub_union = cnf.unify_and_remove_subsumed(with_empty);
+            CHECK(no_sub_union == empty_clause);
+
+            no_sub_union = with_empty.unify_and_remove_subsumed(with_empty);
+            CHECK(no_sub_union == empty_clause);
+        }
     }
 
     SECTION("File operations") {
