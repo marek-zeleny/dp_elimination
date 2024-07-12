@@ -215,14 +215,26 @@ void WatchedLiterals::activate_clause(size_t clause_index, bool skip_if_active) 
     if (data.clause.empty()) {
         ++m_initial_empty_count;
     } else if (data.clause.size() == 1) {
-        size_t var_idx = get_var_index(data.clause[0]);
-        m_variables[var_idx].watched_clauses.insert(clause_index);
+        Literal l = data.clause[0];
+        size_t var_idx = get_var_index(l);
+        auto &watched = l > 0
+                ? m_variables[var_idx].watched_clauses_positive
+                : m_variables[var_idx].watched_clauses_negative;
+        watched.insert(clause_index);
         m_initial_unit_clauses.insert(clause_index);
     } else {
-        size_t var1_idx = get_var_index(data.clause[data.watched1]);
-        size_t var2_idx = get_var_index(data.clause[data.watched2]);
-        m_variables[var1_idx].watched_clauses.insert(clause_index);
-        m_variables[var2_idx].watched_clauses.insert(clause_index);
+        Literal l1 = data.clause[data.watched1];
+        Literal l2 = data.clause[data.watched2];
+        size_t var1_idx = get_var_index(l1);
+        size_t var2_idx = get_var_index(l2);
+        auto &watched1 = l1 > 0
+                ? m_variables[var1_idx].watched_clauses_positive
+                : m_variables[var1_idx].watched_clauses_negative;
+        auto &watched2 = l2 > 0
+                ? m_variables[var2_idx].watched_clauses_positive
+                : m_variables[var2_idx].watched_clauses_negative;
+        watched1.insert(clause_index);
+        watched2.insert(clause_index);
     }
 }
 
@@ -236,14 +248,26 @@ void WatchedLiterals::deactivate_clause(size_t clause_index, bool skip_if_not_ac
     if (data.clause.empty()) {
         --m_initial_empty_count;
     } else if (data.clause.size() == 1) {
-        size_t var_idx = get_var_index(data.clause[0]);
-        m_variables[var_idx].watched_clauses.erase(clause_index);
+        Literal l = data.clause[0];
+        size_t var_idx = get_var_index(l);
+        auto &watched = l > 0
+                ? m_variables[var_idx].watched_clauses_positive
+                : m_variables[var_idx].watched_clauses_negative;
+        watched.erase(clause_index);
         m_initial_unit_clauses.erase(clause_index);
     } else {
-        size_t var1_idx = get_var_index(data.clause[data.watched1]);
-        size_t var2_idx = get_var_index(data.clause[data.watched2]);
-        m_variables[var1_idx].watched_clauses.erase(clause_index);
-        m_variables[var2_idx].watched_clauses.erase(clause_index);
+        Literal l1 = data.clause[data.watched1];
+        Literal l2 = data.clause[data.watched2];
+        size_t var1_idx = get_var_index(l1);
+        size_t var2_idx = get_var_index(l2);
+        auto &watched1 = l1 > 0
+                ? m_variables[var1_idx].watched_clauses_positive
+                : m_variables[var1_idx].watched_clauses_negative;
+        auto &watched2 = l2 > 0
+                ? m_variables[var2_idx].watched_clauses_positive
+                : m_variables[var2_idx].watched_clauses_negative;
+        watched1.erase(clause_index);
+        watched2.erase(clause_index);
     }
 }
 
@@ -258,14 +282,18 @@ bool WatchedLiterals::propagate() {
         // obtain the literal to assign a value to
         Literal l1 = clause_data.clause[clause_data.watched1];
         Literal l2 = clause_data.clause[clause_data.watched2];
+        Assignment a1 = get_assignment(l1);
+        Assignment a2 = get_assignment(l2);
         Literal l;
-        if (get_assignment(l1) == Assignment::unassigned) {
+        if (a1 == Assignment::positive || a2 == Assignment::positive) {
+            // not a unit clause anymore, skip
+            continue;
+        } else if (a1 == Assignment::unassigned) {
             // check that the clause is really unit
-            assert(clause_data.watched2 == clause_data.watched1 || get_assignment(l2) == Assignment::negative);
+            assert(a2 == Assignment::negative || clause_data.watched2 == clause_data.watched1);
             l = l1;
         } else {
-            assert(get_assignment(l1) == Assignment::negative);
-            assert(get_assignment(l2) == Assignment::unassigned);
+            assert(a2 == Assignment::unassigned);
             l = l2;
         }
         // assign value to corresponding variable
@@ -285,11 +313,13 @@ bool WatchedLiterals::assign_value_impl(Literal l) {
     VarData &var_data = m_variables[var_idx];
     var_data.assignment = l > 0 ? Assignment::positive : Assignment::negative;
     m_stack.back().push_back(l);
-    // update literals that watched this variable
-    for (auto it = std::begin(var_data.watched_clauses); it != std::end(var_data.watched_clauses);) {
+    // update literals that watched this variable (only opposite literals need to be checked)
+    auto &watched = l > 0 ? var_data.watched_clauses_negative : var_data.watched_clauses_positive;
+    auto it = watched.begin();
+    while (it != watched.end()) {
         bool moved_to_new_literal = update_watched_literal(*it, var_idx);
         if (moved_to_new_literal) {
-            it = var_data.watched_clauses.erase(it);
+            it = watched.erase(it);
         } else {
             ++it;
         }
@@ -317,8 +347,6 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
     }
     Assignment a1 = get_assignment(clause_data.clause[w1]);
     Assignment a2 = get_assignment(clause_data.clause[w2]);
-    // if the clause was unit, it is no longer so
-    m_unit_clauses.erase(clause_index);
     // either watch is positive -> clause is satisfied, no update
     if (a1 == Assignment::positive || a2 == Assignment::positive) {
         return false;
@@ -357,7 +385,11 @@ bool WatchedLiterals::update_watched_literal(size_t clause_index, size_t var_ind
             case Assignment::unassigned:
                 // satisfied clause or unassigned variable -> update in either case
                 w1 = w_new;
-                m_variables[get_var_index(l)].watched_clauses.insert(clause_index);
+                if (l > 0) {
+                    m_variables[get_var_index(l)].watched_clauses_positive.insert(clause_index);
+                } else {
+                    m_variables[get_var_index(l)].watched_clauses_negative.insert(clause_index);
+                }
                 return true;
             default:
                 throw std::logic_error("Unexpected enum value");
@@ -374,7 +406,8 @@ void WatchedLiterals::backtrack_impl() {
     m_stack.pop_back();
 }
 
-size_t WatchedLiterals::get_var_index(Literal l) const {
+size_t WatchedLiterals::get_var_index(Literal l) {
+    assert(l != 0);
     size_t idx = std::abs(l) - 1; // 0 variable doesn't exist
     return idx;
 }

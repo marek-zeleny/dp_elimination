@@ -52,7 +52,8 @@ private:
     };
 
     struct VarData {
-        std::unordered_set<size_t> watched_clauses{};
+        std::unordered_set<size_t> watched_clauses_positive{};
+        std::unordered_set<size_t> watched_clauses_negative{};
         Assignment assignment{Assignment::unassigned};
     };
 
@@ -74,7 +75,7 @@ private:
     bool update_watched_literal(size_t clause_index, size_t var_index);
     void backtrack_impl();
 
-    size_t get_var_index(Literal l) const;
+    static size_t get_var_index(Literal l);
 
     static size_t find_max_var(const std::vector<Clause> &clauses);
 };
