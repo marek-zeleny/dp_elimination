@@ -1,8 +1,9 @@
 # jupyter notebook files
 *.ipynb_checkpoints/
 
-# ignore results directory
+# ignore results directories and archive
 results*/
+archive/
 
 # SLURM scripts and output
 *.slurm
