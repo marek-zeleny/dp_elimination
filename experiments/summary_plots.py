@@ -113,9 +113,8 @@ def extract_setup_summary_data(metrics: dict, data: dict[str, dict[str, tuple[fl
     )
 
 
-def prepare_setup_summary_data(data: dict[str, dict[str, tuple[float, float, float]]]) -> tuple[list, dict[dict[list]]]:
+def prepare_setup_summary_data(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> tuple[list, dict[dict[list]]]:
     inputs = sorted(data.keys())
-    setups = {s_key for i_data in data.values() for s_key in i_data.keys()}
     complete_data = {
         "duration": {s: [] for s in setups},
         "vars": {s: [] for s in setups},
@@ -130,8 +129,8 @@ def prepare_setup_summary_data(data: dict[str, dict[str, tuple[float, float, flo
     return inputs, complete_data
 
 
-def create_setup_summary_plots(data: dict[str, dict[str, tuple[float, float, float]]]) -> list[tuple[str, plt.Figure]]:
-    inputs, complete_data = prepare_setup_summary_data(data)
+def create_setup_summary_plots(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> list[tuple[str, plt.Figure]]:
+    inputs, complete_data = prepare_setup_summary_data(data, setups)
     labels = [i.rsplit('/', 1)[1] for i in inputs]
     figures = []
 

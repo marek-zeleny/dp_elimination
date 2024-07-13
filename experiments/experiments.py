@@ -127,7 +127,7 @@ def visualize_setup_summaries(args):
     def process(_, metrics: dict, setup: str, formula: str):
         extract_setup_summary_data(metrics, data, setup, formula)
     process_metrics(results_dir, process)
-    plots = create_setup_summary_plots(data)
+    plots = create_setup_summary_plots(data, experiment_setups)
     for name, fig in plots:
         fig.savefig(results_dir_path / f"{name}.{format}", format=format, dpi=dpi)
         plt.close(fig)
