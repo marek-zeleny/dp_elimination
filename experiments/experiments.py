@@ -23,7 +23,8 @@ setups_dir: Path = script_root_dir / "setups"
 # setups
 input_formulas: list[str] = None
 experiment_setups: list[str] = [
-    "default",
+    "all_minimizations",
+    "only_complete_minimization",
     "no_absorbed_removal",
 ]
 
