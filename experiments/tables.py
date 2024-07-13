@@ -130,7 +130,7 @@ def create_overall_summary_table(metrics: dict, stages_summary: pd.DataFrame) ->
         "RemovedAbsorbedClauses": metrics["counters"]["AbsorbedClausesRemoved"],
         "HeuristicCorrelation": get_heuristic_correlation(metrics),
         "ReadDuration": metrics["durations"]["ReadInputFormula"],
-        "WriteDuration": metrics["durations"]["WriteOutputFormula"],
+        "WriteDuration": metrics["durations"]["WriteOutputFormula"] or 0,
         "AlgorithmDuration": metrics["durations"]["AlgorithmTotal"],
         "VarSelection": stages_summary["VarSelection"].loc["sum"],
         "Elimination": stages_summary["Elimination"].loc["sum"],
