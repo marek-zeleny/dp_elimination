@@ -75,6 +75,10 @@ public:
     OrderHeuristic(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
 
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
+        if (cnf.is_empty()) {
+            LOG_INFO << "Heuristic called for an empty formula";
+            return {false, 0, 0};
+        }
         SylvanZddCnf::FormulaStats stats = cnf.find_all_literals();
         const size_t min_var = std::max(m_min_var, stats.index_shift);
         const size_t max_var = std::min(m_max_var, stats.vars.size() + stats.index_shift - 1);
@@ -117,6 +121,10 @@ public:
     MinimalScoreHeuristic(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
 
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
+        if (cnf.is_empty()) {
+            LOG_INFO << "Heuristic called for an empty formula";
+            return {false, 0, 0};
+        }
         SylvanZddCnf::FormulaStats stats = cnf.count_all_literals();
         // minimize score
         Score best_score = std::numeric_limits<Score>::max();
