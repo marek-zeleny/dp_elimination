@@ -82,21 +82,23 @@ public:
         SylvanZddCnf::FormulaStats stats = cnf.find_all_literals();
         const size_t min_var = std::max(m_min_var, stats.index_shift);
         const size_t max_var = std::min(m_max_var, stats.vars.size() + stats.index_shift - 1);
-        const size_t start = Ascending ? min_var : max_var;
-        const size_t end = Ascending ? max_var + 1 : min_var - 1;
-        for (size_t var = start; var != end; var = loop_update(var)) {
-            size_t idx = var - stats.index_shift;
-            const SylvanZddCnf::VariableStats &var_stats = stats.vars[idx];
-            // skip missing variables
-            if (var_stats.positive_clause_count == 0 && var_stats.negative_clause_count == 0) {
-                continue;
+        if (min_var <= max_var) {
+            const size_t start = Ascending ? min_var : max_var;
+            const size_t end = Ascending ? max_var + 1 : min_var - 1;
+            for (size_t var = start; var != end; var = loop_update(var)) {
+                size_t idx = var - stats.index_shift;
+                const SylvanZddCnf::VariableStats &var_stats = stats.vars[idx];
+                // skip missing variables
+                if (var_stats.positive_clause_count == 0 && var_stats.negative_clause_count == 0) {
+                    continue;
+                }
+                if constexpr (Ascending) {
+                    LOG_INFO << "Heuristic found smallest variable " << var;
+                } else {
+                    LOG_INFO << "Heuristic found largest variable " << var;
+                }
+                return {true, static_cast<SylvanZddCnf::Literal>(var), 0};
             }
-            if constexpr (Ascending) {
-                LOG_INFO << "Heuristic found smallest variable " << var;
-            } else {
-                LOG_INFO << "Heuristic found largest variable " << var;
-            }
-            return {true, static_cast<SylvanZddCnf::Literal>(var), 0};
         }
         LOG_INFO << "Heuristic didn't find any variable in range";
         return {false, 0, 0};
