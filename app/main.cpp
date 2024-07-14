@@ -244,6 +244,11 @@ int impl(const ArgsParser &args) {
         success = true;
     } catch (const SylvanFullTableException &e) {
         LOG_ERROR << e.what();
+        // export metrics - the program will terminate after exiting the catch block
+        std::string metrics_file_name = args.get_metrics_file_name();
+        std::ofstream metrics_file{metrics_file_name};
+        std::cout << "Exporting metrics to " << metrics_file_name << std::endl;
+        metrics.export_json(metrics_file);
     }
 
     // write result to file
