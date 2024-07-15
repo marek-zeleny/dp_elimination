@@ -1,7 +1,5 @@
 heuristic = "minimal_bloat"
 
-absorbed-removal-algorithm = "watched_literals"
-
 complete-minimization-condition = "never"
 
 partial-minimization-condition = "relative_size"
