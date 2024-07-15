@@ -26,12 +26,6 @@ public:
         MinimalBloat,
     };
 
-    enum class AbsorbedRemovalAlgorithm : EnumUnderlyingType {
-        None,
-        ZBDD,
-        WatchedLiterals,
-    };
-
     enum class Condition : EnumUnderlyingType {
         None,
         Never,
@@ -49,7 +43,6 @@ public:
     [[nodiscard]] const size_t &get_output_cnf_file_max_size() const { return m_output_cnf_file_max_size; }
 
     [[nodiscard]] Heuristic get_heuristic() const { return m_heuristic; }
-    [[nodiscard]] AbsorbedRemovalAlgorithm get_absorbed_removal_algorithm() const { return m_absorbed_removal_algorithm; }
     [[nodiscard]] Condition get_complete_minimization_condition() const { return m_complete_minimization_condition; }
     [[nodiscard]] size_t get_complete_minimization_interval() const { return m_complete_minimization_interval; }
     [[nodiscard]] float get_complete_minimization_relative_size() const { return m_complete_minimization_relative_size; }
@@ -94,16 +87,15 @@ private:
     size_t m_output_cnf_file_max_size{std::numeric_limits<size_t>::max()};
     // algorithm
     Heuristic m_heuristic{Heuristic::None};
-    AbsorbedRemovalAlgorithm m_absorbed_removal_algorithm{AbsorbedRemovalAlgorithm::WatchedLiterals};
     Condition m_complete_minimization_condition{Condition::RelativeSize};
-    size_t m_complete_minimization_interval{0};
+    size_t m_complete_minimization_interval{1};
     float m_complete_minimization_relative_size{1.5};
     Condition m_partial_minimization_condition{Condition::RelativeSize};
-    size_t m_partial_minimization_interval{0};
+    size_t m_partial_minimization_interval{1};
     float m_partial_minimization_relative_size{0.1};
     size_t m_partial_minimization_absolute_size{0};
     Condition m_incremental_absorption_removal_condition{Condition::RelativeSize};
-    size_t m_incremental_absorption_removal_interval{0};
+    size_t m_incremental_absorption_removal_interval{1};
     float m_incremental_absorption_removal_relative_size{0.1};
     size_t m_incremental_absorption_removal_absolute_size{0};
     // stop conditions

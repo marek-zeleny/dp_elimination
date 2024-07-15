@@ -121,6 +121,8 @@ private:
 
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
     EliminationAlgorithmConfig config;
+    config.complete_minimization = absorbed_clause_detection::with_conversion::remove_absorbed_clauses;
+    config.unify_and_remove_absorbed = absorbed_clause_detection::with_conversion::unify_with_non_absorbed;
     config.stop_condition = StopCondition(cnf.count_clauses(), args.get_max_iterations(),
                                           args.get_max_formula_growth(), args.get_max_duration_seconds());
     config.is_allowed_variable = AllowedVariablePredicate(args.get_min_var(), args.get_max_var());
@@ -143,19 +145,6 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
             break;
         default:
             throw std::logic_error("Heuristic not implemented");
-    }
-
-    switch (args.get_absorbed_removal_algorithm()) {
-        case ArgsParser::AbsorbedRemovalAlgorithm::ZBDD:
-            //config.unify_with_non_absorbed = absorbed_clause_detection::remove_absorbed_clauses_without_conversion;
-            //break;
-            throw std::logic_error("Absorbed removal algorithm not implemented");
-        case ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals:
-            config.complete_minimization = absorbed_clause_detection::with_conversion::remove_absorbed_clauses;
-            config.unify_and_remove_absorbed = absorbed_clause_detection::with_conversion::unify_with_non_absorbed;
-            break;
-        default:
-            throw std::logic_error("Absorbed removal algorithm not implemented");
     }
 
     switch (args.get_complete_minimization_condition()) {

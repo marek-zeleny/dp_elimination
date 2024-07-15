@@ -11,11 +11,6 @@ static const std::unordered_map<std::string, ArgsParser::Heuristic> heuristic_ma
         {"minimal_bloat", ArgsParser::Heuristic::MinimalBloat},
 };
 
-static const std::unordered_map<std::string, ArgsParser::AbsorbedRemovalAlgorithm> absorbed_removal_algorithm_map {
-        {"watched_literals", ArgsParser::AbsorbedRemovalAlgorithm::WatchedLiterals},
-        {"zbdd", ArgsParser::AbsorbedRemovalAlgorithm::ZBDD},
-};
-
 static const std::unordered_map<std::string, ArgsParser::Condition> condition_full_map {
         {"absolute_size", ArgsParser::Condition::AbsoluteSize},
         {"relative_size", ArgsParser::Condition::RelativeSize},
@@ -70,13 +65,6 @@ std::optional<ArgsParser> ArgsParser::parse(int argc, char *argv[]) {
                                                        CLI::ignore_space,
                                                        CLI::ignore_underscore));
     app.option_defaults()->always_capture_default(true);
-    app.add_option("--absorbed-removal-algorithm", args.m_absorbed_removal_algorithm,
-                   "Algorithm for removing absorbed clauses")
-                   ->group("Algorithm")
-                   ->transform(CLI::CheckedTransformer(absorbed_removal_algorithm_map,
-                                                       CLI::ignore_case,
-                                                       CLI::ignore_space,
-                                                       CLI::ignore_underscore));
 
     // complete minimization
     app.add_option("--complete-minimization-condition", args.m_complete_minimization_condition,
