@@ -114,41 +114,35 @@ def extract_setup_summary_data(metrics: dict, data: dict[str, dict[str, tuple[fl
     )
 
 
-def prepare_setup_summary_data(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> tuple[list, dict[dict[list]]]:
+def create_setup_summary_table(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> pd.DataFrame:
     inputs = sorted(data.keys())
-    complete_data = {
-        "duration": {s: [] for s in setups},
-        "vars": {s: [] for s in setups},
-        "growth": {s: [] for s in setups},
-    }
+    complete_data = {(s, v): [] for s in setups for v in ["duration", "vars", "growth"]}
     for _, i_data in sorted(data.items()):
         for s in setups:
             duration, vars, growth = i_data.get(s, (float("nan"), float("nan"), float("nan")))
-            complete_data["duration"][s].append(duration)
-            complete_data["vars"][s].append(vars)
-            complete_data["growth"][s].append(growth)
-    return inputs, complete_data
-
-
-def create_setup_summary_table(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> pd.DataFrame:
-    inputs, complete_data = prepare_setup_summary_data(data, setups)
-    df_data = {(s, v): d for v, sd in complete_data.items() for s, d in sd.items()}
-    df = pd.DataFrame(df_data, index=inputs)
+            complete_data[(s, "duration")].append(duration)
+            complete_data[(s, "vars")].append(vars)
+            complete_data[(s, "growth")].append(growth)
+    df = pd.DataFrame(complete_data, index=inputs)
     return df
 
 
-def create_setup_summary_plots(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> list[tuple[str, plt.Figure]]:
-    inputs, complete_data = prepare_setup_summary_data(data, setups)
-    labels = [i.rsplit('/', 1)[1] for i in inputs]
+def get_data_for_metric(df: pd.DataFrame, setups: list[str], metric: str) -> dict[list]:
+    data = {setup: df.loc[:,(setup, metric)].values for setup in setups}
+    return data
+
+
+def create_setup_summary_plots(df: pd.DataFrame, setups: list[str]) -> list[tuple[str, plt.Figure]]:
+    labels = [i.rsplit('/', 1)[1] for i in df.index]
     figures = []
 
-    fig_duration, _ = plot_durations(labels, complete_data["duration"])
+    fig_duration, _ = plot_durations(labels, get_data_for_metric(df, setups, "duration"))
     figures.append(("duration", fig_duration))
 
-    fig_vars, _ = plot_vars(labels, complete_data["vars"])
+    fig_vars, _ = plot_vars(labels, get_data_for_metric(df, setups, "vars"))
     figures.append(("variables", fig_vars))
 
-    fig_growth, _ = plot_growth(labels, complete_data["growth"])
+    fig_growth, _ = plot_growth(labels, get_data_for_metric(df, setups, "growth"))
     figures.append(("growth", fig_growth))
 
     return figures

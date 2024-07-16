@@ -135,18 +135,17 @@ def create_setups_summary(args):
 
 
 def visualize_setup_summaries(args):
-    results_dir = args.results_dir
-    results_dir_path = Path(results_dir).absolute()
+    data = args.data
+    data_path = Path(data).absolute()
+    output_dir = args.output_dir
+    output_dir_path = Path(output_dir).absolute()
     format = args.format
     dpi = args.dpi
 
-    data = dict()
-    def process(_, metrics: dict, setup: str, formula: str):
-        extract_setup_summary_data(metrics, data, setup, formula)
-    process_metrics(results_dir, process)
-    plots = create_setup_summary_plots(data, experiment_setups)
+    df = pd.read_csv(data_path, header=[0, 1], index_col=0)
+    plots = create_setup_summary_plots(df, experiment_setups)
     for name, fig in plots:
-        fig.savefig(results_dir_path / f"{name}.{format}", format=format, dpi=dpi)
+        fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=dpi)
         plt.close(fig)
 
 
@@ -176,7 +175,7 @@ parser_summary = subparsers.add_parser("summarize",
                                        description="Process metrics from experiments and create summary tables",
                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_summary.set_defaults(func=summarize_metrics)
-parser_summary.add_argument("results_dir",
+parser_summary.add_argument("results-dir",
                             type=str,
                             help="Directory with results (given as '--results-dir' when running experiments)")
 parser_summary.add_argument("-f", "--format", type=str, default="md", help="Format of exported tables")
@@ -185,7 +184,7 @@ parser_visualize = subparsers.add_parser("visualize",
                                          description="Process metrics from experiments and visualize them",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_visualize.set_defaults(func=visualize_metrics)
-parser_visualize.add_argument("results_dir",
+parser_visualize.add_argument("results-dir",
                               type=str,
                               help="Directory with results (given as '--results-dir' when running experiments)")
 parser_visualize.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
@@ -195,7 +194,7 @@ parser_setup_summary = subparsers.add_parser("setup-summary",
                                              description="Process metrics from experiments and create summary table",
                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_setup_summary.set_defaults(func=create_setups_summary)
-parser_setup_summary.add_argument("results_dir",
+parser_setup_summary.add_argument("results-dir",
                               type=str,
                               help="Directory with results (given as '--results-dir' when running experiments)")
 parser_setup_summary.add_argument("-f", "--format", type=str, default="csv", help="Format of the table")
@@ -205,12 +204,14 @@ parser_visualize_setup_summary = subparsers.add_parser("visualize-setup-summary"
                                                        " comparing experiment setups",
                                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_visualize_setup_summary.set_defaults(func=visualize_setup_summaries)
-parser_visualize_setup_summary.add_argument("results_dir",
+parser_visualize_setup_summary.add_argument("data",
                                             type=str,
-                                            help="Directory with results (given as '--results-dir' when running"
-                                            " experiments)")
+                                            help="File containing summary data as a CSV")
+parser_visualize_setup_summary.add_argument("-o", "--output-dir", type=str, default=".",
+                                            help="Directory to save the plots to")
 parser_visualize_setup_summary.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
-parser_visualize_setup_summary.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
+parser_visualize_setup_summary.add_argument("-r", "--dpi", "--resolution", type=int, default=150,
+                                            help="Resolution of plots")
 
 if __name__ == '__main__':
     args = parser.parse_args()
