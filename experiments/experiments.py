@@ -11,7 +11,7 @@ from typing import Callable, Generator
 from run import run_dp_experiments
 from tables import create_tables
 from plots import create_plots
-from summary import extract_setup_summary_data, create_setup_summary_table
+from summary_table import extract_setup_summary_data, create_setup_summary_table
 from summary_plots import create_setup_summary_plots
 
 # path constants
