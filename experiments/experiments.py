@@ -15,8 +15,7 @@ from summary import extract_setup_summary_data, create_setup_summary_table, crea
 
 # path constants
 script_root_dir: Path = Path(os.path.realpath(__file__)).parent.absolute()
-#input_formulas_list_path: Path = script_root_dir / "input_formulas.txt"
-input_formulas_list_path: Path = script_root_dir / "develop_formulas.txt"
+input_formulas_list_path: Path = script_root_dir / "input_formulas.txt"
 default_config_path: Path = script_root_dir / "default_config.toml"
 inputs_dir: Path = script_root_dir / "inputs"
 setups_dir: Path = script_root_dir / "setups"
@@ -25,8 +24,8 @@ setups_dir: Path = script_root_dir / "setups"
 input_formulas: list[str] = None
 experiment_setups: list[str] = [
     "all_minimizations",
-    #"only_complete_minimization",
-    #"no_absorbed_removal",
+    "only_complete_minimization",
+    "no_absorbed_removal",
 ]
 
 
