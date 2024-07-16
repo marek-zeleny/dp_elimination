@@ -11,11 +11,12 @@ from typing import Callable, Generator
 from run import run_dp_experiments
 from tables import create_tables
 from plots import create_plots
-from summary_plots import extract_setup_summary_data, create_setup_summary_plots
+from summary import extract_setup_summary_data, create_setup_summary_table, create_setup_summary_plots
 
 # path constants
 script_root_dir: Path = Path(os.path.realpath(__file__)).parent.absolute()
-input_formulas_list_path: Path = script_root_dir / "input_formulas.txt"
+#input_formulas_list_path: Path = script_root_dir / "input_formulas.txt"
+input_formulas_list_path: Path = script_root_dir / "develop_formulas.txt"
 default_config_path: Path = script_root_dir / "default_config.toml"
 inputs_dir: Path = script_root_dir / "inputs"
 setups_dir: Path = script_root_dir / "setups"
@@ -24,8 +25,8 @@ setups_dir: Path = script_root_dir / "setups"
 input_formulas: list[str] = None
 experiment_setups: list[str] = [
     "all_minimizations",
-    "only_complete_minimization",
-    "no_absorbed_removal",
+    #"only_complete_minimization",
+    #"no_absorbed_removal",
 ]
 
 
@@ -98,6 +99,10 @@ def export_table(table: pd.DataFrame, path: Path, format: str, include_index: bo
             output = table.astype(str).to_markdown(index=include_index, tablefmt="pretty")
     elif format == "tex":
         output = table.to_latex(index=include_index)
+    elif format == "csv":
+        output = table.to_csv(index=include_index)
+    elif format == "json":
+        output = table.to_json(index=include_index)
     else:
         raise NotImplementedError(f"Table format {format} not supported")
 
@@ -115,6 +120,19 @@ def visualize_metrics(args):
             fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=dpi)
             plt.close(fig)
     process_metrics(results_dir, process)
+
+
+def create_setups_summary(args):
+    results_dir = args.results_dir
+    results_dir_path = Path(results_dir).absolute()
+    format = args.format
+
+    data = dict()
+    def process(_, metrics: dict, setup: str, formula: str):
+        extract_setup_summary_data(metrics, data, setup, formula)
+    process_metrics(results_dir, process)
+    table = create_setup_summary_table(data, experiment_setups)
+    export_table(table, results_dir_path / f"summary_data.{format}", format, True)
 
 
 def visualize_setup_summaries(args):
@@ -175,15 +193,25 @@ parser_visualize.add_argument("-f", "--format", type=str, default="png", help="F
 parser_visualize.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
 
 parser_setup_summary = subparsers.add_parser("setup-summary",
-                                             description="Process metrics from experiments and generate plots comparing"
-                                                         " experiment setups",
+                                             description="Process metrics from experiments and create summary table",
                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser_setup_summary.set_defaults(func=visualize_setup_summaries)
+parser_setup_summary.set_defaults(func=create_setups_summary)
 parser_setup_summary.add_argument("results_dir",
                               type=str,
                               help="Directory with results (given as '--results-dir' when running experiments)")
-parser_setup_summary.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
-parser_setup_summary.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
+parser_setup_summary.add_argument("-f", "--format", type=str, default="csv", help="Format of the table")
+
+parser_visualize_setup_summary = subparsers.add_parser("visualize-setup-summary",
+                                                       description="Process metrics from experiments and generate plots"
+                                                       " comparing experiment setups",
+                                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser_visualize_setup_summary.set_defaults(func=visualize_setup_summaries)
+parser_visualize_setup_summary.add_argument("results_dir",
+                                            type=str,
+                                            help="Directory with results (given as '--results-dir' when running"
+                                            " experiments)")
+parser_visualize_setup_summary.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
+parser_visualize_setup_summary.add_argument("-r", "--dpi", "--resolution", type=int, default=150, help="Resolution of plots")
 
 if __name__ == '__main__':
     args = parser.parse_args()

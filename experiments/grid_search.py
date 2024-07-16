@@ -11,7 +11,7 @@ from typing import Generator
 from pathlib import Path
 from experiments import setups_dir, inputs_dir, default_config_path
 from run import run_experiment
-from summary_plots import get_duration, get_remaining_vars_ratio
+from summary import get_duration, get_remaining_vars_ratio
 
 
 def get_distribution(start: float, stop: float, num: int, shift: float = 0.2):

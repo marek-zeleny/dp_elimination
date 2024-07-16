@@ -1,3 +1,4 @@
+import pandas as pd
 from matplotlib import pyplot as plt, ticker
 from plots import get_axes_scaling_factor, get_divider
 
@@ -127,6 +128,13 @@ def prepare_setup_summary_data(data: dict[str, dict[str, tuple[float, float, flo
             complete_data["vars"][s].append(vars)
             complete_data["growth"][s].append(growth)
     return inputs, complete_data
+
+
+def create_setup_summary_table(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> pd.DataFrame:
+    inputs, complete_data = prepare_setup_summary_data(data, setups)
+    df_data = {(s, v): d for s, vd in complete_data.items() for v, d in vd.items()}
+    df = pd.DataFrame(df_data, index=inputs)
+    return df
 
 
 def create_setup_summary_plots(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> list[tuple[str, plt.Figure]]:
