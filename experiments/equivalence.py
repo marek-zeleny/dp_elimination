@@ -21,14 +21,16 @@ def compare_formulas_pysat(path1, path2):
     cnf1 = CNF(from_file=path1)
     cnf2 = CNF(from_file=path2)
     f1_impl_f2 = does_formula_imply(cnf1, cnf2)
-    if not f1_impl_f2:
+    if f1_impl_f2:
+        print("formula 1 implies formula 2")
+    else:
         print("formula 1 does not imply formula 2")
-        return False
     f2_impl_f1 = does_formula_imply(cnf2, cnf1)
-    if not f2_impl_f1:
+    if f2_impl_f1:
+        print("formula 2 implies formula 1")
+    else:
         print("formula 2 does not imply formula 1")
-        return False
-    return True
+    return f1_impl_f2 and f2_impl_f1
 
 
 if __name__ == '__main__':
