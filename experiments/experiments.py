@@ -23,9 +23,13 @@ setups_dir: Path = script_root_dir / "setups"
 # setups
 input_formulas: list[str] = None
 experiment_setups: list[str] = [
+    "lace_1_thread",
     "all_minimizations",
     "only_complete_minimization",
     "no_absorbed_removal",
+    "ascending_heuristic",
+    "descending_heuristic",
+    "lace_7_threads",
 ]
 
 
