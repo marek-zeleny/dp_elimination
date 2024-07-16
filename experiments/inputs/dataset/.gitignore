@@ -1,0 +1,3 @@
+# unnecessary input files, but not actual inputs
+*.nnf
+*.dc.cnf
