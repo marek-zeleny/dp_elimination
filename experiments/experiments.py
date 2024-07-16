@@ -175,7 +175,7 @@ parser_summary = subparsers.add_parser("summarize",
                                        description="Process metrics from experiments and create summary tables",
                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_summary.set_defaults(func=summarize_metrics)
-parser_summary.add_argument("results-dir",
+parser_summary.add_argument("results_dir",
                             type=str,
                             help="Directory with results (given as '--results-dir' when running experiments)")
 parser_summary.add_argument("-f", "--format", type=str, default="md", help="Format of exported tables")
@@ -184,7 +184,7 @@ parser_visualize = subparsers.add_parser("visualize",
                                          description="Process metrics from experiments and visualize them",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_visualize.set_defaults(func=visualize_metrics)
-parser_visualize.add_argument("results-dir",
+parser_visualize.add_argument("results_dir",
                               type=str,
                               help="Directory with results (given as '--results-dir' when running experiments)")
 parser_visualize.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
@@ -194,7 +194,7 @@ parser_setup_summary = subparsers.add_parser("setup-summary",
                                              description="Process metrics from experiments and create summary table",
                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser_setup_summary.set_defaults(func=create_setups_summary)
-parser_setup_summary.add_argument("results-dir",
+parser_setup_summary.add_argument("results_dir",
                               type=str,
                               help="Directory with results (given as '--results-dir' when running experiments)")
 parser_setup_summary.add_argument("-f", "--format", type=str, default="csv", help="Format of the table")
