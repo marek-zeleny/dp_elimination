@@ -11,7 +11,8 @@ from typing import Callable, Generator
 from run import run_dp_experiments
 from tables import create_tables
 from plots import create_plots
-from summary import extract_setup_summary_data, create_setup_summary_table, create_setup_summary_plots
+from summary import extract_setup_summary_data, create_setup_summary_table
+from summary_plots import create_setup_summary_plots
 
 # path constants
 script_root_dir: Path = Path(os.path.realpath(__file__)).parent.absolute()
