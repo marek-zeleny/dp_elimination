@@ -144,11 +144,15 @@ def visualize_setup_summaries(args):
     data_path = Path(data).absolute()
     output_dir = args.output_dir
     output_dir_path = Path(output_dir).absolute()
+    legend = args.legend
     format = args.format
     dpi = args.dpi
 
+    if not legend:
+        legend = experiment_setups
+    setup_map = {s: l for s, l in zip(experiment_setups, legend)}
     df = pd.read_csv(data_path, header=[0, 1], index_col=0)
-    plots = create_setup_summary_plots(df, experiment_setups)
+    plots = create_setup_summary_plots(df, setup_map)
     for name, fig in plots:
         fig.savefig(output_dir_path / f"{name}.{format}", format=format, dpi=dpi)
         plt.close(fig)
@@ -214,6 +218,8 @@ parser_visualize_setup_summary.add_argument("data",
                                             help="File containing summary data as a CSV")
 parser_visualize_setup_summary.add_argument("-o", "--output-dir", type=str, default=".",
                                             help="Directory to save the plots to")
+parser_visualize_setup_summary.add_argument("-l", "--legend", type=str, nargs=len(experiment_setups), default=None,
+                                            help="Legend names for each configuration")
 parser_visualize_setup_summary.add_argument("-f", "--format", type=str, default="png", help="Format of plot files")
 parser_visualize_setup_summary.add_argument("-r", "--dpi", "--resolution", type=int, default=150,
                                             help="Resolution of plots")

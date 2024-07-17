@@ -9,30 +9,30 @@ bar_width = 0.7
 
 
 # data extraction
-def get_duration(df: pd.DataFrame, setups: str) -> dict[list]:
+def get_duration(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
     data = {
-        s: df.loc[:, (s, "duration")].values
-        for s in setups
+        l: df.loc[:, (s, "duration")].values
+        for s, l in setups.items()
     }
     return data
 
 
-def get_remaining_vars_ratio(df: pd.DataFrame, setups: str) -> dict[list]:
+def get_remaining_vars_ratio(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
     vars = df.loc[:, (global_col, "vars")]
     aux_vars = df.loc[:, (global_col, "aux_vars")]
     prot_vars = vars - aux_vars
     data = {
-        s: ((df.loc[:, (s, "end_vars")] - prot_vars) / aux_vars).values
-        for s in setups
+        l: ((df.loc[:, (s, "end_vars")] - prot_vars) / aux_vars).values
+        for s, l in setups.items()
     }
     return data
 
 
-def get_relative_growth(df: pd.DataFrame, setups: str) -> dict[list]:
+def get_relative_growth(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
     size = df.loc[:, (global_col, "size")]
     data = {
-        s: (df.loc[:, (s, "end_size")] / size).values
-        for s in setups
+        l: (df.loc[:, (s, "end_size")] / size).values
+        for s, l in setups.items()
     }
     return data
 
@@ -49,7 +49,7 @@ def _plot_bar_group(ax: plt.Axes, data: list[tuple[list, str]]):
         ax.bar(pos, points, w, label=label)
 
 
-def plot_durations(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Axes]]:
+def plot_durations(labels: list, data: dict[str, list]) -> tuple[plt.Figure, list[plt.Axes]]:
     axes = []
 
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
@@ -72,7 +72,7 @@ def plot_durations(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt
     return fig, axes
 
 
-def plot_vars(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Axes]]:
+def plot_vars(labels: list, data: dict[str, list]) -> tuple[plt.Figure, list[plt.Axes]]:
     axes = []
 
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
@@ -93,7 +93,7 @@ def plot_vars(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Axes
     return fig, axes
 
 
-def plot_growth(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Axes]]:
+def plot_growth(labels: list, data: dict[str, list]) -> tuple[plt.Figure, list[plt.Axes]]:
     axes = []
 
     sub: tuple[plt.Figure, plt.Axes] = plt.subplots()
@@ -116,7 +116,7 @@ def plot_growth(labels: list, data: dict[list]) -> tuple[plt.Figure, list[plt.Ax
 
 
 # interface
-def create_setup_summary_plots(df: pd.DataFrame, setups: list[str]) -> list[tuple[str, plt.Figure]]:
+def create_setup_summary_plots(df: pd.DataFrame, setups: dict[str, str]) -> list[tuple[str, plt.Figure]]:
     labels = [i.rsplit('/', 1)[1] for i in df.index]
     figures = []
 
