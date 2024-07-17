@@ -31,7 +31,7 @@ def get_remaining_vars_ratio(df: pd.DataFrame, setups: dict[str, str]) -> dict[s
 def get_relative_growth(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
     size = df.loc[:, (global_col, "size")]
     data = {
-        l: (df.loc[:, (s, "end_size")] / size).values
+        l: (df.loc[:, (s, "max_size")] / size).values
         for s, l in setups.items()
     }
     return data
@@ -101,7 +101,7 @@ def plot_growth(labels: list, data: dict[str, list]) -> tuple[plt.Figure, list[p
     axes.append(ax)
     _plot_bar_group(ax, [(points, setup) for setup, points in data.items()])
 
-    ax.set_title("Formula growth")
+    ax.set_title("Maximum formula growth")
     ax.set_xlabel("input formulas")
     ax.set_ylabel("relative growth of # clauses")
     ax.xaxis.set_ticks(range(len(labels)), labels, rotation=90)
