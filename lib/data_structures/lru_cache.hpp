@@ -8,6 +8,14 @@
 
 namespace dp {
 
+/**
+ * LRU cache implementation.
+ *
+ * @tparam Key Type of access keys for entries.
+ * @tparam T Type of stored entries.
+ * @tparam Capacity_ Maximum number of stored entries.
+ * @tparam Hash Hash function for access keys.
+ */
 template<typename Key, typename T, size_t Capacity_, typename Hash = std::hash<Key>>
 class LruCache {
 public:
@@ -19,10 +27,16 @@ private:
     using CacheMap = std::unordered_map<Key, typename CacheList::iterator, Hash>;
 
 public:
+    /**
+     * @return Number of currently stored entries.
+     */
     [[nodiscard]] size_t size() const {
         return m_cache_list.size();
     }
 
+    /**
+     * @return Entry stored under the given key if it exists, otherwise nullopt.
+     */
     std::optional<T> try_get(const Key &key) {
         typename CacheMap::iterator map_it = m_cache_map.find(key);
         if (map_it == m_cache_map.end()) {
@@ -34,12 +48,12 @@ public:
     }
 
     /**
-     * @brief Adds new entry to the cache under given key.
+     * Adds new entry to the cache under given key.
      *
      * If the key already exists, replaces the existing entry with the new one.
      * If the cache is full, removes the least recently used entry.
      *
-     * @return If an entry has been removed in the process, returns that key-entry pair; otherwise returns nullopt
+     * @return If an entry has been removed in the process, returns that key-entry pair, otherwise returns nullopt.
      */
     std::optional<EntryPair> add(const Key &key, const T &entry) {
         typename CacheMap::iterator map_it = m_cache_map.find(key);
