@@ -113,6 +113,9 @@ inline const std::array<std::string, to_underlying(MetricsCumulativeDurations::L
     "WatchedLiterals_Backtrack",
 };
 
+/**
+ * Collects metrics for the dp library.
+ */
 inline MetricsCollector<MetricsCounters, MetricsSeries, MetricsDurations, MetricsCumulativeDurations> metrics{
     counter_names,
     series_names,

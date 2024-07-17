@@ -13,6 +13,10 @@
 
 namespace nlohmann {
 
+/**
+ * Custom JSON serializer for std::chrono::duration.
+ * Converts the value to microseconds.
+ */
 template <typename Rep, typename Period>
 struct adl_serializer<std::chrono::duration<Rep, Period>> {
     static void to_json(json &j, const std::chrono::duration<Rep, Period> &duration) {
@@ -24,9 +28,23 @@ struct adl_serializer<std::chrono::duration<Rep, Period>> {
 
 namespace dp {
 
+/**
+ * Specifies that a type is an enumeration type that has an element named `Last`.
+ */
 template<typename Enum>
 concept IsEnumWithLast = IsEnum<Enum> && is_valid_value_v<Enum::Last>;
 
+/**
+ * Tool for collecting metrics.
+ *
+ * The collected entries are specified by enumeration types that are given as template parameters.
+ * Collected data can be exported into JSON.
+ *
+ * @tparam CounterEntries Entries with a single accumulated integer value.
+ * @tparam SeriesEntries Entries with a vector of integer values.
+ * @tparam DurationEntries Entries with a vector of durations.
+ * @tparam CumulativeDurationEntries Entries with a single accumulated duration.
+ */
 template<IsEnumWithLast CounterEntries, IsEnumWithLast SeriesEntries, IsEnumWithLast DurationEntries,
         IsEnumWithLast CumulativeDurationEntries>
 class MetricsCollector {
@@ -57,6 +75,12 @@ private:
     class Timer;
 
 public:
+    /**
+     * Creates a new metrics collector.
+     *
+     * Names given as constructor arguments correspond to entries supplied as template arguments.
+     * They are used in JSON exports.
+     */
     MetricsCollector(const name_array<num_counters> &counter_names,
                      const name_array<num_series> &series_names,
                      const name_array<num_durations> &duration_names,
@@ -69,22 +93,41 @@ public:
     MetricsCollector(MetricsCollector &&) = delete;
     MetricsCollector &operator=(MetricsCollector &&) = delete;
 
+    /**
+     * Adds a given value to a counter.
+     */
     void increase_counter(CounterEntries entry, counter amount = 1) {
         m_counters[to_underlying(entry)] += amount;
     }
 
+    /**
+     * Appends a given value to a series.
+     */
     void append_to_series(SeriesEntries entry, series_value value) {
         m_series[to_underlying(entry)].push_back(value);
     }
 
+    /**
+     * Starts a timer who's duration will be appended to a vector entry when stopped.
+     *
+     * @return Timer that can be stopped manually by .stop(), or will be stopped automatically upon destruction.
+     */
     [[nodiscard]] Timer<DurationEntries> get_timer(DurationEntries entry) {
         return Timer<DurationEntries>(*this, entry);
     }
 
+    /**
+     * Starts a timer who's duration will be added to a cumulative entry when stopped.
+     *
+     * @return Timer that can be stopped manually by .stop(), or will be stopped automatically upon destruction.
+     */
     [[nodiscard]] Timer<CumulativeDurationEntries> get_cumulative_timer(CumulativeDurationEntries entry) {
         return Timer<CumulativeDurationEntries>(*this, entry);
     }
 
+    /**
+     * Exports collected data as JSON to a given stream.
+     */
     void export_json(std::ostream &stream) {
         using json = nlohmann::json;
         json counters;
