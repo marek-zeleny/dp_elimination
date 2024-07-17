@@ -11,7 +11,23 @@ from typing import Generator
 from pathlib import Path
 from experiments import setups_dir, inputs_dir, default_config_path
 from run import run_experiment
-from summary_table import get_duration, get_remaining_vars_ratio
+
+
+# data extraction
+def get_duration(metrics):
+    return metrics["durations"]["AlgorithmTotal"][0]
+
+
+def get_remaining_vars_ratio(metrics):
+    total = metrics["counters"]["InitVars"] - metrics["counters"]["MinVar"] + 1
+    remaining = metrics["counters"]["FinalVars"] - metrics["counters"]["MinVar"] + 1
+    return remaining / total
+
+
+def get_relative_growth(metrics):
+    initial = metrics["series"]["ClauseCounts"][0]
+    final = metrics["series"]["ClauseCounts"][-1]
+    return final / initial
 
 
 def get_distribution(start: float, stop: float, num: int, shift: float = 0.2):
