@@ -7,6 +7,11 @@
 
 namespace dp {
 
+/**
+ * CNF formula represented by a vector of clauses.
+ *
+ * This implementation was used only for debugging and verification purposes and is not up-to-date.
+ */
 class VectorCnf {
 public:
     using Literal = int32_t;
