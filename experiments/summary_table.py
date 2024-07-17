@@ -1,6 +1,6 @@
 import pandas as pd
 
-global_col = "global"
+global_col_name = "global"
 
 
 # interface
@@ -19,26 +19,25 @@ def extract_setup_summary_data(metrics: dict, data: dict[str, dict[str, tuple[fl
         metrics["counters"]["InitVars"],
         metrics["counters"]["InitVars"] - metrics["counters"]["MinVar"] + 1,
     )
-    if global_col not in data[input_key]:
-        data[input_key][global_col] = general
+    if global_col_name not in data[input_key]:
+        data[input_key][global_col_name] = general
     else:
-        assert data[input_key][global_col] == general
+        assert data[input_key][global_col_name] == general
 
 
 def create_setup_summary_table(data: dict[str, dict[str, tuple[float, float, float]]], setups: list[str]) -> pd.DataFrame:
     inputs = sorted(data.keys())
-    complete_data = {(global_col, v): [] for v in ["size", "vars", "aux_vars"]}
-    complete_data |= {(s, v): [] for s in setups for v in ["duration", "end_size", "max_size", "end_vars"]}
+    global_cols = ["size", "vars", "aux_vars"]
+    local_cols = ["duration", "end_size", "max_size", "end_vars"]
+    complete_data = {(global_col_name, v): [] for v in global_cols}
+    complete_data |= {(s, v): [] for s in setups for v in local_cols}
     for _, i_data in sorted(data.items()):
-        size, vars, aux_vars = i_data.get(global_col, (float("nan"), float("nan"), float("nan")))
-        complete_data[(global_col, "size")].append(size)
-        complete_data[(global_col, "vars")].append(vars)
-        complete_data[(global_col, "aux_vars")].append(aux_vars)
+        values = i_data.get(global_col_name, tuple([float("nan")] * len(global_cols)))
+        for c, v in zip(global_cols, values):
+            complete_data[(global_col_name, c)].append(v)
         for s in setups:
-            duration, end_size, max_size, end_vars = i_data.get(s, (float("nan"), float("nan"), float("nan"), float("nan")))
-            complete_data[(s, "duration")].append(duration)
-            complete_data[(s, "end_size")].append(end_size)
-            complete_data[(s, "max_size")].append(max_size)
-            complete_data[(s, "end_vars")].append(end_vars)
+            values = i_data.get(s, tuple([float("nan")] * len(local_cols)))
+            for c, v in zip(local_cols, values):
+                complete_data[(s, c)].append(v)
     df = pd.DataFrame(complete_data, index=inputs)
     return df

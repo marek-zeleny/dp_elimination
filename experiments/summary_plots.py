@@ -1,7 +1,7 @@
 import pandas as pd
 from matplotlib import pyplot as plt, ticker
 from plots import get_axes_scaling_factor, get_divider
-from summary_table import global_col
+from summary_table import global_col_name
 
 figure_width = 14
 figure_height = 8
@@ -18,8 +18,8 @@ def get_duration(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
 
 
 def get_remaining_vars_ratio(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
-    vars = df.loc[:, (global_col, "vars")]
-    aux_vars = df.loc[:, (global_col, "aux_vars")]
+    vars = df.loc[:, (global_col_name, "vars")]
+    aux_vars = df.loc[:, (global_col_name, "aux_vars")]
     prot_vars = vars - aux_vars
     data = {
         l: ((df.loc[:, (s, "end_vars")] - prot_vars) / aux_vars).values
@@ -29,7 +29,7 @@ def get_remaining_vars_ratio(df: pd.DataFrame, setups: dict[str, str]) -> dict[s
 
 
 def get_relative_growth(df: pd.DataFrame, setups: dict[str, str]) -> dict[str, list]:
-    size = df.loc[:, (global_col, "size")]
+    size = df.loc[:, (global_col_name, "size")]
     data = {
         l: (df.loc[:, (s, "max_size")] / size).values
         for s, l in setups.items()
