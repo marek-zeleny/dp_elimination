@@ -6,11 +6,21 @@
 #include <tuple>
 #include <limits>
 
+/**
+ * Encapsulates a CLI argument parser.
+ *
+ * Uses the CLI11 library.
+ */
 class ArgsParser {
 private:
     using EnumUnderlyingType = uint16_t;
 
 public:
+    /**
+     * Parses the given input arguments.
+     *
+     * @return If parsing was successful, returns an instance with the parsed arguments, otherwise returns nullopt.
+     */
     static std::optional<ArgsParser> parse(int argc, char *argv[]);
 
     ArgsParser(const ArgsParser &) = default;
