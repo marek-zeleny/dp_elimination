@@ -66,7 +66,12 @@ If you can't use Conda, you can install the necessary packages manually - they'r
 environment file.
 
 To run the predefined experiments with all default settings, make sure that you have already [compiled](#compilation)
-the `dp` application, then run
+the `dp` application.
+It might also be necessary to increase the program stack limit to avoid segmentation fault in some experimens:
+```
+ulimit -s 16777216
+```
+Then run
 ```
 experiments/experiments.py run build/dp
 ```
