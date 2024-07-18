@@ -232,7 +232,7 @@ private:
 namespace scores {
 
 /**
- * Computes the upper bound of how much the formula can grow if the given variable is eliminated. 
+ * Computes the upper bound of how much the formula can grow if the given variable is eliminated.
  */
 inline HeuristicResult::Score bloat_score(const SylvanZddCnf::VariableStats &stats) {
     using Score = HeuristicResult::Score;

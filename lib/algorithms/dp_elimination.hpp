@@ -11,23 +11,63 @@
 
 namespace dp {
 
+/**
+ * Represents a stop condition for DP elimination.
+ *
+ * @param iteration Current iteration of the algorithm.
+ * @param cnf Current state of the formula.
+ * @param cnf_size Size of the formula (optimization).
+ * @param result Result of the last query to literal selection heuristic.
+ */
 using StopCondition_f = std::function<bool(size_t iteration, const SylvanZddCnf &cnf, size_t cnf_size,
         const HeuristicResult &result)>;
+/**
+ * Represents a condition based on the development of formula's size.
+ *
+ * @param iteration Current iteration of the algorithm.
+ * @param prev_cnf_size Last checkpoint of formula size.
+ * @param cnf_size Current size of the formula.
+ */
 using SizeBasedCondition_f = std::function<bool(size_t iteration, size_t prev_cnf_size, size_t cnf_size)>;
+/**
+ * Represents a unary operation over a formula.
+ */
 using UnaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf)>;
+/**
+ * Represents a unary operation over a formula supporting a stop condition.
+ */
 using UnaryOperationWithStopCondition_f = std::function<SylvanZddCnf(const SylvanZddCnf &cnf,
                                                                      const std::function<bool()> &stop_condition)>;
+/**
+ * Represents a unary operation over formulas.
+ */
 using BinaryOperation_f = std::function<SylvanZddCnf(const SylvanZddCnf &op1, const SylvanZddCnf &op2)>;
+/**
+ * Represents a binary operation over formulas supporting a stop condition.
+ */
 using BinaryOperationwithStopCondition_f = std::function<SylvanZddCnf(const SylvanZddCnf &op1,
                                                                       const SylvanZddCnf &op2,
                                                                       const std::function<bool()> &stop_condition)>;
+/**
+ * Represents a literal selection heuristic.
+ */
 using Heuristic_f = std::function<HeuristicResult(const SylvanZddCnf &cnf)>;
+/**
+ * Represents a predicate of allowed variables.
+ */
 using IsAllowedVariable_f = std::function<bool(uint32_t var)>;
 
 inline SylvanZddCnf default_union(const SylvanZddCnf &zdd1, const SylvanZddCnf &zdd2) {
     return zdd1.unify_and_remove_subsumed(zdd2);
 }
 
+/**
+ * Performs cut-elimination of a variable from a given formula.
+ *
+ * @param l Literal of the variable to eliminate (the operation is symmetric for both literals).
+ * @param unify Algorithm for unifying clauses not containing the eliminated variable with resolvents of the cut
+ *              elimination.
+ */
 [[nodiscard]]
 inline SylvanZddCnf eliminate(const SylvanZddCnf &set, const SylvanZddCnf::Literal &l,
                               const BinaryOperation_f &unify = default_union) {
@@ -78,17 +118,55 @@ inline void log_zdd_stats(const size_t &num_clauses, const size_t &num_nodes, co
     LOG_INFO << "ZDD size - clauses: " << num_clauses << ", nodes: " << num_nodes << ", depth: " << depth;
 }
 
+/**
+ * Configuration of the DP elimination algorithm.
+ */
 struct EliminationAlgorithmConfig {
+    /**
+     * Heuristic for selecting the next literal to eliminate.
+     */
     Heuristic_f heuristic;
+    /**
+     * Stop condition for the algorithm.
+     *
+     * Checked in each iteration as well as during some expensive minimization operations.
+     */
     StopCondition_f stop_condition;
+    /**
+     * Decides when the formula should be completely minimized (expensive).
+     */
     SizeBasedCondition_f complete_minimization_condition;
+    /**
+     * Complete minimization algorithm.
+     */
     UnaryOperationWithStopCondition_f complete_minimization;
+    /**
+     * Decides when the formula should be partially minimized (not as expensive).
+     */
     SizeBasedCondition_f partial_minimization_condition;
+    /**
+     * Decides when incremental ("absorption-free") union should be performed instead of basic union (can be expensive).
+     *
+     * Can be only triggered if partial minimization also takes place.
+     */
     SizeBasedCondition_f incremental_absorption_removal_condition;
+    /**
+     * Absorption-free union algorithm.
+     */
     BinaryOperationwithStopCondition_f unify_and_remove_absorbed;
+    /**
+     * Predicate specifying if a variable is allowed to be eliminated or not.
+     */
     IsAllowedVariable_f is_allowed_variable;
 };
 
+/**
+ * Performs DP elimination.
+ *
+ * Eliminates variables from a given CNF formula until a stop condition is met.
+ *
+ * @param config Configuration of the algorithm.
+ */
 [[nodiscard]]
 inline SylvanZddCnf eliminate_vars(SylvanZddCnf cnf, const EliminationAlgorithmConfig &config) {
     using unit_propagation::unit_propagation;
