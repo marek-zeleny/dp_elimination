@@ -8,26 +8,54 @@
 
 namespace dp {
 
+/**
+ * Result of a search for literal to be eliminated.
+ *
+ * If the search was not successful, all fields except for `success` are undefined.
+ */
 struct HeuristicResult {
     using Score = int64_t;
 
+    /**
+     * Heuristic score given to the result.
+     */
     Score score;
+    /**
+     * Literal selected by the heuristic.
+     */
     SylvanZddCnf::Literal literal;
+    /**
+     * true if a suitable literal was found, otherwise false.
+     */
     bool success;
 
     HeuristicResult(bool success, SylvanZddCnf::Literal literal, Score score) :
         score(score), literal(literal), success(success) {}
 };
 
+/**
+ * Contains heuristics for selecting literals to be eliminated.
+ */
 namespace heuristics {
 
+/**
+ * Specifies a scoring function working with ZBDD variable statistics.
+ */
 template<typename F>
 concept IsScoreEvaluator = requires(F f, const SylvanZddCnf::VariableStats &stats) {
     { f(stats) } -> std::convertible_to<HeuristicResult::Score>;
 };
 
+/**
+ * Selects the root literal.
+ *
+ * Legacy heuristic not reachable from user interface.
+ */
 class SimpleHeuristic {
 public:
+    /**
+     * @return The result is binary (does not provide any score).
+     */
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
         SylvanZddCnf::Literal l = cnf.get_root_literal();
         LOG_INFO << "Heuristic found root literal " << l;
@@ -39,8 +67,16 @@ public:
     }
 };
 
+/**
+ * Selects a unit literal if one exists, otherwise fails.
+ *
+ * Legacy heuristic not reachable from user interface.
+ */
 class UnitLiteralHeuristic {
 public:
+    /**
+     * @return The result is binary (does not provide any score).
+     */
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
         SylvanZddCnf::Literal l = cnf.get_unit_literal();
         if (l == 0) {
@@ -54,8 +90,16 @@ public:
     }
 };
 
+/**
+ * Selects a clean literal (with no complement in the formula) if one exists, otherwise fails.
+ *
+ * Legacy heuristic not reachable from user interface.
+ */
 class ClearLiteralHeuristic {
 public:
+    /**
+     * @return The result is binary (does not provide any score).
+     */
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
         SylvanZddCnf::Literal l = cnf.get_clear_literal();
         if (l == 0) {
@@ -69,11 +113,21 @@ public:
     }
 };
 
+/**
+ * Heuristic based on variable ordering. Selects the first variable in given order.
+ *
+ * Works on a specified variable range. If no variable within the range is found, it fails.
+ *
+ * @tparam Ascending If true, selects the smallest existing variable in range, otherwise selects the largest.
+ */
 template<bool Ascending>
 class OrderHeuristic {
 public:
     OrderHeuristic(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
 
+    /**
+     * @return The result is binary (does not provide any score).
+     */
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
         if (cnf.is_empty()) {
             LOG_INFO << "Heuristic called for an empty formula";
@@ -117,11 +171,21 @@ private:
     }
 };
 
+/**
+ * Heuristic based on formula statistics. Selects a variable with minimal score.
+ *
+ * Works on a specified variable range. If no variable within the range is found, it fails.
+ *
+ * @tparam ScoreEvaluator Function providing a score for a variable based on its occurrence counts.
+ */
 template<auto ScoreEvaluator> requires IsScoreEvaluator<decltype(ScoreEvaluator)>
 class MinimalScoreHeuristic {
 public:
     MinimalScoreHeuristic(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
 
+    /**
+     * @return If successful, the selected variable's score is given.
+     */
     HeuristicResult operator()(const SylvanZddCnf &cnf) {
         if (cnf.is_empty()) {
             LOG_INFO << "Heuristic called for an empty formula";
@@ -162,8 +226,14 @@ private:
     const size_t m_max_var;
 };
 
+/**
+ * Contains scoring functions for MinimalScoreHeuristic.
+ */
 namespace scores {
 
+/**
+ * Computes the upper bound of how much the formula can grow if the given variable is eliminated. 
+ */
 inline HeuristicResult::Score bloat_score(const SylvanZddCnf::VariableStats &stats) {
     using Score = HeuristicResult::Score;
     auto removed_clauses = static_cast<Score>(stats.positive_clause_count + stats.negative_clause_count);
