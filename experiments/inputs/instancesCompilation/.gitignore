@@ -1,5 +1,0 @@
-# unnecessary input files, but not actual inputs
-*.nnf
-#*.cnf
-#!*.dc.min.cnf
-*.dc.cnf
