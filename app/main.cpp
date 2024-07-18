@@ -1,7 +1,6 @@
 #include <chrono>
 #include <thread>
 #include <stdexcept>
-#include <sys/resource.h>
 #include <sylvan_obj.hpp>
 #include <simple_logger.h>
 #include "args_parser.hpp"
@@ -13,16 +12,36 @@
 
 using namespace dp;
 
+/**
+ * Functor class for stop condition of DP elimination.
+ */
 class StopCondition {
 private:
     using clock = std::chrono::steady_clock;
 
 public:
+    /**
+     * Initializes a stop condition.
+     *
+     * @param orig_cnf_size Size of the input formula.
+     * @param max_iterations If not nullopt, stops at most after the given number of iterations.
+     * @param max_growth If not nullopt, stops when the formula becomes larger than the given limit.
+     * @param max_duration_seconds If not nullopt, stops at most after the given number of seconds.
+     *                             Note that this condition overshoots, and in certain situations (very large formula)
+     *                             can overshoot by a significant amount of time.
+     */
     StopCondition(size_t orig_cnf_size, const std::optional<size_t> &max_iterations,
                   const std::optional<float> &max_growth, const std::optional<size_t> &max_duration_seconds) :
             m_max_iterations(max_iterations), m_max_size(get_max_size(orig_cnf_size, max_growth)),
             m_max_end_time(get_max_end_time(max_duration_seconds)) {}
 
+    /**
+     * @param iteration Current iteration of the algorithm.
+     * @param cnf Current state of the formula.
+     * @param cnf_size Size of the formula (optimization).
+     * @param result Result of the last query to literal selection heuristic.
+     * @return true if DP elimination can continue, otherwise false.
+     */
     bool operator()(size_t iter, const SylvanZddCnf &cnf, size_t cnf_size, const HeuristicResult &result) const {
         if (cnf.is_empty() || cnf.contains_empty()) {
             LOG_INFO << "Found empty formula or empty clause, stopping DP elimination";
@@ -66,10 +85,16 @@ private:
     }
 };
 
+/**
+ * Condition that is never true.
+ */
 bool never_condition(size_t, size_t, size_t) {
     return false;
 }
 
+/**
+ * Condition that is true in certain intervals.
+ */
 class IntervalCondition {
 public:
     explicit IntervalCondition(size_t interval) : m_interval(interval) {}
@@ -82,6 +107,9 @@ private:
     const size_t m_interval;
 };
 
+/**
+ * Condition that is true if the second size is at least the given ratio of the first size.
+ */
 class RelativeSizeCondition {
 public:
     explicit RelativeSizeCondition(float ratio) : m_ratio(ratio) {}
@@ -94,6 +122,9 @@ private:
     const float m_ratio;
 };
 
+/**
+ * Condition that is true if the second size is larger than given threshold.
+ */
 class AbsoluteSizeCondition {
 public:
     explicit AbsoluteSizeCondition(size_t max_size) : m_max_size(max_size) {}
@@ -106,6 +137,9 @@ private:
     const size_t m_max_size;
 };
 
+/**
+ * Predicate defining allowed range of variables.
+ */
 class AllowedVariablePredicate {
 public:
     AllowedVariablePredicate(size_t min_var, size_t max_var) : m_min_var(min_var), m_max_var(max_var) {}
@@ -119,6 +153,9 @@ private:
     const size_t m_max_var;
 };
 
+/**
+ * Creates a DP elimination configuration based on CLI arguments.
+ */
 EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, const ArgsParser &args) {
     EliminationAlgorithmConfig config;
     config.complete_minimization = absorbed_clause_detection::with_conversion::remove_absorbed_clauses;
@@ -202,6 +239,12 @@ EliminationAlgorithmConfig create_config_from_args(const SylvanZddCnf &cnf, cons
     return config;
 }
 
+/**
+ * Implementation of the program.
+ *
+ * Initializes the Sylvan library, loads input file, performs DP elimination, exports resulting formula and metrics.
+ * The function is separated from main() because historically it was a Lace task.
+ */
 int impl(const ArgsParser &args) {
     // initialize Sylvan
     LOG_INFO << "Initializing Sylvan";
@@ -270,25 +313,6 @@ int impl(const ArgsParser &args) {
     return 0;
 }
 
-void set_lace_stack_limit(size_t size = 0) {
-    rlimit limit{size, size};
-    // if a size is given, set the limit manually
-    if (size > 0) {
-        setrlimit(RLIMIT_STACK, &limit);
-    }
-    // get stack limit and give it to Lace
-    if (getrlimit(RLIMIT_STACK, &limit) == 0) {
-        LOG_INFO << "Stack limit: " << limit.rlim_cur << " / " << limit.rlim_max;
-        lace_set_stacksize(limit.rlim_cur);
-        if (lace_get_stacksize() != limit.rlim_cur) {
-            throw std::runtime_error("Couldn't set Lace stack size (" + std::to_string(lace_get_stacksize())
-                                     + " != " + std::to_string(limit.rlim_cur) + ")");
-        }
-    } else {
-        throw std::runtime_error("Couldn't obtain stack limit");
-    }
-}
-
 int main(int argc, char *argv[]) {
     // parse args
     std::optional<ArgsParser> args = ArgsParser::parse(argc, argv);
@@ -303,7 +327,6 @@ int main(int argc, char *argv[]) {
     LOG_INFO << "Used configuration:\n" << args->get_config_string();
 
     // initialize Lace
-    //set_lace_stack_limit();
     size_t n_workers = args->get_lace_threads();
     size_t deque_size = 0; // default value for the size of task deques for the workers
     lace_start(n_workers, deque_size);

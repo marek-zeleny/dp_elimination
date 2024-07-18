@@ -26,6 +26,7 @@ public:
  * CNF formula represented by a ZBDD implemented with the Sylvan library.
  *
  * Instances are immutable, all operations create new ZBDDs without modifying the operands.
+ * Assumes that Lace threads are always suspended outside of the class.
  */
 class SylvanZddCnf {
 public:
