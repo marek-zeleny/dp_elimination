@@ -3,6 +3,9 @@
 Program for preprocessing CNF formulas by eliminating some of its variables using the Davis-Putnam algorithm.
 It uses Zero-suppressed Binary Decision Diagrams (ZDDs) for efficient representation and manipulation of CNF formulas.
 
+The program was developed as part of a Master thesis at Faculty of Mathematics and Physics, Charles University in Prague.
+The thesis is attached as `thesis.pdf` and includes detailed user and programming documentation.
+
 ## Prerequisites
 
 - Linux-based system
