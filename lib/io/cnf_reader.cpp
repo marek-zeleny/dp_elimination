@@ -23,7 +23,7 @@ static std::tuple<size_t, size_t> try_start_reading(const std::string &line, con
     iss >> token;
     if (token == "p") {
         std::string type;
-        if ((iss >> type >> num_vars >> num_clauses) && type == "cnf") { // TODO
+        if ((iss >> type >> num_vars >> num_clauses) && type == "cnf") {
             LOG_INFO << "reading CNF formula with " << num_vars << " variables and " << num_clauses << " clauses";
             return std::make_tuple(num_vars, num_clauses);
         } else {
